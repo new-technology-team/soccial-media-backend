@@ -13,7 +13,8 @@ const {
   removeConversationMember,
   updateConversationAdmin,
   toggleConversationNotifications,
-  getMessageUploadUrl
+  getMessageUploadUrl,
+  uploadMessageBase64
 } = require("../controllers/chat.controller");
 
 const router = express.Router();
@@ -27,6 +28,7 @@ router.get("/conversations/:id", getConversationDetail);
 router.get("/conversations/:id/messages", getConversationMessages);
 router.post("/conversations/:id/messages", sendMessage);
 router.post("/conversations/:id/messages/upload-url", getMessageUploadUrl);
+router.post("/conversations/:id/messages/upload-base64", uploadMessageBase64);
 router.patch("/conversations/:id/seen", seenConversation);
 router.patch("/conversations/:id/notifications", toggleConversationNotifications);
 router.post("/conversations/:id/members", addConversationMember);

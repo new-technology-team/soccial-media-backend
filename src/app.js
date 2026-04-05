@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 const env = require("./config/env");
 const authRoutes = require("./routes/auth.routes");
 const chatRoutes = require("./routes/chat.routes");
@@ -18,6 +19,7 @@ app.use(
 );
 app.use(express.json({ limit: "15mb" }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api", (_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");

@@ -19,7 +19,7 @@ const ensureUserSchema = async () => {
         verification_expires_at DATETIME DEFAULT NULL,
         reset_code VARCHAR(20) DEFAULT NULL,
         reset_expires_at DATETIME DEFAULT NULL,
-        refresh_token VARCHAR(512) DEFAULT NULL,
+        refresh_token TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT chk_email_or_phone CHECK (email IS NOT NULL OR phone IS NOT NULL)
@@ -36,6 +36,8 @@ const ensureUserSchema = async () => {
     await conn.query(
       "ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NULL"
     );
+    // refresh_token can exceed 512 chars when profile payload is large.
+    await conn.query("ALTER TABLE users MODIFY COLUMN refresh_token TEXT NULL");
     await conn.query(
       "ALTER TABLE users ADD CONSTRAINT chk_email_or_phone CHECK (email IS NOT NULL OR phone IS NOT NULL)"
     ).catch(() => {

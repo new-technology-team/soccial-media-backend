@@ -1,5 +1,7 @@
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const fs = require("fs");
+const path = require("path");
 const { z } = require("zod");
 const env = require("../config/env");
 const { s3Client, hasAwsConfig } = require("../config/aws");
@@ -58,6 +60,18 @@ const updateAdminSchema = z.object({
 const updateNotificationSchema = z.object({
   enabled: z.boolean()
 });
+
+const messageBase64Schema = z.object({
+  fileName: z.string().min(1).max(255),
+  contentType: z.string().min(1).max(255),
+  base64Data: z.string().min(10)
+});
+
+const sanitizeFileName = (name) =>
+  String(name || "file")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 120);
 
 const toConversationPayload = (conversation, members = []) => ({
   id: conversation.id,
@@ -496,6 +510,35 @@ const getMessageUploadUrl = async (req, res) => {
   }
 };
 
+const uploadMessageBase64 = async (req, res) => {
+  try {
+    const conversationId = Number(req.params.id);
+    await ensureMembership(conversationId, req.user.id);
+    const input = messageBase64Schema.parse(req.body);
+
+    const uploadDir = path.join(process.cwd(), "uploads", "messages", String(conversationId), String(req.user.id));
+    fs.mkdirSync(uploadDir, { recursive: true });
+
+    const fileName = `${Date.now()}-${sanitizeFileName(input.fileName)}`;
+    const filePath = path.join(uploadDir, fileName);
+    const buffer = Buffer.from(input.base64Data, "base64");
+    fs.writeFileSync(filePath, buffer);
+
+    const mediaUrl = `/uploads/messages/${conversationId}/${req.user.id}/${fileName}`;
+    return res.json({ message: "Upload file chat thành công", mediaUrl });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    if (error.name === "ZodError") {
+      return res.status(400).json({ message: "Dữ liệu không hợp lệ", issues: error.issues });
+    }
+
+    return res.status(500).json({ message: "Không thể upload file chat base64", error: error.message });
+  }
+};
+
 module.exports = {
   listConversations,
   createDirect,
@@ -509,5 +552,6 @@ module.exports = {
   removeConversationMember,
   updateConversationAdmin,
   toggleConversationNotifications,
-  getMessageUploadUrl
+  getMessageUploadUrl,
+  uploadMessageBase64
 };

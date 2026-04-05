@@ -345,17 +345,30 @@ const resendVerificationCode = async (req, res) => {
 const login = async (req, res) => {
   try {
     const input = loginSchema.parse(req.body);
-    const user = await findUserByEmailOrPhone(input.emailOrPhone);
+    const { email, phone } = normalizeEmailOrPhone(input.emailOrPhone);
+    const identifier = email || phone;
+    const user = await findUserByEmailOrPhone(identifier);
 
     if (!user) {
       return res.status(401).json({ message: "Email/số điện thoại hoặc mật khẩu không chính xác" });
+    }
+
+    if (!user.password_hash) {
+      return res.status(401).json({
+        message: "Tài khoản chưa có mật khẩu đăng nhập. Vui lòng dùng quên mật khẩu để tạo mật khẩu mới"
+      });
     }
 
     if (env.auth.requireEmailVerification && !user.is_verified) {
       return res.status(403).json({ message: "Email hoặc số điện thoại chưa được xác thực" });
     }
 
-    const matched = await comparePassword(input.password, user.password_hash);
+    let matched = false;
+    try {
+      matched = await comparePassword(input.password, user.password_hash);
+    } catch (_error) {
+      return res.status(401).json({ message: "Email/số điện thoại hoặc mật khẩu không chính xác" });
+    }
 
     if (!matched) {
       return res.status(401).json({ message: "Email/số điện thoại hoặc mật khẩu không chính xác" });
@@ -364,6 +377,10 @@ const login = async (req, res) => {
     const tokenData = await issueTokens(user);
     return res.json(tokenData);
   } catch (error) {
+    if (error.message === "Vui lòng nhập email hoặc số điện thoại hợp lệ") {
+      return res.status(400).json({ message: error.message });
+    }
+
     if (error.name === "ZodError") {
       return res.status(400).json({ message: "Lỗi xác thực dữ liệu", issues: error.issues });
     }
