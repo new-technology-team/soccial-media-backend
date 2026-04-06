@@ -1,27 +1,54 @@
+
 services:
   mariadb:
-    image: mariadb:11.4
-    container_name: zalo_mariadb
-    restart: unless-stopped
+    image: mariadb:11
+    container_name: mariadb
+    restart: always
     environment:
-      MARIADB_ROOT_PASSWORD: root
-      MARIADB_DATABASE: zalo_app
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: social_media
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 123456
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  backend:
-    build: .
-    container_name: zalo_backend
-    restart: unless-stopped
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: social_media
     ports:
-      - "5000:5000"
-    env_file:
-      - .env
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  nextjs:
+    build: .
+    container_name: nextjs-backend
     depends_on:
       - mariadb
+      - mongodb
+    ports:
+      - "3000:3000"
+    environment:
+      # MariaDB
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: social_media
+      DB_USER: user
+      DB_PASSWORD: 123456
+
+      # MongoDB
+      MONGO_URI: mongodb://mongodb:27017/social_media
+
+      # Timezone
+      TZ: Asia/Ho_Chi_Minh
+
+    command: npm run start
 
 volumes:
   mariadb_data:
+  mongodb_data:
