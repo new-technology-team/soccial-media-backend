@@ -11,9 +11,9 @@ import { AuthController } from './auth.controller';
             global: true,
             secret: "secretKey",
             signOptions: { expiresIn: '60s' },
+            verifyOptions: { algorithms: ['HS256'] },
         }),
-        UserModule,
-        AuthModule,
+        UserModule
     ],
     providers: [AuthService],
     controllers: [AuthController],
