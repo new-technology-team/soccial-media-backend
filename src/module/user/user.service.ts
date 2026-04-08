@@ -1,24 +1,22 @@
 import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { User } from "./user.entity";
-import { Repository } from "typeorm";
+import { MariaService } from "../../prisma/maria/maria.service";
+import { User } from "../../../generated/maria"; 
 
 @Injectable()
 export class UserService {
     constructor(
-        @InjectRepository(User)
-        private usersRepository: Repository<User>
+        private readonly mariaService: MariaService
     ) { }
 
     async findOne(userId: number): Promise<User | null> {
-        return this.usersRepository.findOneBy({ userId });
+        return this.mariaService.user.findUnique({ where: { userId } });
     }
 
     async findOneByUsername(username: string): Promise<User | null> {
-        return this.usersRepository.findOneBy({ username });
+        return this.mariaService.user.findUnique({ where: { username } });
     }
 
-    async findOneEmail(email: string): Promise<User | null> {
-        return this.usersRepository.findOneBy({ email });
+    async findOneByEmail(email: string): Promise<User | null> {
+        return this.mariaService.user.findUnique({ where: { email } });
     }
 }

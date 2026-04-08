@@ -1,0 +1,20 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_MARIA")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../generated/maria"
+}
+
+model User {
+  userId      Int     @id @default(autoincrement())
+  username    String  @unique
+  displayName String
+  sex         Int
+  email       String  @unique
+  phone       String
+  password    String
+  avatarUrl   String
+}
