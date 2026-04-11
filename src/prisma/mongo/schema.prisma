@@ -8,17 +8,6 @@ generator client {
   output   = "../../../generated/mongo"
 }
 
-model Member {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  accountId           Int
-  displayName         String
-  avatarUrl           String
-  roleInConversation  String
-  conversationId      String   @db.ObjectId
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-}
-
 model Conversation {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   conversationName String
@@ -26,8 +15,9 @@ model Conversation {
   createdAt        DateTime
 
   members   Member[]
-  messages  Message[]
   interacts Interacts[]
+
+  messages  Message[]
 }
 
 model Message {
@@ -42,20 +32,6 @@ model Message {
   conversation Conversation @relation(fields: [conversationId], references: [id])
 }
 
-model Interacts {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  accountId      Int
-  displayName    String
-  avatarUrl      String
-  interactType   String
-  createdAt      String
-  conversationId String   @db.ObjectId
-  postId         String?  @db.ObjectId
-
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  post         Post?        @relation(fields: [postId], references: [id])
-}
-
 model Post {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   postId    Int
@@ -67,33 +43,40 @@ model Post {
   interacts Interacts[]
 }
 
-model Comment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  commentId Int
-  postId    String   @db.ObjectId
-  content   String
-  file      String
-  ownerId   String   @db.ObjectId
-
-  post  Post  @relation(fields: [postId], references: [id])
-  owner Owner @relation(fields: [ownerId], references: [id])
+model Notification {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  notificationId Int
+  userId         String
+  title          String
+  content        String
+  link           String
+  createdAt      DateTime
 }
 
-model Owner {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+type Member {
+  accountId          Int
+  displayName        String
+  avatarUrl          String
+  roleInConversation String
+}
+
+type Interacts {
+  accountId    Int
+  displayName  String
+  avatarUrl    String
+  interactType String
+  createdAt    String
+}
+
+type Comment {
+  commentId Int
+  content   String
+  file      String
+  owner     Owner
+}
+
+type Owner {
   accountId   Int
   displayName String
   avatarUrl   String
-
-  comments Comment[]
-}
-
-model Notification {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  notificationId Int
-  userId    String
-  title     String
-  content   String
-  link      String
-  createdAt DateTime
 }
