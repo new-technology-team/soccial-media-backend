@@ -9,16 +9,15 @@ import { InjectRepository } from "@nestjs/typeorm";
 export class PostService {
     constructor(
         @InjectRepository(Post)
-        private postsRepository: Repository<Post>,
+        private readonly postsRepository: Repository<Post>,
     ) { }
-
 
     async createPost(createPostDto: CreatePostDto): Promise<Post> {
         const post = {
             title: createPostDto.title,
             content: createPostDto.content,
         };
-        
+
         return this.postsRepository.save(post);
     }
 }

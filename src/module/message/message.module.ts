@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
-import { CommentService } from "./message.service";
-import { CommentController } from "./message.controller";
+import { MessageController } from "./message.controller";
+import { MessageService } from "./message.service";
+import { Message } from "./message.entity";
+import { TypeOrmModule } from "@nestjs/typeorm";
 
 @Module({
-    controllers: [CommentController],
-    providers: [CommentService]
+    imports: [TypeOrmModule.forFeature([Message])],
+    controllers: [MessageController],
+    providers: [MessageService]
 })
-export class CommentModule {}
+export class MessageModule {}

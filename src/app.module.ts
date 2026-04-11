@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Post } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from "./module/user/user.module";
@@ -7,6 +7,18 @@ import { AuthModule } from './module/auth/auth.module';
 import { PostModule } from './module/post/post.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './module/user/user.entity';
+import { CommentModule } from './module/comment/comment.module';
+import { ConversationModule } from './module/conversation/conversation.module';
+import { FriendshipModule } from './module/friendship/friendship.module';
+import { MessageModule } from './module/message/message.module';
+import { NotificationModule } from './module/notification/notification.module';
+import { ReportModule } from './module/report/report.module';
+import { Message } from './module/message/message.entity';
+import { Conversation } from './module/conversation/conversation.entity';
+import { Friendship } from './module/friendship/friendship.entity';
+import { Report } from './module/report/report.entity';
+import { Comment } from './module/comment/comment.entity';
+import { Notification } from './module/notification/notification.entity';
 
 @Module({
   imports: [
@@ -20,7 +32,7 @@ import { User } from './module/user/user.entity';
       password: '123456',
       database: 'social_media',
       synchronize: true,
-      entities: [User],
+      entities: [User, Friendship, Report],
     }),
     TypeOrmModule.forRoot({
       type: 'mongodb',
@@ -29,11 +41,17 @@ import { User } from './module/user/user.entity';
       password: '123456',
       database: 'social_media',
       synchronize: true,
-      entities: [],
+      entities: [Comment, Conversation, Message, Notification],
     }),
-    UserModule,
     AuthModule,
-    PostModule
+    CommentModule,
+    ConversationModule,
+    FriendshipModule,
+    MessageModule,
+    NotificationModule,
+    PostModule,
+    ReportModule,
+    UserModule
   ],
   controllers: [AppController],
   providers: [AppService],
