@@ -5,6 +5,7 @@ export class RegisterDto {
     password: string;
     displayName: string;
     sex: number;
+    dateOfBirth: Date;
     phone: string;
 
     constructor(
@@ -13,14 +14,15 @@ export class RegisterDto {
         password: string,
         displayName: string,
         sex: number,
+        dateOfBirth: Date,
         phone: string,
-        avatarUrl: string
     ) {
         this.username = username;
         this.email = email;
         this.password = password;
         this.displayName = displayName;
         this.sex = sex;
+        this.dateOfBirth = dateOfBirth;
         this.phone = phone;
     }
 }

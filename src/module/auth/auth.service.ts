@@ -13,7 +13,7 @@ export class AuthService {
     ) { }
 
     async login(loginDto: LoginDto): Promise<any> {
-        const user = await this.userService.findOneByEmail(loginDto.email);
+        const user = await this.userService.findOneByUsername(loginDto.username);
         if (user?.password !== loginDto.password) {
             throw new UnauthorizedException();
         }

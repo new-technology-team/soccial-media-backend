@@ -33,8 +33,11 @@ export class UserService {
                 username: registerDto.username,
                 displayName: registerDto.displayName,
                 sex: registerDto.sex,
+                dateOfBirth: registerDto.dateOfBirth,
                 phone: registerDto.phone,
+                avatarUrl: '',
                 role: 'USER',
+                status: 'ACTIVE',
             },
         });
     }
