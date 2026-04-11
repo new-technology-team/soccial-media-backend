@@ -1,21 +1,24 @@
 import { Injectable } from "@nestjs/common";
-import { Post } from "../../../generated/mongo"; 
-import { MongoService } from "../../prisma/mongo/mongo.service";
 import { CreatePostDto } from "./dto/create-post.dto";
+import { Post } from "./post.entity";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 
 
 @Injectable()
 export class PostService {
     constructor(
-        private readonly mongoService: MongoService
+        @InjectRepository(Post)
+        private postsRepository: Repository<Post>,
     ) { }
 
+
     async createPost(createPostDto: CreatePostDto): Promise<Post> {
-        return await this.mongoService.post.create({
-            data: {
-                title: createPostDto.title,
-                content: createPostDto.content
-            }
-        })
+        const post = {
+            title: createPostDto.title,
+            content: createPostDto.content,
+        };
+        
+        return this.postsRepository.save(post);
     }
 }

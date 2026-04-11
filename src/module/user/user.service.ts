@@ -1,24 +1,28 @@
 import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
-import { MariaService } from "../../prisma/maria/maria.service";
-import { User } from "../../../generated/maria"; 
+import { User } from "./user.entity";
 import { RegisterDto } from "../auth/dto/register.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { UserStatus } from "../../common/enum/user-status.enum";
+import { UserRole } from "../../common/enum/user-role.enum";
 
 @Injectable()
 export class UserService {
     constructor(
-        private readonly mariaService: MariaService
+        @InjectRepository(User)
+        private usersRepository: Repository<User>,
     ) { }
 
     async findOne(userId: number): Promise<User | null> {
-        return this.mariaService.user.findUnique({ where: { userId } });
+        return this.usersRepository.findOne({ where: { userId } });
     }
 
     async findOneByUsername(username: string): Promise<User | null> {
-        return this.mariaService.user.findUnique({ where: { username } });
+        return this.usersRepository.findOne({ where: { username } });
     }
 
     async findOneByEmail(email: string): Promise<User | null> {
-        return this.mariaService.user.findUnique({ where: { email } });
+        return this.usersRepository.findOne({ where: { email } });
     }
 
     async create(registerDto: RegisterDto): Promise<User> {
@@ -26,19 +30,20 @@ export class UserService {
         if (existingUser) {
             throw new BadRequestException('Email already exists');
         }
-        return this.mariaService.user.create({
-            data: {
-                email: registerDto.email,
-                password: registerDto.password,
-                username: registerDto.username,
-                displayName: registerDto.displayName,
-                sex: registerDto.sex,
-                dateOfBirth: registerDto.dateOfBirth,
-                phone: registerDto.phone,
-                avatarUrl: '',
-                role: 'USER',
-                status: 'ACTIVE',
-            },
+
+        const user = this.usersRepository.create({
+            email: registerDto.email,
+            password: registerDto.password,
+            username: registerDto.username,
+            displayName: registerDto.displayName,
+            sex: registerDto.sex,
+            dateOfBirth: registerDto.dateOfBirth,
+            phone: registerDto.phone,
+            avatarUrl: '',
+            role: UserRole.USER,
+            status: UserStatus.ACTIVE,
         });
+
+        return this.usersRepository.save(user);
     }
 }
