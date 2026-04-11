@@ -6,7 +6,6 @@ export class RegisterDto {
     displayName: string;
     sex: number;
     phone: string;
-    avatarUrl: string;
 
     constructor(
         username: string,
@@ -23,7 +22,5 @@ export class RegisterDto {
         this.displayName = displayName;
         this.sex = sex;
         this.phone = phone;
-        this.avatarUrl = avatarUrl;
     }
-
 }

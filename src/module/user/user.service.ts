@@ -34,7 +34,7 @@ export class UserService {
                 displayName: registerDto.displayName,
                 sex: registerDto.sex,
                 phone: registerDto.phone,
-                avatarUrl: registerDto.avatarUrl
+                role: 'USER',
             },
         });
     }
