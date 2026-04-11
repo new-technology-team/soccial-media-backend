@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { MariaService } from "../../prisma/maria/maria.service";
 import { User } from "../../../generated/maria"; 
-import { RegisterDto } from "../auth/dto/registerDto";
+import { RegisterDto } from "../auth/dto/register.dto";
 
 @Injectable()
 export class UserService {
