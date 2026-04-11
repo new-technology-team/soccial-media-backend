@@ -9,12 +9,66 @@ generator client {
 }
 
 model User {
-  userId      Int     @id @default(autoincrement())
-  username    String  @unique
+  userId      Int      @id @default(autoincrement())
   displayName String
   sex         Int
-  email       String  @unique
+  email       String   @unique
   phone       String
   password    String
   avatarUrl   String
+  role        String
+  status      UserStatus
+
+  friendships1 Friendship[] @relation("User1")
+  friendships2 Friendship[] @relation("User2")
+  reports      Report[]
+}
+
+model Friendship {
+  id             Int      @id @default(autoincrement())
+  user1Id        Int
+  user2Id        Int
+  status         FriendshipStatus
+  conversationId String
+  createdAt      DateTime
+
+  user1 User @relation("User1", fields: [user1Id], references: [userId])
+  user2 User @relation("User2", fields: [user2Id], references: [userId])
+}
+
+model Report {
+  reportId   Int      @id @default(autoincrement())
+  status     ReportStatus
+  createAt   DateTime
+  description String
+  targetId   String
+  reportType ReportType
+  userId     Int
+
+  user User @relation(fields: [userId], references: [userId])
+}
+
+enum UserStatus {
+  BLOCKED
+  RESTRICTED
+  HIDDEN
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+enum ReportType {
+  USER
+  POST
+  MESSAGE
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
