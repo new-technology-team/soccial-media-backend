@@ -10,9 +10,10 @@ generator client {
 
 model Conversation {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId   Int      @default(autoincrement())
   conversationName String
   status           String
-  createdAt        DateTime
+  createdAt        DateTime @default(now())
 
   members   Member[]
   interacts Interacts[]
@@ -22,7 +23,7 @@ model Conversation {
 
 model Message {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  messageId      Int
+  messageId      Int      @default(autoincrement())
   conversationId String   @db.ObjectId
   content        String
   createdAt      DateTime
@@ -33,11 +34,11 @@ model Message {
 }
 
 model Post {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  postId    Int
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  postId    Int       @default(autoincrement())
   title     String
   content   String
-  createdAt DateTime
+  createdAt DateTime  @default(now())
 
   comments  Comment[]
   interacts Interacts[]
@@ -45,12 +46,12 @@ model Post {
 
 model Notification {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  notificationId Int
+  notificationId Int      @default(autoincrement())
   userId         String
   title          String
   content        String
   link           String
-  createdAt      DateTime
+  createdAt      DateTime   @default(now())
 }
 
 type Member {
