@@ -6,7 +6,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Report])],
+    imports: [TypeOrmModule.forFeature([Report], 'mariadb')],
     controllers: [ReportController],
     providers: [ReportService]
 })

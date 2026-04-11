@@ -9,7 +9,7 @@ import { UserRole } from "../../common/enum/user-role.enum";
 @Injectable()
 export class UserService {
     constructor(
-        @InjectRepository(User)
+        @InjectRepository(User, 'mariadb')
         private readonly usersRepository: Repository<User>,
     ) { }
 

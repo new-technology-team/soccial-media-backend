@@ -6,8 +6,9 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Conversation])],
+    imports: [TypeOrmModule.forFeature([Conversation], 'mongodb')],
     controllers: [ConversationController],
-    providers: [ConversationService]
+    providers: [ConversationService],
+    exports: [ConversationService, TypeOrmModule],
 })
 export class ConversationModule {}

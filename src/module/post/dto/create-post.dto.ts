@@ -1,9 +1,11 @@
 export class CreatePostDto {
     title: string;
     content: string;
+    ownerId: number;
 
-    constructor(title: string, content: string) {
+    constructor(title: string, content: string, ownerId: number) {
         this.title = title;
         this.content = content;
+        this.ownerId = ownerId;
     }
 }

@@ -5,8 +5,9 @@ import { Friendship } from "./friendship.entity";
 import { TypeOrmModule } from "@nestjs/typeorm";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Friendship])],
+    imports: [TypeOrmModule.forFeature([Friendship], 'mariadb')],
     controllers: [FriendshipController],
-    providers: [FriendshipService]
+    providers: [FriendshipService],
+    exports: [FriendshipService, TypeOrmModule],
 })
 export class FriendshipModule { }

@@ -1,4 +1,4 @@
-import { Module, Post } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from "./module/user/user.module";
@@ -19,6 +19,8 @@ import { Friendship } from './module/friendship/friendship.entity';
 import { Report } from './module/report/report.entity';
 import { Comment } from './module/comment/comment.entity';
 import { Notification } from './module/notification/notification.entity';
+import { Post } from './module/post/post.entity';
+
 
 @Module({
   imports: [
@@ -26,22 +28,18 @@ import { Notification } from './module/notification/notification.entity';
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
+      name: 'mariadb',
       type: 'mariadb',
-      port: 3306,
-      username: 'root',
-      password: '123456',
-      database: 'social_media',
+      url: process.env.DATABASE_URL_MARIA,
       synchronize: true,
       entities: [User, Friendship, Report],
     }),
     TypeOrmModule.forRoot({
+      name: 'mongodb',
       type: 'mongodb',
-      port: 27017,
-      username: 'root',
-      password: '123456',
-      database: 'social_media',
+      url: process.env.DATABASE_URL_MONGO,
       synchronize: true,
-      entities: [Comment, Conversation, Message, Notification],
+      entities: [Comment, Conversation, Message, Notification, Post],
     }),
     AuthModule,
     CommentModule,
