@@ -10,7 +10,7 @@ import { AuthController } from './auth.controller';
         JwtModule.register({
             global: true,
             secret: "secretKey",
-            signOptions: { expiresIn: '60s' },
+            signOptions: { expiresIn: '7200s' },
             verifyOptions: { algorithms: ['HS256'] },
         }),
         UserModule
