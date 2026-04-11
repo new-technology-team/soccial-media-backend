@@ -10,7 +10,12 @@ export class PostService {
         private readonly mongoService: MongoService
     ) { }
 
-    async createPost(createPostDto: CreatePostDto): Promise<void> {
-        
+    async createPost(createPostDto: CreatePostDto): Promise<Post> {
+        return await this.mongoService.post.create({
+            data: {
+                title: createPostDto.title,
+                content: createPostDto.content
+            }
+        })
     }
 }
