@@ -1,5 +1,4 @@
 import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
-import { Owner } from "../../common/embedded/owner.embed";
 
 @Entity()
 export class Comment {
@@ -10,25 +9,23 @@ export class Comment {
     postId: string;
 
     @Column()
+    userId: number;
+
+    @Column()
     content: string;
 
     @Column({ nullable: true })
-    file: string;
+    file: string | null;
 
-    @Column(() => Owner)
-    owner: Owner;
+    @Column()
+    status: string;
 
-    constructor(
-        _id: ObjectId,
-        postId: string,
-        content: string,
-        file: string,
-        owner: Owner
-    ) {
-        this._id = _id;
-        this.postId = postId;
-        this.content = content;
-        this.file = file;
-        this.owner = owner;
-    }
+    @Column()
+    reactions: any[];
+
+    @Column()
+    createdAt: Date;
+
+    @Column()
+    updatedAt: Date;
 }

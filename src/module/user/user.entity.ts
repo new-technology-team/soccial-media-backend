@@ -7,29 +7,50 @@ export class User {
     @PrimaryGeneratedColumn()
     userId: number;
 
-    @Column({ unique: true })
-    username: string;
+    @Column({ unique: true, nullable: true })
+    username: string | null;
 
     @Column()
     displayName: string;
 
     @Column({ nullable: true })
-    sex: number;
+    sex: number | null;
 
-    @Column({ unique: true })
-    email: string;
+    @Column({ unique: true, nullable: true })
+    email: string | null;
 
     @Column({ type: "date", nullable: true })
-    dateOfBirth: Date;
+    dateOfBirth: Date | null;
 
     @Column({ nullable: true })
-    phone: string;
-
-    @Column()
-    password: string;
+    phone: string | null;
 
     @Column({ nullable: true })
-    avatarUrl: string;
+    password: string | null;
+
+    @Column({ nullable: true })
+    avatarUrl: string | null;
+
+    @Column({ default: false })
+    isVerified: boolean;
+
+    @Column({ nullable: true })
+    refreshToken: string | null;
+
+    @Column({ default: true })
+    privacyLastSeen: boolean;
+
+    @Column({ default: true })
+    privacyProfilePhoto: boolean;
+
+    @Column({ default: true })
+    allowFriendRequests: boolean;
+
+    @Column({ default: true })
+    notificationMessages: boolean;
+
+    @Column({ default: true })
+    notificationCalls: boolean;
 
     @Column({
         type: "enum",
@@ -44,30 +65,4 @@ export class User {
         default: UserStatus.ACTIVE
     })
     status: UserStatus;
-
-    constructor(
-        userId: number,
-        username: string,
-        displayName: string,
-        sex: number,
-        email: string,
-        dateOfBirth: Date,
-        phone: string,
-        password: string,
-        avatarUrl: string,
-        role: UserRole,
-        status: UserStatus
-    ) {
-        this.userId = userId;
-        this.username = username;
-        this.displayName = displayName;
-        this.sex = sex;
-        this.email = email;
-        this.dateOfBirth = dateOfBirth;
-        this.phone = phone;
-        this.password = password;
-        this.avatarUrl = avatarUrl;
-        this.role = role;
-        this.status = status;
-    }
 }

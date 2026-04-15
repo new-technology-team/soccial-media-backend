@@ -3,4 +3,5 @@ export enum UserStatus {
     BLOCKED = "BLOCKED",
     RESTRICTED = "RESTRICTED",
     HIDDEN = "HIDDEN",
+    DELETED = "DELETED",
 }

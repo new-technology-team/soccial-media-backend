@@ -1,6 +1,4 @@
 import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
-import { Interacts } from "../../common/embedded/interacts.embed";
-import { Owner } from "../../common/embedded/owner.embed";
 
 @Entity()
 export class Post {
@@ -8,33 +6,29 @@ export class Post {
     _id: ObjectId;
 
     @Column()
-    title: string;
+    content: string;
+
+    @Column({ nullable: true })
+    mediaUrl: string | null;
 
     @Column()
-    content: string;
+    visibility: string;
+
+    @Column()
+    status: string;
+
+    @Column()
+    authorId: number;
 
     @Column()
     createdAt: Date;
 
     @Column()
-    interacts: Interacts[];
+    updatedAt: Date;
 
     @Column()
-    owner: Owner;
+    reactions: any[];
 
-    constructor(
-        _id: ObjectId,
-        title: string,
-        content: string,
-        createdAt: Date,
-        interacts: Interacts[],
-        owner: Owner
-    ) {
-        this._id = _id;
-        this.title = title;
-        this.content = content;
-        this.createdAt = createdAt;
-        this.interacts = interacts;
-        this.owner = owner;
-    }
+    @Column()
+    commentCount: number;
 }

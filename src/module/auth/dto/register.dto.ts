@@ -1,5 +1,6 @@
 
 export class RegisterDto {
+    emailOrPhone?: string;
     username: string;
     email: string;
     password: string;
@@ -7,6 +8,9 @@ export class RegisterDto {
     sex: number;
     dateOfBirth: Date;
     phone: string;
+    avatarUrl?: string;
+    fullName?: string;
+    gender?: string;
 
     constructor(
         username: string,

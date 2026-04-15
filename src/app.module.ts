@@ -20,6 +20,7 @@ import { Report } from './module/report/report.entity';
 import { Comment } from './module/comment/comment.entity';
 import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
+import { AuthOtp } from './module/auth/auth-otp.entity';
 
 
 @Module({
@@ -32,7 +33,7 @@ import { Post } from './module/post/post.entity';
       type: 'mariadb',
       url: process.env.DATABASE_URL_MARIA,
       synchronize: true,
-      entities: [User, Friendship, Report],
+      entities: [User, Friendship, Report, AuthOtp],
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',

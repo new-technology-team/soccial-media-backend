@@ -6,33 +6,23 @@ export class Notification {
   _id: ObjectId;
 
   @Column()
-  userId: string;
+  userId: number;
+
+  @Column()
+  type: string;
 
   @Column()
   title: string;
 
   @Column()
-  content: string;
+  body: string;
 
-  @Column()
-  link: string;
+  @Column({ nullable: true })
+  meta: any;
+
+  @Column({ default: false })
+  isRead: boolean;
 
   @Column()
   createdAt: Date;
-
-  constructor(
-    _id: ObjectId,
-    userId: string,
-    title: string,
-    content: string,
-    link: string,
-    createdAt: Date
-  ) {
-    this._id = _id;
-    this.userId = userId;
-    this.title = title;
-    this.content = content;
-    this.link = link;
-    this.createdAt = createdAt;
-  }
 }

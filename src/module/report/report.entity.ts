@@ -14,33 +14,24 @@ export class Report {
     @Column()
     createAt: Date;
 
+    @Column({ nullable: true })
+    updatedAt: Date | null;
+
     @Column()
     description: string;
 
     @Column()
     targetId: string;
 
+    @Column({ nullable: true })
+    resolutionNote: string | null;
+
+    @Column({ nullable: true })
+    reviewerId: number | null;
+
     @Column()
     reportType: ReportType;
 
     @Column()
     userId: number;
-
-    constructor(
-        reportId: number,
-        status: ReportStatus,
-        createAt: Date,
-        description: string,
-        targetId: string,
-        reportType: ReportType,
-        userId: number
-    ) {
-        this.reportId = reportId;
-        this.status = status;
-        this.createAt = createAt;
-        this.description = description;
-        this.targetId = targetId;
-        this.reportType = reportType;
-        this.userId = userId;
-    }
 }

@@ -9,30 +9,38 @@ export class Message {
     conversationId: string;
 
     @Column()
-    content: string;
+    senderId: number;
+
+    @Column()
+    type: string;
+
+    @Column({ nullable: true })
+    text: string | null;
+
+    @Column({ nullable: true })
+    mediaUrl: string | null;
+
+    @Column({ nullable: true })
+    fileName: string | null;
+
+    @Column({ nullable: true })
+    mimeType: string | null;
+
+    @Column({ nullable: true })
+    fileSize: number | null;
+
+    @Column({ nullable: true })
+    meta: any;
+
+    @Column({ nullable: true })
+    reactions: any[];
 
     @Column()
     createdAt: Date;
 
-    @Column({ nullable: true })
-    fileUrl: string;
+    @Column()
+    updatedAt: Date;
 
     @Column()
     isRecalled: boolean;
-
-    constructor(
-        _id: ObjectId,
-        conversationId: string,
-        content: string,
-        createdAt: Date,
-        fileUrl: string,
-        isRecalled: boolean
-    ) {
-        this._id = _id;
-        this.conversationId = conversationId;
-        this.content = content;
-        this.createdAt = createdAt;
-        this.fileUrl = fileUrl;
-        this.isRecalled = isRecalled;
-    }
 }

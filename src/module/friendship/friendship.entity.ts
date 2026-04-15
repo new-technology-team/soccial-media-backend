@@ -19,20 +19,4 @@ export class Friendship {
 
     @Column()
     createdAt: Date;
-
-    constructor(
-        id: number,
-        userId1: number,
-        userId2: number,
-        status: FriendshipStatus,
-        conversationId: string,
-        createdAt: Date
-    ) {
-        this.id = id;
-        this.userId1 = userId1;
-        this.userId2 = userId2;
-        this.status = status;
-        this.conversationId = conversationId;
-        this.createdAt = createdAt;
-    }
 }
