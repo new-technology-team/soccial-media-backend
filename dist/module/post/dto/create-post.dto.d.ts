@@ -1,0 +1,6 @@
+export declare class CreatePostDto {
+    title: string;
+    content: string;
+    ownerId: number;
+    constructor(title: string, content: string, ownerId: number);
+}

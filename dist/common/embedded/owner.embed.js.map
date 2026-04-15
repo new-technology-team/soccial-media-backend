@@ -1,0 +1,1 @@
+{"version":3,"file":"owner.embed.js","sourceRoot":"","sources":["../../../src/common/embedded/owner.embed.ts"],"names":[],"mappings":";;;AAAA,MAAa,KAAK;IACd,MAAM,CAAS;IACf,WAAW,CAAS;IACpB,SAAS,CAAS;IAClB,YAAY,MAAc,EAAE,WAAmB,EAAE,SAAiB;QAC9D,IAAI,CAAC,MAAM,GAAG,MAAM,CAAC;QACrB,IAAI,CAAC,WAAW,GAAG,WAAW,CAAC;QAC/B,IAAI,CAAC,SAAS,GAAG,SAAS,CAAC;IAC/B,CAAC;CACJ;AATD,sBASC"}
