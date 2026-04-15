@@ -160,3 +160,4 @@ export declare class MessageService {
         note: string;
     }>;
 }
+//# sourceMappingURL=message.service.d.ts.map

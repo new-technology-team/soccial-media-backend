@@ -7,3 +7,4 @@ export declare class Friendship {
     conversationId: string;
     createdAt: Date;
 }
+//# sourceMappingURL=friendship.entity.d.ts.map

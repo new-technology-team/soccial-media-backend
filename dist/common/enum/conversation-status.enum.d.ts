@@ -1,4 +1,6 @@
 export declare enum ConversationStatus {
     ACTIVE = "ACTIVE",
-    CLOSED = "CLOSED"
+    ARCHIVED = "ARCHIVED",
+    BLOCKED = "BLOCKED"
 }
+//# sourceMappingURL=conversation-status.enum.d.ts.map

@@ -25,3 +25,4 @@ export declare class PostService {
     }>;
     moderatePost(postId: string, status: string): Promise<any>;
 }
+//# sourceMappingURL=post.service.d.ts.map

@@ -15,3 +15,4 @@ export declare class Message {
     updatedAt: Date;
     isRecalled: boolean;
 }
+//# sourceMappingURL=message.entity.d.ts.map

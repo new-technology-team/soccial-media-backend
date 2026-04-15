@@ -37,3 +37,4 @@ export declare class ReportService {
         user: User;
     }>;
 }
+//# sourceMappingURL=report.service.d.ts.map

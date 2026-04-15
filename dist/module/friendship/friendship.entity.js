@@ -13,12 +13,6 @@ exports.Friendship = void 0;
 const typeorm_1 = require("typeorm");
 const friendship_status_enum_1 = require("../../common/enum/friendship-status.enum");
 let Friendship = class Friendship {
-    id;
-    userId1;
-    userId2;
-    status;
-    conversationId;
-    createdAt;
 };
 exports.Friendship = Friendship;
 __decorate([

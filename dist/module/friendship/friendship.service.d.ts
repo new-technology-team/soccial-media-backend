@@ -21,3 +21,4 @@ export declare class FriendshipService {
         message: string;
     }>;
 }
+//# sourceMappingURL=friendship.service.d.ts.map

@@ -3,3 +3,4 @@ export declare enum ReportStatus {
     REVIEWED = "REVIEWED",
     RESOLVED = "RESOLVED"
 }
+//# sourceMappingURL=report-status.enum.d.ts.map

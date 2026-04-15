@@ -19,8 +19,6 @@ const typeorm_2 = require("typeorm");
 const conversation_entity_1 = require("./conversation.entity");
 const user_service_1 = require("../user/user.service");
 let ConversationService = class ConversationService {
-    conversationRepository;
-    userService;
     constructor(conversationRepository, userService) {
         this.conversationRepository = conversationRepository;
         this.userService = userService;

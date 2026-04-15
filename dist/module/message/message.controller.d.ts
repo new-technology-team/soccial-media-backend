@@ -155,3 +155,4 @@ export declare class MessageController {
         };
     }>;
 }
+//# sourceMappingURL=message.controller.d.ts.map

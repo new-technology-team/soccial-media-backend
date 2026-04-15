@@ -1,9 +1,9 @@
-import { InteractType } from "../../common/enum/interact-type.enum";
 export declare class Interacts {
+    type: string;
     userId: number;
+    username: string;
     displayName: string;
-    avatarUrl: string;
-    interactType: InteractType;
+    avatar?: string;
     createdAt: Date;
-    constructor(userId: number, displayName: string, avatarUrl: string, interactType: InteractType, createdAt: Date);
 }
+//# sourceMappingURL=interacts.embed.d.ts.map

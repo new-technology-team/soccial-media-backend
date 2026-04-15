@@ -5,7 +5,6 @@ var FriendshipStatus;
 (function (FriendshipStatus) {
     FriendshipStatus["PENDING"] = "PENDING";
     FriendshipStatus["ACCEPTED"] = "ACCEPTED";
-    FriendshipStatus["REJECTED"] = "REJECTED";
     FriendshipStatus["BLOCKED"] = "BLOCKED";
 })(FriendshipStatus || (exports.FriendshipStatus = FriendshipStatus = {}));
 //# sourceMappingURL=friendship-status.enum.js.map

@@ -20,3 +20,4 @@ export declare class User {
     role: UserRole;
     status: UserStatus;
 }
+//# sourceMappingURL=user.entity.d.ts.map

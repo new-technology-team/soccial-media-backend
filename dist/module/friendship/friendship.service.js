@@ -21,9 +21,6 @@ const friendship_status_enum_1 = require("../../common/enum/friendship-status.en
 const user_service_1 = require("../user/user.service");
 const notification_service_1 = require("../notification/notification.service");
 let FriendshipService = class FriendshipService {
-    friendshipRepository;
-    userService;
-    notificationService;
     constructor(friendshipRepository, userService, notificationService) {
         this.friendshipRepository = friendshipRepository;
         this.userService = userService;

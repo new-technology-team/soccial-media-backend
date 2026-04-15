@@ -95,3 +95,4 @@ export declare class ConversationController {
         message: string;
     }>;
 }
+//# sourceMappingURL=conversation.controller.d.ts.map

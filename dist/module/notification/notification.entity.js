@@ -12,14 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Notification = void 0;
 const typeorm_1 = require("typeorm");
 let Notification = class Notification {
-    _id;
-    userId;
-    type;
-    title;
-    body;
-    meta;
-    isRead;
-    createdAt;
 };
 exports.Notification = Notification;
 __decorate([

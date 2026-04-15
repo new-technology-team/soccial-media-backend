@@ -18,7 +18,6 @@ const message_service_1 = require("./message.service");
 const jwt_auth_guard_1 = require("../../common/auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 let MessageController = class MessageController {
-    messageService;
     constructor(messageService) {
         this.messageService = messageService;
     }

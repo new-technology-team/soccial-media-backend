@@ -6,3 +6,4 @@ export declare class LoginDto {
     password: string;
     constructor(username: string, password: string);
 }
+//# sourceMappingURL=login.dto.d.ts.map

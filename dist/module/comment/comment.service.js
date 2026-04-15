@@ -20,9 +20,6 @@ const comment_entity_1 = require("./comment.entity");
 const user_service_1 = require("../user/user.service");
 const post_service_1 = require("../post/post.service");
 let CommentService = class CommentService {
-    commentRepository;
-    userService;
-    postService;
     constructor(commentRepository, userService, postService) {
         this.commentRepository = commentRepository;
         this.userService = userService;

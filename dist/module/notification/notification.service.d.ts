@@ -29,3 +29,4 @@ export declare class NotificationService {
         message: string;
     }>;
 }
+//# sourceMappingURL=notification.service.d.ts.map

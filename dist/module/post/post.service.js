@@ -19,8 +19,6 @@ const typeorm_1 = require("typeorm");
 const typeorm_2 = require("@nestjs/typeorm");
 const user_entity_1 = require("../user/user.entity");
 let PostService = class PostService {
-    postsRepository;
-    usersRepository;
     constructor(postsRepository, usersRepository) {
         this.postsRepository = postsRepository;
         this.usersRepository = usersRepository;

@@ -18,7 +18,6 @@ const comment_service_1 = require("./comment.service");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 const jwt_auth_guard_1 = require("../../common/auth/jwt-auth.guard");
 let CommentController = class CommentController {
-    commentService;
     constructor(commentService) {
         this.commentService = commentService;
     }

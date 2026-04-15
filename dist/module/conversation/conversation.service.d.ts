@@ -89,3 +89,4 @@ export declare class ConversationService {
     }>;
     touchLastMessage(conversationId: string, payload: any): Promise<void>;
 }
+//# sourceMappingURL=conversation.service.d.ts.map

@@ -30,3 +30,4 @@ export declare class FriendshipController {
         message: string;
     }>;
 }
+//# sourceMappingURL=friendship.controller.d.ts.map

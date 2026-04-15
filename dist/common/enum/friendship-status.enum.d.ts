@@ -1,6 +1,6 @@
 export declare enum FriendshipStatus {
     PENDING = "PENDING",
     ACCEPTED = "ACCEPTED",
-    REJECTED = "REJECTED",
     BLOCKED = "BLOCKED"
 }
+//# sourceMappingURL=friendship-status.enum.d.ts.map

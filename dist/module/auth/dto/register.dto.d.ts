@@ -12,3 +12,4 @@ export declare class RegisterDto {
     gender?: string;
     constructor(username: string, email: string, password: string, displayName: string, sex: number, dateOfBirth: Date, phone: string);
 }
+//# sourceMappingURL=register.dto.d.ts.map

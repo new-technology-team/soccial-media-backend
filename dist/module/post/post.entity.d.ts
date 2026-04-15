@@ -11,3 +11,4 @@ export declare class Post {
     reactions: any[];
     commentCount: number;
 }
+//# sourceMappingURL=post.entity.d.ts.map

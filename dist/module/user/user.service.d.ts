@@ -36,3 +36,4 @@ export declare class UserService {
         isVerified: boolean;
     };
 }
+//# sourceMappingURL=user.service.d.ts.map

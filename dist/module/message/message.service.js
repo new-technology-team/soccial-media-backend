@@ -56,10 +56,6 @@ const notification_service_1 = require("../notification/notification.service");
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
 let MessageService = class MessageService {
-    messageRepository;
-    conversationService;
-    userService;
-    notificationService;
     constructor(messageRepository, conversationService, userService, notificationService) {
         this.messageRepository = messageRepository;
         this.conversationService = conversationService;

@@ -1,6 +1,7 @@
 export declare class Owner {
     userId: number;
+    username: string;
     displayName: string;
-    avatarUrl: string;
-    constructor(userId: number, displayName: string, avatarUrl: string);
+    avatar?: string;
 }
+//# sourceMappingURL=owner.embed.d.ts.map

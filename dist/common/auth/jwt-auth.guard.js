@@ -13,7 +13,6 @@ exports.JwtAuthGuard = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 let JwtAuthGuard = class JwtAuthGuard {
-    jwtService;
     constructor(jwtService) {
         this.jwtService = jwtService;
     }
@@ -30,8 +29,8 @@ let JwtAuthGuard = class JwtAuthGuard {
             });
             return true;
         }
-        catch (_error) {
-            throw new common_1.UnauthorizedException('Invalid access token');
+        catch (error) {
+            throw new common_1.UnauthorizedException('Invalid token');
         }
     }
 };

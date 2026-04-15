@@ -20,7 +20,6 @@ const register_dto_1 = require("./dto/register.dto");
 const jwt_auth_guard_1 = require("../../common/auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 let AuthController = class AuthController {
-    authService;
     constructor(authService) {
         this.authService = authService;
     }

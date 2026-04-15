@@ -52,9 +52,8 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_status_enum_1 = require("../../common/enum/user-status.enum");
 const user_role_enum_1 = require("../../common/enum/user-role.enum");
-const bcrypt = __importStar(require("bcrypt"));
+const bcrypt = __importStar(require("bcryptjs"));
 let UserService = class UserService {
-    usersRepository;
     constructor(usersRepository) {
         this.usersRepository = usersRepository;
     }

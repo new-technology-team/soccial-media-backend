@@ -22,3 +22,4 @@ export declare class CommentService {
         comment: any;
     }>;
 }
+//# sourceMappingURL=comment.service.d.ts.map

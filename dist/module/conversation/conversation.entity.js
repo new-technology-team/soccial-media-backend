@@ -12,15 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Conversation = void 0;
 const typeorm_1 = require("typeorm");
 let Conversation = class Conversation {
-    _id;
-    type;
-    name;
-    avatarUrl;
-    createdBy;
-    createdAt;
-    updatedAt;
-    members;
-    lastMessage;
 };
 exports.Conversation = Conversation;
 __decorate([

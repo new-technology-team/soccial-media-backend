@@ -22,9 +22,6 @@ const user_entity_1 = require("../user/user.entity");
 const post_entity_1 = require("../post/post.entity");
 const user_role_enum_1 = require("../../common/enum/user-role.enum");
 let ReportService = class ReportService {
-    reportRepository;
-    userRepository;
-    postRepository;
     constructor(reportRepository, userRepository, postRepository) {
         this.reportRepository = reportRepository;
         this.userRepository = userRepository;

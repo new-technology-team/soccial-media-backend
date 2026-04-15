@@ -18,7 +18,6 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const notification_entity_1 = require("./notification.entity");
 let NotificationService = class NotificationService {
-    notificationRepository;
     constructor(notificationRepository) {
         this.notificationRepository = notificationRepository;
     }

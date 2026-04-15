@@ -9,3 +9,4 @@ export declare class Notification {
     isRead: boolean;
     createdAt: Date;
 }
+//# sourceMappingURL=notification.entity.d.ts.map

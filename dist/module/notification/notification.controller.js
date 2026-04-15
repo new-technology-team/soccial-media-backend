@@ -18,7 +18,6 @@ const notification_service_1 = require("./notification.service");
 const jwt_auth_guard_1 = require("../../common/auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 let NotificationController = class NotificationController {
-    notificationService;
     constructor(notificationService) {
         this.notificationService = notificationService;
     }

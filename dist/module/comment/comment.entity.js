@@ -12,15 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Comment = void 0;
 const typeorm_1 = require("typeorm");
 let Comment = class Comment {
-    _id;
-    postId;
-    userId;
-    content;
-    file;
-    status;
-    reactions;
-    createdAt;
-    updatedAt;
 };
 exports.Comment = Comment;
 __decorate([

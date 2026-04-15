@@ -61,13 +61,7 @@ const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
 const crypto = __importStar(require("crypto"));
 const nodemailer_1 = __importDefault(require("nodemailer"));
-let AuthService = class AuthService {
-    static { AuthService_1 = this; }
-    userService;
-    jwtService;
-    otpRepository;
-    static pairingMap = new Map();
-    static pairingCounter = 1;
+let AuthService = AuthService_1 = class AuthService {
     constructor(userService, jwtService, otpRepository) {
         this.userService = userService;
         this.jwtService = jwtService;
@@ -536,6 +530,8 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
+AuthService.pairingMap = new Map();
+AuthService.pairingCounter = 1;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(2, (0, typeorm_1.InjectRepository)(auth_otp_entity_1.AuthOtp, 'mariadb')),

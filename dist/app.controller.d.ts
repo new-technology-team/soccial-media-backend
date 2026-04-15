@@ -4,3 +4,4 @@ export declare class AppController {
     constructor(appService: AppService);
     getHello(): string;
 }
+//# sourceMappingURL=app.controller.d.ts.map

@@ -1,4 +1,5 @@
 export declare enum ConversationRole {
-    OWNER = "OWNER",
+    ADMIN = "ADMIN",
     MEMBER = "MEMBER"
 }
+//# sourceMappingURL=conversation-role.enum.d.ts.map

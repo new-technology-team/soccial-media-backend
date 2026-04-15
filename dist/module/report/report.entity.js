@@ -14,16 +14,6 @@ const typeorm_1 = require("typeorm");
 const report_type_enum_1 = require("../../common/enum/report-type.enum");
 const report_status_enum_1 = require("../../common/enum/report-status.enum");
 let Report = class Report {
-    reportId;
-    status;
-    createAt;
-    updatedAt;
-    description;
-    targetId;
-    resolutionNote;
-    reviewerId;
-    reportType;
-    userId;
 };
 exports.Report = Report;
 __decorate([

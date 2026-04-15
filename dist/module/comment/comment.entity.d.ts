@@ -10,3 +10,4 @@ export declare class Comment {
     createdAt: Date;
     updatedAt: Date;
 }
+//# sourceMappingURL=comment.entity.d.ts.map

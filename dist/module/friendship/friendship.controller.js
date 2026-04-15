@@ -19,8 +19,6 @@ const jwt_auth_guard_1 = require("../../common/auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../../common/auth/current-user.decorator");
 const user_service_1 = require("../user/user.service");
 let FriendshipController = class FriendshipController {
-    friendshipService;
-    userService;
     constructor(friendshipService, userService) {
         this.friendshipService = friendshipService;
         this.userService = userService;

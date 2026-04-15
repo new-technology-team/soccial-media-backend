@@ -14,24 +14,6 @@ const typeorm_1 = require("typeorm");
 const user_role_enum_1 = require("../../common/enum/user-role.enum");
 const user_status_enum_1 = require("../../common/enum/user-status.enum");
 let User = class User {
-    userId;
-    username;
-    displayName;
-    sex;
-    email;
-    dateOfBirth;
-    phone;
-    password;
-    avatarUrl;
-    isVerified;
-    refreshToken;
-    privacyLastSeen;
-    privacyProfilePhoto;
-    allowFriendRequests;
-    notificationMessages;
-    notificationCalls;
-    role;
-    status;
 };
 exports.User = User;
 __decorate([

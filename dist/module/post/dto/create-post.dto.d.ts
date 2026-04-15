@@ -4,3 +4,4 @@ export declare class CreatePostDto {
     ownerId: number;
     constructor(title: string, content: string, ownerId: number);
 }
+//# sourceMappingURL=create-post.dto.d.ts.map

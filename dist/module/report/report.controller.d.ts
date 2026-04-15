@@ -32,3 +32,4 @@ export declare class ReportController {
         user: import("../user/user.entity").User;
     }>;
 }
+//# sourceMappingURL=report.controller.d.ts.map

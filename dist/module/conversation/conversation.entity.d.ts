@@ -10,3 +10,4 @@ export declare class Conversation {
     members: any[];
     lastMessage: any;
 }
+//# sourceMappingURL=conversation.entity.d.ts.map

@@ -21,3 +21,4 @@ export declare class PostController {
         post: any;
     }>;
 }
+//# sourceMappingURL=post.controller.d.ts.map

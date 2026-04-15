@@ -21,3 +21,4 @@ export declare class NotificationController {
         message: string;
     }>;
 }
+//# sourceMappingURL=notification.controller.d.ts.map

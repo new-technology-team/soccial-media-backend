@@ -12,20 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Message = void 0;
 const typeorm_1 = require("typeorm");
 let Message = class Message {
-    _id;
-    conversationId;
-    senderId;
-    type;
-    text;
-    mediaUrl;
-    fileName;
-    mimeType;
-    fileSize;
-    meta;
-    reactions;
-    createdAt;
-    updatedAt;
-    isRecalled;
 };
 exports.Message = Message;
 __decorate([

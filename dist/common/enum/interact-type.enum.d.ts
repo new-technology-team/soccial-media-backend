@@ -1,6 +1,6 @@
 export declare enum InteractType {
     LIKE = "LIKE",
-    LOVE = "LOVE",
-    HAHA = "HAHA",
-    SAD = "SAD"
+    COMMENT = "COMMENT",
+    SHARE = "SHARE"
 }
+//# sourceMappingURL=interact-type.enum.d.ts.map

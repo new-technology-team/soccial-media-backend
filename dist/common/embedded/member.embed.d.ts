@@ -1,8 +1,7 @@
-import { ConversationRole } from "../enum/conversation-role.enum";
 export declare class Member {
     userId: number;
+    username: string;
     displayName: string;
-    avatarUrl: string;
-    roleInConversation: ConversationRole;
-    constructor(userId: number, displayName: string, avatarUrl: string, roleInConversation: ConversationRole);
+    avatar?: string;
 }
+//# sourceMappingURL=member.embed.d.ts.map

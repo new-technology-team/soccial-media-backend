@@ -12,3 +12,4 @@ export declare class Report {
     reportType: ReportType;
     userId: number;
 }
+//# sourceMappingURL=report.entity.d.ts.map

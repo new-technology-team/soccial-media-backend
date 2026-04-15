@@ -21,3 +21,4 @@ export declare class CommentController {
         comment: any;
     }>;
 }
+//# sourceMappingURL=comment.controller.d.ts.map

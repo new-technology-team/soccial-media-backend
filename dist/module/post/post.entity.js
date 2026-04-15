@@ -12,16 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Post = void 0;
 const typeorm_1 = require("typeorm");
 let Post = class Post {
-    _id;
-    content;
-    mediaUrl;
-    visibility;
-    status;
-    authorId;
-    createdAt;
-    updatedAt;
-    reactions;
-    commentCount;
 };
 exports.Post = Post;
 __decorate([
