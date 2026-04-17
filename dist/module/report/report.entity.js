@@ -21,39 +21,46 @@ __decorate([
     __metadata("design:type", Number)
 ], Report.prototype, "reportId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        type: "enum",
+        enum: report_status_enum_1.ReportStatus,
+        default: report_status_enum_1.ReportStatus.PENDING,
+    }),
     __metadata("design:type", String)
 ], Report.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: "datetime" }),
     __metadata("design:type", Date)
 ], Report.prototype, "createAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: "datetime", nullable: true }),
     __metadata("design:type", Object)
 ], Report.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: "text" }),
     __metadata("design:type", String)
 ], Report.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: "varchar", length: 64 }),
     __metadata("design:type", String)
 ], Report.prototype, "targetId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: "text", nullable: true }),
     __metadata("design:type", Object)
 ], Report.prototype, "resolutionNote", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: "int", nullable: true }),
     __metadata("design:type", Object)
 ], Report.prototype, "reviewerId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        type: "enum",
+        enum: report_type_enum_1.ReportType,
+    }),
     __metadata("design:type", String)
 ], Report.prototype, "reportType", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Number)
 ], Report.prototype, "userId", void 0);
 exports.Report = Report = __decorate([

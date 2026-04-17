@@ -1,8 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ObjectId, Repository } from "typeorm";
+import { ObjectId } from "mongodb";
+import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
 import { UserService } from "../user/user.service";
+import { FriendshipService } from "../friendship/friendship.service";
 
 @Injectable()
 export class ConversationService {
@@ -10,6 +12,7 @@ export class ConversationService {
 		@InjectRepository(Conversation, 'mongodb')
 		private readonly conversationRepository: Repository<Conversation>,
 		private readonly userService: UserService,
+		private readonly friendshipService: FriendshipService,
 	) {}
 
 	private mapConversation(conversation: any, viewerId: number) {
@@ -101,8 +104,23 @@ export class ConversationService {
 	}
 
 	async createGroup(actorId: number, name: string, avatarUrl: string | undefined, memberIds: number[]) {
+		const groupName = String(name || '').trim();
+		if (!groupName) {
+			throw new BadRequestException('Tên nhóm không được để trống');
+		}
+
 		const actor = await this.userService.findOne(actorId);
 		const uniqueMemberIds = [...new Set(memberIds.filter((item) => item !== actorId))];
+		if (uniqueMemberIds.length === 0) {
+			throw new BadRequestException('Nhóm cần ít nhất 1 thành viên khác');
+		}
+
+		const acceptedFriendIds = await this.friendshipService.getAcceptedFriendIds(actorId);
+		const nonFriendIds = uniqueMemberIds.filter((id) => !acceptedFriendIds.has(id));
+		if (nonFriendIds.length > 0) {
+			throw new ForbiddenException('Chỉ có thể thêm bạn bè vào nhóm chat');
+		}
+
 		const members: any[] = [
 			{
 				userId: actorId,
@@ -133,7 +151,7 @@ export class ConversationService {
 		const saved = await this.conversationRepository.save(
 			this.conversationRepository.create({
 				type: 'group',
-				name,
+				name: groupName,
 				avatarUrl: avatarUrl || null,
 				createdBy: actorId,
 				createdAt: now,
@@ -240,6 +258,21 @@ export class ConversationService {
 		);
 		await this.conversationRepository.save(conversation);
 		return { message: 'Đã cập nhật quyền thành viên' };
+	}
+
+	async dissolveGroup(conversationId: string, actorId: number) {
+		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ giải tán nhóm chat');
+		}
+
+		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
+		if (actor?.role !== 'admin') {
+			throw new ForbiddenException('Chỉ admin nhóm mới có quyền giải tán nhóm');
+		}
+
+		await this.conversationRepository.delete({ _id: new ObjectId(conversationId) as any });
+		return { message: 'Đã giải tán nhóm chat' };
 	}
 
 	async touchLastMessage(conversationId: string, payload: any) {

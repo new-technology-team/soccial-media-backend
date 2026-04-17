@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ObjectId, Repository } from "typeorm";
+import { ObjectId } from "mongodb";
+import { Repository } from "typeorm";
 import { Comment } from "./comment.entity";
 import { UserService } from "../user/user.service";
 import { PostService } from "../post/post.service";

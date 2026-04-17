@@ -8,6 +8,8 @@ export declare class FriendshipService {
     private readonly notificationService;
     constructor(friendshipRepository: Repository<Friendship>, userService: UserService, notificationService: NotificationService);
     private key;
+    isAcceptedFriend(userA: number, userB: number): Promise<boolean>;
+    getAcceptedFriendIds(userId: number): Promise<Set<number>>;
     listFriends(userId: number): Promise<{
         friends: any[];
     }>;

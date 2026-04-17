@@ -30,6 +30,23 @@ const comment_entity_1 = require("./module/comment/comment.entity");
 const notification_entity_1 = require("./module/notification/notification.entity");
 const post_entity_1 = require("./module/post/post.entity");
 const auth_otp_entity_1 = require("./module/auth/auth-otp.entity");
+function buildMariaUrl() {
+    if (process.env.DATABASE_URL_MARIA) {
+        return process.env.DATABASE_URL_MARIA;
+    }
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '3306';
+    const user = process.env.DB_USER || 'root';
+    const pass = process.env.DB_PASSWORD || 'root';
+    const db = process.env.DB_NAME || 'zalo_app';
+    return `mariadb://${user}:${pass}@${host}:${port}/${db}`;
+}
+function buildMongoUrl() {
+    if (process.env.DATABASE_URL_MONGO) {
+        return process.env.DATABASE_URL_MONGO;
+    }
+    return process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/zalo_app';
+}
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -42,14 +59,14 @@ exports.AppModule = AppModule = __decorate([
             typeorm_1.TypeOrmModule.forRoot({
                 name: 'mariadb',
                 type: 'mariadb',
-                url: process.env.DATABASE_URL_MARIA,
+                url: buildMariaUrl(),
                 synchronize: true,
                 entities: [user_entity_1.User, friendship_entity_1.Friendship, report_entity_1.Report, auth_otp_entity_1.AuthOtp],
             }),
             typeorm_1.TypeOrmModule.forRoot({
                 name: 'mongodb',
                 type: 'mongodb',
-                url: process.env.DATABASE_URL_MONGO,
+                url: buildMongoUrl(),
                 synchronize: true,
                 entities: [comment_entity_1.Comment, conversation_entity_1.Conversation, message_entity_1.Message, notification_entity_1.Notification, post_entity_1.Post],
             }),

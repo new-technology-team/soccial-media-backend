@@ -48,6 +48,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const message_entity_1 = require("./message.entity");
 const conversation_service_1 = require("../conversation/conversation.service");
@@ -163,7 +164,7 @@ let MessageService = class MessageService {
         return { messages: matched.map((row) => this.mapMessage(row)) };
     }
     async reactMessage(actorId, messageId, type) {
-        const message = await this.messageRepository.findOne({ where: { _id: new typeorm_2.ObjectId(messageId) } });
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
@@ -176,7 +177,7 @@ let MessageService = class MessageService {
         return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
     }
     async removeReaction(actorId, messageId) {
-        const message = await this.messageRepository.findOne({ where: { _id: new typeorm_2.ObjectId(messageId) } });
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
@@ -187,7 +188,7 @@ let MessageService = class MessageService {
         return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
     }
     async recallMessage(actorId, messageId) {
-        const message = await this.messageRepository.findOne({ where: { _id: new typeorm_2.ObjectId(messageId) } });
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
@@ -201,7 +202,7 @@ let MessageService = class MessageService {
         return { message: 'Đã thu hồi tin nhắn', chatMessage: this.mapMessage(saved) };
     }
     async forwardMessage(actorId, messageId, targetConversationId) {
-        const message = await this.messageRepository.findOne({ where: { _id: new typeorm_2.ObjectId(messageId) } });
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
@@ -248,6 +249,38 @@ let MessageService = class MessageService {
             });
         }
         return { message: 'Đã chuyển tiếp tin nhắn', chatMessage: payload };
+    }
+    async deleteMessage(actorId, messageId) {
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
+        if (!message) {
+            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+        }
+        const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const actorInConversation = (conversation.members || []).find((item) => item.userId === actorId);
+        const canDelete = Number(message.senderId) === Number(actorId) || actorInConversation?.role === 'admin';
+        if (!canDelete) {
+            throw new common_1.ForbiddenException('Bạn không có quyền xóa tin nhắn này');
+        }
+        await this.messageRepository.delete({ _id: new mongodb_1.ObjectId(messageId) });
+        const latest = await this.messageRepository.findOne({
+            where: { conversationId: message.conversationId },
+            order: { createdAt: 'DESC' },
+        });
+        if (latest) {
+            const payload = this.mapMessage(latest);
+            await this.conversationService.touchLastMessage(message.conversationId, {
+                id: payload.id,
+                senderId: payload.senderId,
+                type: payload.type,
+                text: payload.text,
+                mediaUrl: payload.mediaUrl,
+                createdAt: payload.createdAt,
+            });
+        }
+        else {
+            await this.conversationService.touchLastMessage(message.conversationId, null);
+        }
+        return { message: 'Đã xóa tin nhắn' };
     }
     async getMessageUploadUrl(_actorId, _conversationId, body) {
         const conversationId = String(_conversationId || 'general');

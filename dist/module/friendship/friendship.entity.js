@@ -20,23 +20,27 @@ __decorate([
     __metadata("design:type", Number)
 ], Friendship.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: 'int' }),
     __metadata("design:type", Number)
 ], Friendship.prototype, "userId1", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: 'int' }),
     __metadata("design:type", Number)
 ], Friendship.prototype, "userId2", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: friendship_status_enum_1.FriendshipStatus,
+        default: friendship_status_enum_1.FriendshipStatus.PENDING,
+    }),
     __metadata("design:type", String)
 ], Friendship.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 64 }),
     __metadata("design:type", String)
 ], Friendship.prototype, "conversationId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: 'datetime' }),
     __metadata("design:type", Date)
 ], Friendship.prototype, "createdAt", void 0);
 exports.Friendship = Friendship = __decorate([

@@ -1,10 +1,12 @@
 import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
 import { UserService } from "../user/user.service";
+import { FriendshipService } from "../friendship/friendship.service";
 export declare class ConversationService {
     private readonly conversationRepository;
     private readonly userService;
-    constructor(conversationRepository: Repository<Conversation>, userService: UserService);
+    private readonly friendshipService;
+    constructor(conversationRepository: Repository<Conversation>, userService: UserService, friendshipService: FriendshipService);
     private mapConversation;
     listConversations(userId: number): Promise<{
         conversations: {
@@ -85,6 +87,9 @@ export declare class ConversationService {
         message: string;
     }>;
     updateAdmin(conversationId: string, actorId: number, userId: number, isAdmin: boolean): Promise<{
+        message: string;
+    }>;
+    dissolveGroup(conversationId: string, actorId: number): Promise<{
         message: string;
     }>;
     touchLastMessage(conversationId: string, payload: any): Promise<void>;

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostService = void 0;
 const common_1 = require("@nestjs/common");
 const post_entity_1 = require("./post.entity");
+const mongodb_1 = require("mongodb");
 const typeorm_1 = require("typeorm");
 const typeorm_2 = require("@nestjs/typeorm");
 const user_entity_1 = require("../user/user.entity");
@@ -90,7 +91,7 @@ let PostService = class PostService {
         return { post: payload };
     }
     async getPostById(postId) {
-        const row = await this.postsRepository.findOne({ where: { _id: new typeorm_1.ObjectId(postId) } });
+        const row = await this.postsRepository.findOne({ where: { _id: new mongodb_1.ObjectId(postId) } });
         if (!row) {
             throw new common_1.NotFoundException('Không tìm thấy bài viết');
         }

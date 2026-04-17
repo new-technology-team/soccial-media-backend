@@ -5,18 +5,22 @@ export class Friendship {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column()
+    @Column({ type: 'int' })
     userId1: number;
 
-    @Column()
+    @Column({ type: 'int' })
     userId2: number;
 
-    @Column()
+    @Column({
+        type: 'enum',
+        enum: FriendshipStatus,
+        default: FriendshipStatus.PENDING,
+    })
     status: FriendshipStatus;
 
-    @Column()
+    @Column({ type: 'varchar', length: 64 })
     conversationId: string;
 
-    @Column()
+    @Column({ type: 'datetime' })
     createdAt: Date;
 }

@@ -48,6 +48,9 @@ let ConversationController = class ConversationController {
     updateAdmin(user, id, body) {
         return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
     }
+    dissolveGroup(user, id) {
+        return this.conversationService.dissolveGroup(id, user.id);
+    }
 };
 exports.ConversationController = ConversationController;
 __decorate([
@@ -125,6 +128,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", void 0)
 ], ConversationController.prototype, "updateAdmin", null);
+__decorate([
+    (0, common_1.Delete)('conversations/:id'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ConversationController.prototype, "dissolveGroup", null);
 exports.ConversationController = ConversationController = __decorate([
     (0, common_1.Controller)('chat'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

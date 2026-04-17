@@ -94,5 +94,8 @@ export declare class ConversationController {
     }): Promise<{
         message: string;
     }>;
+    dissolveGroup(user: any, id: string): Promise<{
+        message: string;
+    }>;
 }
 //# sourceMappingURL=conversation.controller.d.ts.map

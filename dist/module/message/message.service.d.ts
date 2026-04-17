@@ -148,6 +148,9 @@ export declare class MessageService {
             isDeleted: boolean;
         };
     }>;
+    deleteMessage(actorId: number, messageId: string): Promise<{
+        message: string;
+    }>;
     getMessageUploadUrl(_actorId: number, _conversationId: string, body: any): Promise<{
         uploadUrl: string;
         fileUrl: string;

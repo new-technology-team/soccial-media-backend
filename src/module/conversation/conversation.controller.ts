@@ -60,4 +60,9 @@ export class ConversationController {
 	) {
 		return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
 	}
+
+	@Delete('conversations/:id')
+	dissolveGroup(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.dissolveGroup(id, user.id);
+	}
 }

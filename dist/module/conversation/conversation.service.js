@@ -15,13 +15,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConversationService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const conversation_entity_1 = require("./conversation.entity");
 const user_service_1 = require("../user/user.service");
+const friendship_service_1 = require("../friendship/friendship.service");
 let ConversationService = class ConversationService {
-    constructor(conversationRepository, userService) {
+    constructor(conversationRepository, userService, friendshipService) {
         this.conversationRepository = conversationRepository;
         this.userService = userService;
+        this.friendshipService = friendshipService;
     }
     mapConversation(conversation, viewerId) {
         return {
@@ -100,8 +103,20 @@ let ConversationService = class ConversationService {
         return { conversation: this.mapConversation(saved, actorId) };
     }
     async createGroup(actorId, name, avatarUrl, memberIds) {
+        const groupName = String(name || '').trim();
+        if (!groupName) {
+            throw new common_1.BadRequestException('Tên nhóm không được để trống');
+        }
         const actor = await this.userService.findOne(actorId);
         const uniqueMemberIds = [...new Set(memberIds.filter((item) => item !== actorId))];
+        if (uniqueMemberIds.length === 0) {
+            throw new common_1.BadRequestException('Nhóm cần ít nhất 1 thành viên khác');
+        }
+        const acceptedFriendIds = await this.friendshipService.getAcceptedFriendIds(actorId);
+        const nonFriendIds = uniqueMemberIds.filter((id) => !acceptedFriendIds.has(id));
+        if (nonFriendIds.length > 0) {
+            throw new common_1.ForbiddenException('Chỉ có thể thêm bạn bè vào nhóm chat');
+        }
         const members = [
             {
                 userId: actorId,
@@ -129,7 +144,7 @@ let ConversationService = class ConversationService {
         const now = new Date();
         const saved = await this.conversationRepository.save(this.conversationRepository.create({
             type: 'group',
-            name,
+            name: groupName,
             avatarUrl: avatarUrl || null,
             createdBy: actorId,
             createdAt: now,
@@ -140,7 +155,7 @@ let ConversationService = class ConversationService {
         return { conversation: this.mapConversation(saved, actorId) };
     }
     async getConversationById(conversationId) {
-        return this.conversationRepository.findOne({ where: { _id: new typeorm_2.ObjectId(conversationId) } });
+        return this.conversationRepository.findOne({ where: { _id: new mongodb_1.ObjectId(conversationId) } });
     }
     async ensureMembership(conversationId, userId) {
         const conversation = await this.getConversationById(conversationId);
@@ -216,6 +231,18 @@ let ConversationService = class ConversationService {
         await this.conversationRepository.save(conversation);
         return { message: 'Đã cập nhật quyền thành viên' };
     }
+    async dissolveGroup(conversationId, actorId) {
+        const conversation = await this.ensureMembership(conversationId, actorId);
+        if (conversation.type !== 'group') {
+            throw new common_1.BadRequestException('Chỉ hỗ trợ giải tán nhóm chat');
+        }
+        const actor = (conversation.members || []).find((item) => item.userId === actorId);
+        if (actor?.role !== 'admin') {
+            throw new common_1.ForbiddenException('Chỉ admin nhóm mới có quyền giải tán nhóm');
+        }
+        await this.conversationRepository.delete({ _id: new mongodb_1.ObjectId(conversationId) });
+        return { message: 'Đã giải tán nhóm chat' };
+    }
     async touchLastMessage(conversationId, payload) {
         const conversation = await this.getConversationById(conversationId);
         if (!conversation) {
@@ -231,6 +258,7 @@ exports.ConversationService = ConversationService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(conversation_entity_1.Conversation, 'mongodb')),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        user_service_1.UserService])
+        user_service_1.UserService,
+        friendship_service_1.FriendshipService])
 ], ConversationService);
 //# sourceMappingURL=conversation.service.js.map

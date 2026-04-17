@@ -48,6 +48,9 @@ let MessageController = class MessageController {
     forwardMessage(user, messageId, body) {
         return this.messageService.forwardMessage(user.id, messageId, String(body?.targetConversationId));
     }
+    deleteMessage(user, messageId) {
+        return this.messageService.deleteMessage(user.id, messageId);
+    }
 };
 exports.MessageController = MessageController;
 __decorate([
@@ -129,6 +132,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "forwardMessage", null);
+__decorate([
+    (0, common_1.Delete)('messages/:messageId'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "deleteMessage", null);
 exports.MessageController = MessageController = __decorate([
     (0, common_1.Controller)('chat'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

@@ -13,12 +13,13 @@ const conversation_service_1 = require("./conversation.service");
 const conversation_entity_1 = require("./conversation.entity");
 const typeorm_1 = require("@nestjs/typeorm");
 const user_module_1 = require("../user/user.module");
+const friendship_module_1 = require("../friendship/friendship.module");
 let ConversationModule = class ConversationModule {
 };
 exports.ConversationModule = ConversationModule;
 exports.ConversationModule = ConversationModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([conversation_entity_1.Conversation], 'mongodb'), user_module_1.UserModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([conversation_entity_1.Conversation], 'mongodb'), user_module_1.UserModule, friendship_module_1.FriendshipModule],
         controllers: [conversation_controller_1.ConversationController],
         providers: [conversation_service_1.ConversationService],
         exports: [conversation_service_1.ConversationService, typeorm_1.TypeOrmModule],

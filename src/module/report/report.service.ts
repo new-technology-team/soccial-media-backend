@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ObjectId, Repository } from "typeorm";
+import { ObjectId } from "mongodb";
+import { Repository } from "typeorm";
 import { Report } from "./report.entity";
 import { ReportStatus } from "../../common/enum/report-status.enum";
 import { ReportType } from "../../common/enum/report-type.enum";

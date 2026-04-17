@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReportService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const report_entity_1 = require("./report.entity");
 const report_status_enum_1 = require("../../common/enum/report-status.enum");
@@ -74,7 +75,7 @@ let ReportService = class ReportService {
         if (![user_role_enum_1.UserRole.ADMIN, user_role_enum_1.UserRole.MODERATOR, 'MODERATOR'].includes(actor.role)) {
             throw new common_1.ForbiddenException('Chỉ kiểm duyệt viên hoặc admin mới có quyền truy cập');
         }
-        const post = await this.postRepository.findOne({ where: { _id: new typeorm_2.ObjectId(postId) } });
+        const post = await this.postRepository.findOne({ where: { _id: new mongodb_1.ObjectId(postId) } });
         if (!post) {
             throw new common_1.NotFoundException('Không tìm thấy bài viết');
         }

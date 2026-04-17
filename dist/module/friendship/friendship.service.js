@@ -29,6 +29,27 @@ let FriendshipService = class FriendshipService {
     key(userA, userB) {
         return userA < userB ? [userA, userB] : [userB, userA];
     }
+    async isAcceptedFriend(userA, userB) {
+        if (userA === userB) {
+            return true;
+        }
+        const [a, b] = this.key(userA, userB);
+        const row = await this.friendshipRepository.findOne({ where: { userId1: a, userId2: b } });
+        return row?.status === friendship_status_enum_1.FriendshipStatus.ACCEPTED;
+    }
+    async getAcceptedFriendIds(userId) {
+        const rows = await this.friendshipRepository.find({
+            where: [
+                { userId1: userId, status: friendship_status_enum_1.FriendshipStatus.ACCEPTED },
+                { userId2: userId, status: friendship_status_enum_1.FriendshipStatus.ACCEPTED },
+            ],
+        });
+        const friendIds = new Set();
+        for (const row of rows) {
+            friendIds.add(row.userId1 === userId ? row.userId2 : row.userId1);
+        }
+        return friendIds;
+    }
     async listFriends(userId) {
         const rows = await this.friendshipRepository.find({
             where: [

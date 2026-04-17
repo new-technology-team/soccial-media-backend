@@ -4,10 +4,11 @@ import { ConversationService } from "./conversation.service";
 import { Conversation } from "./conversation.entity";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { UserModule } from "../user/user.module";
+import { FriendshipModule } from "../friendship/friendship.module";
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Conversation], 'mongodb'), UserModule],
+    imports: [TypeOrmModule.forFeature([Conversation], 'mongodb'), UserModule, FriendshipModule],
     controllers: [ConversationController],
     providers: [ConversationService],
     exports: [ConversationService, TypeOrmModule],

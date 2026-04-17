@@ -154,5 +154,8 @@ export declare class MessageController {
             isDeleted: boolean;
         };
     }>;
+    deleteMessage(user: any, messageId: string): Promise<{
+        message: string;
+    }>;
 }
 //# sourceMappingURL=message.controller.d.ts.map

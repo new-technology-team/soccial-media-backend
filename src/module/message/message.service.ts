@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ObjectId, Repository } from "typeorm";
+import { ObjectId } from "mongodb";
+import { Repository } from "typeorm";
 import { Message } from "./message.entity";
 import { ConversationService } from "../conversation/conversation.service";
 import { UserService } from "../user/user.service";
@@ -231,6 +232,43 @@ export class MessageService {
 		}
 
 		return { message: 'Đã chuyển tiếp tin nhắn', chatMessage: payload };
+	}
+
+	async deleteMessage(actorId: number, messageId: string) {
+		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
+		if (!message) {
+			throw new NotFoundException('Không tìm thấy tin nhắn');
+		}
+
+		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
+		const actorInConversation = (conversation.members || []).find((item: any) => item.userId === actorId);
+		const canDelete = Number(message.senderId) === Number(actorId) || actorInConversation?.role === 'admin';
+		if (!canDelete) {
+			throw new ForbiddenException('Bạn không có quyền xóa tin nhắn này');
+		}
+
+		await this.messageRepository.delete({ _id: new ObjectId(messageId) as any });
+
+		const latest = await this.messageRepository.findOne({
+			where: { conversationId: message.conversationId } as any,
+			order: { createdAt: 'DESC' },
+		});
+
+		if (latest) {
+			const payload = this.mapMessage(latest);
+			await this.conversationService.touchLastMessage(message.conversationId, {
+				id: payload.id,
+				senderId: payload.senderId,
+				type: payload.type,
+				text: payload.text,
+				mediaUrl: payload.mediaUrl,
+				createdAt: payload.createdAt,
+			});
+		} else {
+			await this.conversationService.touchLastMessage(message.conversationId, null);
+		}
+
+		return { message: 'Đã xóa tin nhắn' };
 	}
 
 	async getMessageUploadUrl(_actorId: number, _conversationId: string, body: any) {

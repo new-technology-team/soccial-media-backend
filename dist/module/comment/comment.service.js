@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const comment_entity_1 = require("./comment.entity");
 const user_service_1 = require("../user/user.service");
@@ -68,7 +69,7 @@ let CommentService = class CommentService {
         return { comment: comments.find((item) => item.id === String(row._id)) };
     }
     async reactComment(actorId, commentId, type) {
-        const row = await this.commentRepository.findOne({ where: { _id: new typeorm_2.ObjectId(commentId) } });
+        const row = await this.commentRepository.findOne({ where: { _id: new mongodb_1.ObjectId(commentId) } });
         if (!row || row.status !== 'visible') {
             throw new common_1.NotFoundException('Không tìm thấy bình luận');
         }
@@ -80,7 +81,7 @@ let CommentService = class CommentService {
         return { message: 'Đã cập nhật tương tác bình luận', comment: comments.find((item) => item.id === commentId) };
     }
     async removeCommentReaction(actorId, commentId) {
-        const row = await this.commentRepository.findOne({ where: { _id: new typeorm_2.ObjectId(commentId) } });
+        const row = await this.commentRepository.findOne({ where: { _id: new mongodb_1.ObjectId(commentId) } });
         if (!row || row.status !== 'visible') {
             throw new common_1.NotFoundException('Không tìm thấy bình luận');
         }

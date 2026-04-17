@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { Post } from "./post.entity";
-import { ObjectId, Repository } from "typeorm";
+import { ObjectId } from "mongodb";
+import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "../user/user.entity";
 

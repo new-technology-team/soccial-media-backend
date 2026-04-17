@@ -61,4 +61,9 @@ export class MessageController {
 	) {
 		return this.messageService.forwardMessage(user.id, messageId, String(body?.targetConversationId));
 	}
+
+	@Delete('messages/:messageId')
+	deleteMessage(@CurrentUser() user: any, @Param('messageId') messageId: string) {
+		return this.messageService.deleteMessage(user.id, messageId);
+	}
 }

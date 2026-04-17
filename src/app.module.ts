@@ -22,6 +22,26 @@ import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 
+function buildMariaUrl(): string {
+  if (process.env.DATABASE_URL_MARIA) {
+    return process.env.DATABASE_URL_MARIA;
+  }
+
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '3306';
+  const user = process.env.DB_USER || 'root';
+  const pass = process.env.DB_PASSWORD || 'root';
+  const db = process.env.DB_NAME || 'zalo_app';
+  return `mariadb://${user}:${pass}@${host}:${port}/${db}`;
+}
+
+function buildMongoUrl(): string {
+  if (process.env.DATABASE_URL_MONGO) {
+    return process.env.DATABASE_URL_MONGO;
+  }
+  return process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/zalo_app';
+}
+
 
 @Module({
   imports: [
@@ -31,14 +51,14 @@ import { AuthOtp } from './module/auth/auth-otp.entity';
     TypeOrmModule.forRoot({
       name: 'mariadb',
       type: 'mariadb',
-      url: process.env.DATABASE_URL_MARIA,
+      url: buildMariaUrl(),
       synchronize: true,
       entities: [User, Friendship, Report, AuthOtp],
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',
       type: 'mongodb',
-      url: process.env.DATABASE_URL_MONGO,
+      url: buildMongoUrl(),
       synchronize: true,
       entities: [Comment, Conversation, Message, Notification, Post],
     }),

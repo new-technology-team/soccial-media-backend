@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const notification_entity_1 = require("./notification.entity");
 let NotificationService = class NotificationService {
@@ -52,7 +53,7 @@ let NotificationService = class NotificationService {
         };
     }
     async markRead(userId, id) {
-        const row = await this.notificationRepository.findOne({ where: { _id: new typeorm_2.ObjectId(id) } });
+        const row = await this.notificationRepository.findOne({ where: { _id: new mongodb_1.ObjectId(id) } });
         if (row && Number(row.userId) === Number(userId)) {
             row.isRead = true;
             await this.notificationRepository.save(row);
