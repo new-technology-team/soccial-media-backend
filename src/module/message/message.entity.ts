@@ -43,4 +43,7 @@ export class Message {
 
     @Column()
     isRecalled: boolean;
+
+    @Column({ nullable: true })
+    deletedForUserIds: number[];
 }

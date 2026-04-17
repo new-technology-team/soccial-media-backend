@@ -28,20 +28,97 @@ export class ConversationService {
 				userId: member.userId,
 				fullName: member.fullName,
 				avatarUrl: member.avatarUrl || null,
-				role: member.role || 'member',
+				role: this.normalizeRole(member.role),
 				notificationsEnabled: member.notificationsEnabled !== false,
 				lastReadAt: member.lastReadAt || null,
 			})),
 			lastMessage: conversation.lastMessage || null,
 			unreadCount: 0,
-			role: (conversation.members || []).find((item: any) => item.userId === viewerId)?.role || 'member',
+			role: this.normalizeRole((conversation.members || []).find((item: any) => item.userId === viewerId)?.role),
 			notificationsEnabled:
 				(conversation.members || []).find((item: any) => item.userId === viewerId)?.notificationsEnabled !== false,
 		};
 	}
 
+	private normalizeRole(role: unknown) {
+		const raw = String(role || '').toLowerCase();
+		if (raw === 'leader' || raw === 'deputy' || raw === 'member') {
+			return raw;
+		}
+		// Backward compatibility for old records.
+		if (raw === 'admin') {
+			return 'leader';
+		}
+		return 'member';
+	}
+
+	private getMemberByUserId(conversation: any, userId: number) {
+		return (conversation.members || []).find((item: any) => Number(item.userId) === Number(userId));
+	}
+
+	private isLeader(conversation: any, userId: number) {
+		return this.normalizeRole(this.getMemberByUserId(conversation, userId)?.role) === 'leader';
+	}
+
+	private isLeaderOrDeputy(conversation: any, userId: number) {
+		const role = this.normalizeRole(this.getMemberByUserId(conversation, userId)?.role);
+		return role === 'leader' || role === 'deputy';
+	}
+
+	private enforceSingleLeaderSingleDeputy(conversation: any) {
+		if (!conversation || conversation.type !== 'group') return false;
+		const members = Array.isArray(conversation.members) ? [...conversation.members] : [];
+		if (members.length === 0) return false;
+
+		let changed = false;
+		let normalized = members.map((item: any) => {
+			const nextRole = this.normalizeRole(item.role);
+			if (nextRole !== item.role) changed = true;
+			return { ...item, role: nextRole };
+		});
+
+		const leaderCandidates = normalized.filter((item: any) => item.role === 'leader');
+		if (leaderCandidates.length === 0) {
+			const owner = normalized.find((item: any) => Number(item.userId) === Number(conversation.createdBy));
+			const fallback = owner || normalized[0];
+			normalized = normalized.map((item: any) =>
+				Number(item.userId) === Number(fallback.userId) ? { ...item, role: 'leader' } : item,
+			);
+			changed = true;
+		} else if (leaderCandidates.length > 1) {
+			const ownerLeader = leaderCandidates.find((item: any) => Number(item.userId) === Number(conversation.createdBy));
+			const keep = ownerLeader || leaderCandidates[0];
+			normalized = normalized.map((item: any) => {
+				if (item.role !== 'leader') return item;
+				if (Number(item.userId) === Number(keep.userId)) return item;
+				changed = true;
+				return { ...item, role: 'member' };
+			});
+		}
+
+		const leader = normalized.find((item: any) => item.role === 'leader');
+		const deputyCandidates = normalized.filter((item: any) => item.role === 'deputy' && Number(item.userId) !== Number(leader?.userId));
+		if (deputyCandidates.length > 1) {
+			const keepDeputy = deputyCandidates[0];
+			normalized = normalized.map((item: any) => {
+				if (item.role !== 'deputy') return item;
+				if (Number(item.userId) === Number(keepDeputy.userId)) return item;
+				changed = true;
+				return { ...item, role: 'member' };
+			});
+		}
+
+		conversation.members = normalized;
+		return changed;
+	}
+
 	async listConversations(userId: number) {
 		const rows = await this.conversationRepository.find();
+		for (const row of rows as any[]) {
+			if (this.enforceSingleLeaderSingleDeputy(row)) {
+				await this.conversationRepository.save(row);
+			}
+		}
 		const mine = rows.filter((item: any) => (item.members || []).some((m: any) => m.userId === userId));
 		return { conversations: mine.map((item) => this.mapConversation(item, userId)) };
 	}
@@ -83,7 +160,7 @@ export class ConversationService {
 					userId: actorId,
 					fullName: actor?.displayName || 'Bạn',
 					avatarUrl: actor?.avatarUrl || null,
-					role: 'admin',
+					role: 'member',
 					notificationsEnabled: true,
 					lastReadAt: now,
 				},
@@ -126,7 +203,7 @@ export class ConversationService {
 				userId: actorId,
 				fullName: actor?.displayName || 'Bạn',
 				avatarUrl: actor?.avatarUrl || null,
-				role: 'admin',
+				role: 'leader',
 				notificationsEnabled: true,
 				lastReadAt: new Date(),
 			},
@@ -173,6 +250,11 @@ export class ConversationService {
 		if (!conversation) {
 			throw new NotFoundException('Không tìm thấy hội thoại');
 		}
+
+		if (this.enforceSingleLeaderSingleDeputy(conversation)) {
+			await this.conversationRepository.save(conversation);
+		}
+
 		const joined = (conversation.members || []).some((item: any) => item.userId === userId);
 		if (!joined) {
 			throw new ForbiddenException('Bạn không thuộc cuộc trò chuyện này');
@@ -208,9 +290,8 @@ export class ConversationService {
 		if (conversation.type !== 'group') {
 			throw new BadRequestException('Chỉ hỗ trợ thêm thành viên cho nhóm chat');
 		}
-		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
-		if (actor?.role !== 'admin') {
-			throw new ForbiddenException('Chỉ admin mới có quyền thêm thành viên');
+		if (!this.isLeaderOrDeputy(conversation, actorId)) {
+			throw new ForbiddenException('Chỉ trưởng nhóm hoặc phó nhóm mới có quyền thêm thành viên');
 		}
 
 		if ((conversation.members || []).some((item: any) => item.userId === userId)) {
@@ -242,9 +323,8 @@ export class ConversationService {
 		if (conversation.type !== 'group') {
 			throw new BadRequestException('Chỉ hỗ trợ xóa thành viên cho nhóm chat');
 		}
-		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
-		if (actor?.role !== 'admin') {
-			throw new ForbiddenException('Chỉ admin mới có quyền xóa thành viên');
+		if (!this.isLeaderOrDeputy(conversation, actorId)) {
+			throw new ForbiddenException('Chỉ trưởng nhóm hoặc phó nhóm mới có quyền xóa thành viên');
 		}
 
 		if (!(conversation.members || []).some((item: any) => item.userId === targetUserId)) {
@@ -255,12 +335,14 @@ export class ConversationService {
 			throw new BadRequestException('Không thể tự xóa chính mình khỏi nhóm bằng chức năng này');
 		}
 
-		const target = (conversation.members || []).find((item: any) => item.userId === targetUserId);
-		if (target?.role === 'admin') {
-			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
-			if (adminCount <= 1) {
-				throw new BadRequestException('Không thể xóa admin cuối cùng của nhóm');
-			}
+		const target = this.getMemberByUserId(conversation, targetUserId);
+		const actorRole = this.normalizeRole(this.getMemberByUserId(conversation, actorId)?.role);
+		const targetRole = this.normalizeRole(target?.role);
+		if (targetRole === 'leader') {
+			throw new BadRequestException('Không thể xóa trưởng nhóm');
+		}
+		if (targetRole === 'deputy' && actorRole !== 'leader') {
+			throw new ForbiddenException('Chỉ trưởng nhóm mới có thể xóa phó nhóm');
 		}
 
 		conversation.members = (conversation.members || []).filter((item: any) => item.userId !== targetUserId);
@@ -268,40 +350,80 @@ export class ConversationService {
 		return { message: 'Đã xóa thành viên' };
 	}
 
-	async updateAdmin(conversationId: string, actorId: number, userId: number, isAdmin: boolean) {
+	async transferLeader(conversationId: string, actorId: number, targetUserId: number) {
 		const conversation = await this.ensureMembership(conversationId, actorId);
 		if (conversation.type !== 'group') {
-			throw new BadRequestException('Chỉ hỗ trợ phân quyền cho nhóm chat');
+			throw new BadRequestException('Chỉ hỗ trợ chuyển quyền trưởng nhóm cho nhóm chat');
 		}
-		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
-		if (actor?.role !== 'admin') {
-			throw new ForbiddenException('Chỉ admin mới có quyền thay đổi phân quyền');
+		if (!this.isLeader(conversation, actorId)) {
+			throw new ForbiddenException('Chỉ trưởng nhóm mới có quyền chuyển quyền trưởng nhóm');
+		}
+		if (Number(actorId) === Number(targetUserId)) {
+			throw new BadRequestException('Không thể chuyển quyền cho chính mình');
 		}
 
-		const target = (conversation.members || []).find((item: any) => item.userId === userId);
+		const target = this.getMemberByUserId(conversation, targetUserId);
 		if (!target) {
 			throw new NotFoundException('Thành viên không tồn tại trong nhóm');
 		}
 
-		if (!isAdmin && Number(userId) === Number(actorId)) {
-			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
-			if (adminCount <= 1) {
-				throw new BadRequestException('Không thể hạ quyền admin cuối cùng của nhóm');
+		conversation.members = (conversation.members || []).map((item: any) => {
+			if (Number(item.userId) === Number(actorId)) {
+				return { ...item, role: 'member' };
 			}
-		}
-
-		if (!isAdmin && target.role === 'admin') {
-			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
-			if (adminCount <= 1) {
-				throw new BadRequestException('Nhóm phải luôn có ít nhất 1 admin');
+			if (Number(item.userId) === Number(targetUserId)) {
+				return { ...item, role: 'leader' };
 			}
-		}
+			return this.normalizeRole(item.role) === 'leader' ? { ...item, role: 'member' } : item;
+		});
 
-		conversation.members = (conversation.members || []).map((item: any) =>
-			item.userId === userId ? { ...item, role: isAdmin ? 'admin' : 'member' } : item,
-		);
 		await this.conversationRepository.save(conversation);
-		return { message: 'Đã cập nhật quyền thành viên' };
+		return { message: 'Đã chuyển quyền trưởng nhóm' };
+	}
+
+	async setDeputy(conversationId: string, actorId: number, targetUserId: number | null) {
+		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ cấp quyền phó nhóm cho nhóm chat');
+		}
+		if (!this.isLeader(conversation, actorId)) {
+			throw new ForbiddenException('Chỉ trưởng nhóm mới có quyền cấp quyền phó nhóm');
+		}
+
+		const desiredDeputyId = targetUserId ? Number(targetUserId) : null;
+		if (desiredDeputyId && Number(desiredDeputyId) === Number(actorId)) {
+			throw new BadRequestException('Trưởng nhóm không thể tự đặt làm phó nhóm');
+		}
+		if (desiredDeputyId) {
+			const target = this.getMemberByUserId(conversation, desiredDeputyId);
+			if (!target) {
+				throw new NotFoundException('Thành viên không tồn tại trong nhóm');
+			}
+			if (this.normalizeRole(target.role) === 'leader') {
+				throw new BadRequestException('Không thể gán trưởng nhóm làm phó nhóm');
+			}
+		}
+
+		conversation.members = (conversation.members || []).map((item: any) => {
+			const uid = Number(item.userId);
+			const role = this.normalizeRole(item.role);
+			if (role === 'leader') return { ...item, role: 'leader' };
+			if (desiredDeputyId && uid === desiredDeputyId) {
+				return { ...item, role: 'deputy' };
+			}
+			if (role === 'deputy') {
+				return { ...item, role: 'member' };
+			}
+			return { ...item, role: 'member' };
+		});
+
+		await this.conversationRepository.save(conversation);
+		return { message: desiredDeputyId ? 'Đã cấp quyền phó nhóm' : 'Đã thu hồi quyền phó nhóm' };
+	}
+
+	async updateAdmin(conversationId: string, actorId: number, userId: number, isAdmin: boolean) {
+		// Backward-compat endpoint: map admin=true to deputy, admin=false to remove deputy.
+		return this.setDeputy(conversationId, actorId, isAdmin ? Number(userId) : null);
 	}
 
 	async dissolveGroup(conversationId: string, actorId: number) {
@@ -310,9 +432,8 @@ export class ConversationService {
 			throw new BadRequestException('Chỉ hỗ trợ giải tán nhóm chat');
 		}
 
-		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
-		if (actor?.role !== 'admin') {
-			throw new ForbiddenException('Chỉ admin nhóm mới có quyền giải tán nhóm');
+		if (!this.isLeader(conversation, actorId)) {
+			throw new ForbiddenException('Chỉ trưởng nhóm mới có quyền giải tán nhóm');
 		}
 
 		await this.conversationRepository.delete({ _id: new ObjectId(conversationId) as any });

@@ -61,6 +61,25 @@ export class ConversationController {
 		return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
 	}
 
+	@Patch('conversations/:id/leader')
+	transferLeader(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { userId: number },
+	) {
+		return this.conversationService.transferLeader(id, user.id, Number(body.userId));
+	}
+
+	@Patch('conversations/:id/deputy')
+	setDeputy(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { userId?: number | null },
+	) {
+		const value = body?.userId === null || body?.userId === undefined ? null : Number(body.userId);
+		return this.conversationService.setDeputy(id, user.id, value);
+	}
+
 	@Delete('conversations/:id')
 	dissolveGroup(@CurrentUser() user: any, @Param('id') id: string) {
 		return this.conversationService.dissolveGroup(id, user.id);

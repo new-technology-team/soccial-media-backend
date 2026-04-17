@@ -8,6 +8,11 @@ export declare class ConversationService {
     private readonly friendshipService;
     constructor(conversationRepository: Repository<Conversation>, userService: UserService, friendshipService: FriendshipService);
     private mapConversation;
+    private normalizeRole;
+    private getMemberByUserId;
+    private isLeader;
+    private isLeaderOrDeputy;
+    private enforceSingleLeaderSingleDeputy;
     listConversations(userId: number): Promise<{
         conversations: {
             id: string;
@@ -20,7 +25,7 @@ export declare class ConversationService {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         }[];
     }>;
@@ -36,7 +41,7 @@ export declare class ConversationService {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -52,7 +57,7 @@ export declare class ConversationService {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -70,7 +75,7 @@ export declare class ConversationService {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -84,6 +89,12 @@ export declare class ConversationService {
         message: string;
     }>;
     removeMember(conversationId: string, actorId: number, targetUserId: number): Promise<{
+        message: string;
+    }>;
+    transferLeader(conversationId: string, actorId: number, targetUserId: number): Promise<{
+        message: string;
+    }>;
+    setDeputy(conversationId: string, actorId: number, targetUserId: number | null): Promise<{
         message: string;
     }>;
     updateAdmin(conversationId: string, actorId: number, userId: number, isAdmin: boolean): Promise<{

@@ -96,9 +96,10 @@ let MessageService = class MessageService {
             order: { createdAt: 'DESC' },
             take: Math.min(Math.max(Number(limit || 30), 1), 100),
         });
+        const visible = rows.filter((item) => !(item.deletedForUserIds || []).some((uid) => Number(uid) === Number(actorId)));
         const filtered = beforeId
-            ? rows.filter((item) => String(item._id) < beforeId)
-            : rows;
+            ? visible.filter((item) => String(item._id) < beforeId)
+            : visible;
         return { messages: filtered.map((item) => this.mapMessage(item)) };
     }
     async sendMessage(actorId, conversationId, body) {
@@ -122,6 +123,7 @@ let MessageService = class MessageService {
             createdAt: now,
             updatedAt: now,
             isRecalled: false,
+            deletedForUserIds: [],
         }));
         const payload = this.mapMessage(created);
         await this.conversationService.touchLastMessage(conversationId, {
@@ -158,6 +160,8 @@ let MessageService = class MessageService {
                 .then(() => true)
                 .catch(() => false);
             if (!isJoined)
+                continue;
+            if ((item.deletedForUserIds || []).some((uid) => Number(uid) === Number(actorId)))
                 continue;
             if (!String(item.text || '').toLowerCase().includes(keyword))
                 continue;
@@ -244,6 +248,7 @@ let MessageService = class MessageService {
             createdAt: now,
             updatedAt: now,
             isRecalled: false,
+            deletedForUserIds: [],
         }));
         const payload = this.mapMessage(forwarded);
         await this.conversationService.touchLastMessage(targetConversationId, {
@@ -273,40 +278,18 @@ let MessageService = class MessageService {
         if (!message) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
-        const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
-        const actorInConversation = (conversation.members || []).find((item) => item.userId === actorId);
-        const canDelete = Number(message.senderId) === Number(actorId) || actorInConversation?.role === 'admin';
-        if (!canDelete) {
-            throw new common_1.ForbiddenException('Bạn không có quyền xóa tin nhắn này');
+        await this.conversationService.ensureMembership(message.conversationId, actorId);
+        if (Number(message.senderId) !== Number(actorId)) {
+            throw new common_1.ForbiddenException('Bạn chỉ có thể xóa tin nhắn của mình');
         }
-        await this.messageRepository.delete({ _id: new mongodb_1.ObjectId(messageId) });
-        const latest = await this.messageRepository.findOne({
-            where: { conversationId: message.conversationId },
-            order: { createdAt: 'DESC' },
-        });
-        if (latest) {
-            const payload = this.mapMessage(latest);
-            await this.conversationService.touchLastMessage(message.conversationId, {
-                id: payload.id,
-                senderId: payload.senderId,
-                type: payload.type,
-                text: payload.text,
-                mediaUrl: payload.mediaUrl,
-                createdAt: payload.createdAt,
-            });
-            (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
-                conversationId: message.conversationId,
-                message: payload,
-            });
+        const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
+        if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
+            deletedForUserIds.push(actorId);
         }
-        else {
-            await this.conversationService.touchLastMessage(message.conversationId, null);
-            (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
-                conversationId: message.conversationId,
-                message: null,
-            });
-        }
-        return { message: 'Đã xóa tin nhắn' };
+        message.deletedForUserIds = deletedForUserIds;
+        message.updatedAt = new Date();
+        await this.messageRepository.save(message);
+        return { message: 'Đã xóa tin nhắn ở phía bạn' };
     }
     async getMessageUploadUrl(_actorId, _conversationId, body) {
         const conversationId = String(_conversationId || 'general');

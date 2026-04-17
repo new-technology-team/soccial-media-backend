@@ -55,9 +55,13 @@ export class MessageService {
 			take: Math.min(Math.max(Number(limit || 30), 1), 100),
 		});
 
+		const visible = rows.filter(
+			(item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId)),
+		);
+
 		const filtered = beforeId
-			? rows.filter((item: any) => String(item._id) < beforeId)
-			: rows;
+			? visible.filter((item: any) => String(item._id) < beforeId)
+			: visible;
 
 		return { messages: filtered.map((item) => this.mapMessage(item)) };
 	}
@@ -86,6 +90,7 @@ export class MessageService {
 				createdAt: now,
 				updatedAt: now,
 				isRecalled: false,
+				deletedForUserIds: [],
 			}),
 		);
 
@@ -129,6 +134,7 @@ export class MessageService {
 				.catch(() => false);
 
 			if (!isJoined) continue;
+			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId))) continue;
 			if (!String(item.text || '').toLowerCase().includes(keyword)) continue;
 			matched.push(item);
 		}
@@ -224,6 +230,7 @@ export class MessageService {
 				createdAt: now,
 				updatedAt: now,
 				isRecalled: false,
+				deletedForUserIds: [],
 			}),
 		);
 
@@ -258,43 +265,20 @@ export class MessageService {
 			throw new NotFoundException('Không tìm thấy tin nhắn');
 		}
 
-		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
-		const actorInConversation = (conversation.members || []).find((item: any) => item.userId === actorId);
-		const canDelete = Number(message.senderId) === Number(actorId) || actorInConversation?.role === 'admin';
-		if (!canDelete) {
-			throw new ForbiddenException('Bạn không có quyền xóa tin nhắn này');
+		await this.conversationService.ensureMembership(message.conversationId, actorId);
+		if (Number(message.senderId) !== Number(actorId)) {
+			throw new ForbiddenException('Bạn chỉ có thể xóa tin nhắn của mình');
 		}
 
-		await this.messageRepository.delete({ _id: new ObjectId(messageId) as any });
-
-		const latest = await this.messageRepository.findOne({
-			where: { conversationId: message.conversationId } as any,
-			order: { createdAt: 'DESC' },
-		});
-
-		if (latest) {
-			const payload = this.mapMessage(latest);
-			await this.conversationService.touchLastMessage(message.conversationId, {
-				id: payload.id,
-				senderId: payload.senderId,
-				type: payload.type,
-				text: payload.text,
-				mediaUrl: payload.mediaUrl,
-				createdAt: payload.createdAt,
-			});
-			emitToConversation(message.conversationId, 'message:updated', {
-				conversationId: message.conversationId,
-				message: payload,
-			});
-		} else {
-			await this.conversationService.touchLastMessage(message.conversationId, null);
-			emitToConversation(message.conversationId, 'message:updated', {
-				conversationId: message.conversationId,
-				message: null,
-			});
+		const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
+		if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
+			deletedForUserIds.push(actorId);
 		}
+		message.deletedForUserIds = deletedForUserIds;
+		message.updatedAt = new Date();
+		await this.messageRepository.save(message);
 
-		return { message: 'Đã xóa tin nhắn' };
+		return { message: 'Đã xóa tin nhắn ở phía bạn' };
 	}
 
 	async getMessageUploadUrl(_actorId: number, _conversationId: string, body: any) {

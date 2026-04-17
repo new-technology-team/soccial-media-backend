@@ -48,6 +48,13 @@ let ConversationController = class ConversationController {
     updateAdmin(user, id, body) {
         return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
     }
+    transferLeader(user, id, body) {
+        return this.conversationService.transferLeader(id, user.id, Number(body.userId));
+    }
+    setDeputy(user, id, body) {
+        const value = body?.userId === null || body?.userId === undefined ? null : Number(body.userId);
+        return this.conversationService.setDeputy(id, user.id, value);
+    }
     dissolveGroup(user, id) {
         return this.conversationService.dissolveGroup(id, user.id);
     }
@@ -128,6 +135,24 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", void 0)
 ], ConversationController.prototype, "updateAdmin", null);
+__decorate([
+    (0, common_1.Patch)('conversations/:id/leader'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], ConversationController.prototype, "transferLeader", null);
+__decorate([
+    (0, common_1.Patch)('conversations/:id/deputy'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], ConversationController.prototype, "setDeputy", null);
 __decorate([
     (0, common_1.Delete)('conversations/:id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

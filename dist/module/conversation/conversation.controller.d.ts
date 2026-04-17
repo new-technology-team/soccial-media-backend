@@ -14,7 +14,7 @@ export declare class ConversationController {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         }[];
     }>;
@@ -32,7 +32,7 @@ export declare class ConversationController {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -52,7 +52,7 @@ export declare class ConversationController {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -68,7 +68,7 @@ export declare class ConversationController {
             members: any;
             lastMessage: any;
             unreadCount: number;
-            role: any;
+            role: string;
             notificationsEnabled: boolean;
         };
     }>;
@@ -91,6 +91,16 @@ export declare class ConversationController {
     updateAdmin(user: any, id: string, body: {
         userId: number;
         isAdmin: boolean;
+    }): Promise<{
+        message: string;
+    }>;
+    transferLeader(user: any, id: string, body: {
+        userId: number;
+    }): Promise<{
+        message: string;
+    }>;
+    setDeputy(user: any, id: string, body: {
+        userId?: number | null;
     }): Promise<{
         message: string;
     }>;

@@ -14,5 +14,6 @@ export declare class Message {
     createdAt: Date;
     updatedAt: Date;
     isRecalled: boolean;
+    deletedForUserIds: number[];
 }
 //# sourceMappingURL=message.entity.d.ts.map
