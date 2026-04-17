@@ -205,6 +205,9 @@ export class ConversationService {
 
 	async addMember(conversationId: string, actorId: number, userId: number) {
 		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ thêm thành viên cho nhóm chat');
+		}
 		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
 		if (actor?.role !== 'admin') {
 			throw new ForbiddenException('Chỉ admin mới có quyền thêm thành viên');
@@ -236,9 +239,28 @@ export class ConversationService {
 
 	async removeMember(conversationId: string, actorId: number, targetUserId: number) {
 		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ xóa thành viên cho nhóm chat');
+		}
 		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
 		if (actor?.role !== 'admin') {
 			throw new ForbiddenException('Chỉ admin mới có quyền xóa thành viên');
+		}
+
+		if (!(conversation.members || []).some((item: any) => item.userId === targetUserId)) {
+			throw new NotFoundException('Thành viên không tồn tại trong nhóm');
+		}
+
+		if (targetUserId === actorId) {
+			throw new BadRequestException('Không thể tự xóa chính mình khỏi nhóm bằng chức năng này');
+		}
+
+		const target = (conversation.members || []).find((item: any) => item.userId === targetUserId);
+		if (target?.role === 'admin') {
+			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
+			if (adminCount <= 1) {
+				throw new BadRequestException('Không thể xóa admin cuối cùng của nhóm');
+			}
 		}
 
 		conversation.members = (conversation.members || []).filter((item: any) => item.userId !== targetUserId);
@@ -248,9 +270,31 @@ export class ConversationService {
 
 	async updateAdmin(conversationId: string, actorId: number, userId: number, isAdmin: boolean) {
 		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ phân quyền cho nhóm chat');
+		}
 		const actor = (conversation.members || []).find((item: any) => item.userId === actorId);
 		if (actor?.role !== 'admin') {
 			throw new ForbiddenException('Chỉ admin mới có quyền thay đổi phân quyền');
+		}
+
+		const target = (conversation.members || []).find((item: any) => item.userId === userId);
+		if (!target) {
+			throw new NotFoundException('Thành viên không tồn tại trong nhóm');
+		}
+
+		if (!isAdmin && Number(userId) === Number(actorId)) {
+			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
+			if (adminCount <= 1) {
+				throw new BadRequestException('Không thể hạ quyền admin cuối cùng của nhóm');
+			}
+		}
+
+		if (!isAdmin && target.role === 'admin') {
+			const adminCount = (conversation.members || []).filter((item: any) => item.role === 'admin').length;
+			if (adminCount <= 1) {
+				throw new BadRequestException('Nhóm phải luôn có ít nhất 1 admin');
+			}
 		}
 
 		conversation.members = (conversation.members || []).map((item: any) =>
