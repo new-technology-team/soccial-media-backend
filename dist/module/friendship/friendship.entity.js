@@ -40,6 +40,10 @@ __decorate([
     __metadata("design:type", String)
 ], Friendship.prototype, "conversationId", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Object)
+], Friendship.prototype, "requesterId", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'datetime' }),
     __metadata("design:type", Date)
 ], Friendship.prototype, "createdAt", void 0);

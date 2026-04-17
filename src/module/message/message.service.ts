@@ -8,6 +8,7 @@ import { UserService } from "../user/user.service";
 import { NotificationService } from "../notification/notification.service";
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { emitToConversation } from "../../common/socket/chat-socket";
 
 @Injectable()
 export class MessageService {
@@ -97,6 +98,7 @@ export class MessageService {
 			mediaUrl: payload.mediaUrl,
 			createdAt: payload.createdAt,
 		});
+		emitToConversation(conversationId, 'message:new', payload);
 
 		for (const member of conversation.members || []) {
 			if (Number(member.userId) === Number(actorId)) continue;
@@ -146,7 +148,12 @@ export class MessageService {
 		message.reactions = reactions;
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
-		return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
+		const payload = this.mapMessage(saved);
+		emitToConversation(message.conversationId, 'message:reaction', {
+			conversationId: message.conversationId,
+			message: payload,
+		});
+		return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: payload };
 	}
 
 	async removeReaction(actorId: number, messageId: string) {
@@ -158,7 +165,12 @@ export class MessageService {
 		message.reactions = (message.reactions || []).filter((item: any) => item.userId !== actorId);
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
-		return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
+		const payload = this.mapMessage(saved);
+		emitToConversation(message.conversationId, 'message:reaction', {
+			conversationId: message.conversationId,
+			message: payload,
+		});
+		return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: payload };
 	}
 
 	async recallMessage(actorId: number, messageId: string) {
@@ -175,7 +187,12 @@ export class MessageService {
 		message.isRecalled = true;
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
-		return { message: 'Đã thu hồi tin nhắn', chatMessage: this.mapMessage(saved) };
+		const payload = this.mapMessage(saved);
+		emitToConversation(message.conversationId, 'message:updated', {
+			conversationId: message.conversationId,
+			message: payload,
+		});
+		return { message: 'Đã thu hồi tin nhắn', chatMessage: payload };
 	}
 
 	async forwardMessage(actorId: number, messageId: string, targetConversationId: string) {
@@ -219,6 +236,7 @@ export class MessageService {
 			mediaUrl: payload.mediaUrl,
 			createdAt: payload.createdAt,
 		});
+		emitToConversation(targetConversationId, 'message:new', payload);
 
 		for (const member of targetConversation.members || []) {
 			if (Number(member.userId) === Number(actorId)) continue;
@@ -264,8 +282,16 @@ export class MessageService {
 				mediaUrl: payload.mediaUrl,
 				createdAt: payload.createdAt,
 			});
+			emitToConversation(message.conversationId, 'message:updated', {
+				conversationId: message.conversationId,
+				message: payload,
+			});
 		} else {
 			await this.conversationService.touchLastMessage(message.conversationId, null);
+			emitToConversation(message.conversationId, 'message:updated', {
+				conversationId: message.conversationId,
+				message: null,
+			});
 		}
 
 		return { message: 'Đã xóa tin nhắn' };

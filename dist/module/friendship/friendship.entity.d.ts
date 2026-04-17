@@ -5,6 +5,7 @@ export declare class Friendship {
     userId2: number;
     status: FriendshipStatus;
     conversationId: string;
+    requesterId: number | null;
     createdAt: Date;
 }
 //# sourceMappingURL=friendship.entity.d.ts.map

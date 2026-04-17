@@ -21,6 +21,9 @@ export class Friendship {
     @Column({ type: 'varchar', length: 64 })
     conversationId: string;
 
+    @Column({ type: 'int', nullable: true })
+    requesterId: number | null;
+
     @Column({ type: 'datetime' })
     createdAt: Date;
 }

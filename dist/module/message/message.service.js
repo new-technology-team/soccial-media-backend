@@ -56,6 +56,7 @@ const user_service_1 = require("../user/user.service");
 const notification_service_1 = require("../notification/notification.service");
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
+const chat_socket_1 = require("../../common/socket/chat-socket");
 let MessageService = class MessageService {
     constructor(messageRepository, conversationService, userService, notificationService) {
         this.messageRepository = messageRepository;
@@ -131,6 +132,7 @@ let MessageService = class MessageService {
             mediaUrl: payload.mediaUrl,
             createdAt: payload.createdAt,
         });
+        (0, chat_socket_1.emitToConversation)(conversationId, 'message:new', payload);
         for (const member of conversation.members || []) {
             if (Number(member.userId) === Number(actorId))
                 continue;
@@ -174,7 +176,12 @@ let MessageService = class MessageService {
         message.reactions = reactions;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
+        const payload = this.mapMessage(saved);
+        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
+            conversationId: message.conversationId,
+            message: payload,
+        });
+        return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: payload };
     }
     async removeReaction(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -185,7 +192,12 @@ let MessageService = class MessageService {
         message.reactions = (message.reactions || []).filter((item) => item.userId !== actorId);
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved) };
+        const payload = this.mapMessage(saved);
+        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
+            conversationId: message.conversationId,
+            message: payload,
+        });
+        return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: payload };
     }
     async recallMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -199,7 +211,12 @@ let MessageService = class MessageService {
         message.isRecalled = true;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        return { message: 'Đã thu hồi tin nhắn', chatMessage: this.mapMessage(saved) };
+        const payload = this.mapMessage(saved);
+        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
+            conversationId: message.conversationId,
+            message: payload,
+        });
+        return { message: 'Đã thu hồi tin nhắn', chatMessage: payload };
     }
     async forwardMessage(actorId, messageId, targetConversationId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -237,6 +254,7 @@ let MessageService = class MessageService {
             mediaUrl: payload.mediaUrl,
             createdAt: payload.createdAt,
         });
+        (0, chat_socket_1.emitToConversation)(targetConversationId, 'message:new', payload);
         for (const member of targetConversation.members || []) {
             if (Number(member.userId) === Number(actorId))
                 continue;
@@ -276,9 +294,17 @@ let MessageService = class MessageService {
                 mediaUrl: payload.mediaUrl,
                 createdAt: payload.createdAt,
             });
+            (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
+                conversationId: message.conversationId,
+                message: payload,
+            });
         }
         else {
             await this.conversationService.touchLastMessage(message.conversationId, null);
+            (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
+                conversationId: message.conversationId,
+                message: null,
+            });
         }
         return { message: 'Đã xóa tin nhắn' };
     }

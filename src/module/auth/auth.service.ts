@@ -91,10 +91,12 @@ export class AuthService {
             };
         }
 
-        const smtpHost = String(process.env.OTP_SMTP_HOST || '').trim();
-        const smtpUser = String(process.env.OTP_SMTP_USER || '').trim();
-        const smtpPass = String(process.env.OTP_SMTP_PASS || '').trim();
-        const smtpFrom = String(process.env.OTP_SMTP_FROM || '').trim();
+        const smtpHost = String(process.env.OTP_SMTP_HOST || process.env.SMTP_HOST || '').trim();
+        const smtpUser = String(process.env.OTP_SMTP_USER || process.env.SMTP_USER || '').trim();
+        const smtpPass = String(process.env.OTP_SMTP_PASS || process.env.SMTP_PASS || '').trim();
+        const smtpFrom = String(process.env.OTP_SMTP_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
+        const smtpPort = Number(process.env.OTP_SMTP_PORT || process.env.SMTP_PORT || 587);
+        const smtpSecure = String(process.env.OTP_SMTP_SECURE || process.env.SMTP_SECURE || '') === 'true' || smtpPort === 465;
 
         if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
             return {
@@ -109,8 +111,8 @@ export class AuthService {
         try {
             const transporter = nodemailer.createTransport({
                 host: smtpHost,
-                port: Number(process.env.OTP_SMTP_PORT || 587),
-                secure: process.env.OTP_SMTP_SECURE === 'true',
+                port: smtpPort,
+                secure: smtpSecure,
                 auth: { user: smtpUser, pass: smtpPass },
             });
 
@@ -216,6 +218,10 @@ export class AuthService {
         const matched = await this.userService.checkPassword(user, loginDto.password);
         if (!matched) {
             throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
+        }
+
+        if (this.authFlags.requireEmailVerification && !Boolean(user.isVerified)) {
+            throw new UnauthorizedException('Tài khoản chưa xác thực OTP. Vui lòng xác thực trước khi đăng nhập.');
         }
 
         return this.issueTokens(user);

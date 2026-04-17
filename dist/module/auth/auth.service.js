@@ -112,10 +112,12 @@ let AuthService = AuthService_1 = class AuthService {
                 error: 'Missing SMS provider',
             };
         }
-        const smtpHost = String(process.env.OTP_SMTP_HOST || '').trim();
-        const smtpUser = String(process.env.OTP_SMTP_USER || '').trim();
-        const smtpPass = String(process.env.OTP_SMTP_PASS || '').trim();
-        const smtpFrom = String(process.env.OTP_SMTP_FROM || '').trim();
+        const smtpHost = String(process.env.OTP_SMTP_HOST || process.env.SMTP_HOST || '').trim();
+        const smtpUser = String(process.env.OTP_SMTP_USER || process.env.SMTP_USER || '').trim();
+        const smtpPass = String(process.env.OTP_SMTP_PASS || process.env.SMTP_PASS || '').trim();
+        const smtpFrom = String(process.env.OTP_SMTP_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
+        const smtpPort = Number(process.env.OTP_SMTP_PORT || process.env.SMTP_PORT || 587);
+        const smtpSecure = String(process.env.OTP_SMTP_SECURE || process.env.SMTP_SECURE || '') === 'true' || smtpPort === 465;
         if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
             return {
                 sent: false,
@@ -128,8 +130,8 @@ let AuthService = AuthService_1 = class AuthService {
         try {
             const transporter = nodemailer_1.default.createTransport({
                 host: smtpHost,
-                port: Number(process.env.OTP_SMTP_PORT || 587),
-                secure: process.env.OTP_SMTP_SECURE === 'true',
+                port: smtpPort,
+                secure: smtpSecure,
                 auth: { user: smtpUser, pass: smtpPass },
             });
             await transporter.sendMail({
@@ -221,6 +223,9 @@ let AuthService = AuthService_1 = class AuthService {
         const matched = await this.userService.checkPassword(user, loginDto.password);
         if (!matched) {
             throw new common_1.UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
+        }
+        if (this.authFlags.requireEmailVerification && !Boolean(user.isVerified)) {
+            throw new common_1.UnauthorizedException('Tài khoản chưa xác thực OTP. Vui lòng xác thực trước khi đăng nhập.');
         }
         return this.issueTokens(user);
     }

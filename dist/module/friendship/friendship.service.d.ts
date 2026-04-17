@@ -16,7 +16,7 @@ export declare class FriendshipService {
     requestFriend(actorId: number, targetUserId: number, actorName: string): Promise<{
         message: string;
     }>;
-    acceptFriend(actorId: number, requesterId: number, actorName: string): Promise<{
+    acceptFriend(actorId: number, requesterIdOrFriendshipId: number, actorName: string): Promise<{
         message: string;
     }>;
     deleteFriend(actorId: number, friendUserId: number): Promise<{

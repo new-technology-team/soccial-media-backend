@@ -2,17 +2,34 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { Server } from 'socket.io';
+import { json, urlencoded } from 'express';
+import { registerChatSocketHandlers, setChatSocketServer } from './common/socket/chat-socket';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:19006')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:19006')
-      .split(',')
-      .map((origin) => origin.trim()),
+    origin: allowedOrigins,
     credentials: true,
   });
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
+  app.use(json({ limit: '20mb' }));
+  app.use(urlencoded({ extended: true, limit: '20mb' }));
+
+  const io = new Server(app.getHttpServer(), {
+    cors: {
+      origin: allowedOrigins,
+      credentials: true,
+    },
+  });
+  setChatSocketServer(io);
+  registerChatSocketHandlers(io);
 
   const port = Number(process.env.PORT ?? 5000);
   await app.listen(port);
