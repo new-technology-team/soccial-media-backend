@@ -66,4 +66,19 @@ export class MessageController {
 	deleteMessage(@CurrentUser() user: any, @Param('messageId') messageId: string) {
 		return this.messageService.deleteMessage(user.id, messageId);
 	}
+
+	@Patch('messages/:messageId/pin')
+	pinMessage(@CurrentUser() user: any, @Param('messageId') messageId: string) {
+		return this.messageService.pinMessage(user.id, messageId);
+	}
+
+	@Delete('messages/:messageId/pin')
+	unpinMessage(@CurrentUser() user: any, @Param('messageId') messageId: string) {
+		return this.messageService.unpinMessage(user.id, messageId);
+	}
+
+	@Delete('conversations/:id/messages')
+	clearConversationMessages(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.messageService.clearConversationMessages(user.id, id);
+	}
 }

@@ -100,7 +100,7 @@ let MessageService = class MessageService {
         const filtered = beforeId
             ? visible.filter((item) => String(item._id) < beforeId)
             : visible;
-        return { messages: filtered.map((item) => this.mapMessage(item)) };
+        return { messages: filtered.reverse().map((item) => this.mapMessage(item)) };
     }
     async sendMessage(actorId, conversationId, body) {
         const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
@@ -290,6 +290,38 @@ let MessageService = class MessageService {
         message.updatedAt = new Date();
         await this.messageRepository.save(message);
         return { message: 'Đã xóa tin nhắn ở phía bạn' };
+    }
+    async clearConversationMessages(actorId, conversationId) {
+        await this.conversationService.ensureMembership(conversationId, actorId);
+        const rows = await this.messageRepository.find({
+            where: { conversationId },
+        });
+        for (const row of rows) {
+            const deletedForUserIds = Array.isArray(row.deletedForUserIds) ? [...row.deletedForUserIds] : [];
+            if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
+                deletedForUserIds.push(actorId);
+                row.deletedForUserIds = deletedForUserIds;
+                row.updatedAt = new Date();
+                await this.messageRepository.save(row);
+            }
+        }
+        return { message: 'Đã xóa đoạn chat ở phía bạn' };
+    }
+    async pinMessage(actorId, messageId) {
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
+        if (!message) {
+            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+        }
+        await this.conversationService.pinMessage(message.conversationId, actorId, messageId);
+        return { message: 'Đã ghim tin nhắn' };
+    }
+    async unpinMessage(actorId, messageId) {
+        const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
+        if (!message) {
+            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+        }
+        await this.conversationService.unpinMessage(message.conversationId, actorId, messageId);
+        return { message: 'Đã bỏ ghim tin nhắn' };
     }
     async getMessageUploadUrl(_actorId, _conversationId, body) {
         const conversationId = String(_conversationId || 'general');

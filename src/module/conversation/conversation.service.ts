@@ -33,6 +33,7 @@ export class ConversationService {
 				lastReadAt: member.lastReadAt || null,
 			})),
 			lastMessage: conversation.lastMessage || null,
+			pinnedMessageIds: Array.isArray(conversation.pinnedMessageIds) ? conversation.pinnedMessageIds.map((item: any) => String(item)) : [],
 			unreadCount: 0,
 			role: this.normalizeRole((conversation.members || []).find((item: any) => item.userId === viewerId)?.role),
 			notificationsEnabled:
@@ -174,6 +175,7 @@ export class ConversationService {
 				},
 			],
 			lastMessage: null,
+			pinnedMessageIds: [],
 		});
 
 		const saved = await this.conversationRepository.save(conversation);
@@ -235,6 +237,7 @@ export class ConversationService {
 				updatedAt: now,
 				members,
 				lastMessage: null,
+				pinnedMessageIds: [],
 			}),
 		);
 
@@ -448,5 +451,23 @@ export class ConversationService {
 		conversation.lastMessage = payload;
 		conversation.updatedAt = new Date();
 		await this.conversationRepository.save(conversation);
+	}
+
+	async pinMessage(conversationId: string, userId: number, messageId: string) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		const pinnedMessageIds = new Set<string>((conversation.pinnedMessageIds || []).map((item: any) => String(item)));
+		pinnedMessageIds.add(String(messageId));
+		conversation.pinnedMessageIds = Array.from(pinnedMessageIds);
+		await this.conversationRepository.save(conversation);
+		return { message: 'Đã ghim tin nhắn' };
+	}
+
+	async unpinMessage(conversationId: string, userId: number, messageId: string) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		const pinnedMessageIds = new Set<string>((conversation.pinnedMessageIds || []).map((item: any) => String(item)));
+		pinnedMessageIds.delete(String(messageId));
+		conversation.pinnedMessageIds = Array.from(pinnedMessageIds);
+		await this.conversationRepository.save(conversation);
+		return { message: 'Đã bỏ ghim tin nhắn' };
 	}
 }

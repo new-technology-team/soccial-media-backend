@@ -9,5 +9,6 @@ export declare class Conversation {
     updatedAt: Date;
     members: any[];
     lastMessage: any;
+    pinnedMessageIds: string[];
 }
 //# sourceMappingURL=conversation.entity.d.ts.map

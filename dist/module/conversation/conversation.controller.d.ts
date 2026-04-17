@@ -13,6 +13,7 @@ export declare class ConversationController {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -31,6 +32,7 @@ export declare class ConversationController {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -51,6 +53,7 @@ export declare class ConversationController {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -67,6 +70,7 @@ export declare class ConversationController {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;

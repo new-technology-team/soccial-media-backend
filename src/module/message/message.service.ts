@@ -63,7 +63,7 @@ export class MessageService {
 			? visible.filter((item: any) => String(item._id) < beforeId)
 			: visible;
 
-		return { messages: filtered.map((item) => this.mapMessage(item)) };
+		return { messages: filtered.reverse().map((item) => this.mapMessage(item)) };
 	}
 
 	async sendMessage(actorId: number, conversationId: string, body: any) {
@@ -279,6 +279,43 @@ export class MessageService {
 		await this.messageRepository.save(message);
 
 		return { message: 'Đã xóa tin nhắn ở phía bạn' };
+	}
+
+	async clearConversationMessages(actorId: number, conversationId: string) {
+		await this.conversationService.ensureMembership(conversationId, actorId);
+		const rows = await this.messageRepository.find({
+			where: { conversationId } as any,
+		});
+
+		for (const row of rows as any[]) {
+			const deletedForUserIds = Array.isArray(row.deletedForUserIds) ? [...row.deletedForUserIds] : [];
+			if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
+				deletedForUserIds.push(actorId);
+				row.deletedForUserIds = deletedForUserIds;
+				row.updatedAt = new Date();
+				await this.messageRepository.save(row);
+			}
+		}
+
+		return { message: 'Đã xóa đoạn chat ở phía bạn' };
+	}
+
+	async pinMessage(actorId: number, messageId: string) {
+		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
+		if (!message) {
+			throw new NotFoundException('Không tìm thấy tin nhắn');
+		}
+		await this.conversationService.pinMessage(message.conversationId, actorId, messageId);
+		return { message: 'Đã ghim tin nhắn' };
+	}
+
+	async unpinMessage(actorId: number, messageId: string) {
+		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
+		if (!message) {
+			throw new NotFoundException('Không tìm thấy tin nhắn');
+		}
+		await this.conversationService.unpinMessage(message.conversationId, actorId, messageId);
+		return { message: 'Đã bỏ ghim tin nhắn' };
 	}
 
 	async getMessageUploadUrl(_actorId: number, _conversationId: string, body: any) {

@@ -24,6 +24,7 @@ export declare class ConversationService {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -40,6 +41,7 @@ export declare class ConversationService {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -56,6 +58,7 @@ export declare class ConversationService {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -74,6 +77,7 @@ export declare class ConversationService {
             updatedAt: any;
             members: any;
             lastMessage: any;
+            pinnedMessageIds: any;
             unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
@@ -104,5 +108,11 @@ export declare class ConversationService {
         message: string;
     }>;
     touchLastMessage(conversationId: string, payload: any): Promise<void>;
+    pinMessage(conversationId: string, userId: number, messageId: string): Promise<{
+        message: string;
+    }>;
+    unpinMessage(conversationId: string, userId: number, messageId: string): Promise<{
+        message: string;
+    }>;
 }
 //# sourceMappingURL=conversation.service.d.ts.map

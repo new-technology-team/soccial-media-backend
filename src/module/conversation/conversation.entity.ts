@@ -28,4 +28,7 @@ export class Conversation {
 
     @Column({ nullable: true })
     lastMessage: any;
+
+    @Column({ nullable: true })
+    pinnedMessageIds: string[];
 }

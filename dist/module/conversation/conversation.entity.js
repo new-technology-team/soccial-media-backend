@@ -50,6 +50,10 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Object)
 ], Conversation.prototype, "lastMessage", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Array)
+], Conversation.prototype, "pinnedMessageIds", void 0);
 exports.Conversation = Conversation = __decorate([
     (0, typeorm_1.Entity)()
 ], Conversation);

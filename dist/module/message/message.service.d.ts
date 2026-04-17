@@ -151,6 +151,15 @@ export declare class MessageService {
     deleteMessage(actorId: number, messageId: string): Promise<{
         message: string;
     }>;
+    clearConversationMessages(actorId: number, conversationId: string): Promise<{
+        message: string;
+    }>;
+    pinMessage(actorId: number, messageId: string): Promise<{
+        message: string;
+    }>;
+    unpinMessage(actorId: number, messageId: string): Promise<{
+        message: string;
+    }>;
     getMessageUploadUrl(_actorId: number, _conversationId: string, body: any): Promise<{
         uploadUrl: string;
         fileUrl: string;

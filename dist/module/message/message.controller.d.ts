@@ -157,5 +157,14 @@ export declare class MessageController {
     deleteMessage(user: any, messageId: string): Promise<{
         message: string;
     }>;
+    pinMessage(user: any, messageId: string): Promise<{
+        message: string;
+    }>;
+    unpinMessage(user: any, messageId: string): Promise<{
+        message: string;
+    }>;
+    clearConversationMessages(user: any, id: string): Promise<{
+        message: string;
+    }>;
 }
 //# sourceMappingURL=message.controller.d.ts.map

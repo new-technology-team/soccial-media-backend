@@ -51,6 +51,15 @@ let MessageController = class MessageController {
     deleteMessage(user, messageId) {
         return this.messageService.deleteMessage(user.id, messageId);
     }
+    pinMessage(user, messageId) {
+        return this.messageService.pinMessage(user.id, messageId);
+    }
+    unpinMessage(user, messageId) {
+        return this.messageService.unpinMessage(user.id, messageId);
+    }
+    clearConversationMessages(user, id) {
+        return this.messageService.clearConversationMessages(user.id, id);
+    }
 };
 exports.MessageController = MessageController;
 __decorate([
@@ -140,6 +149,30 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], MessageController.prototype, "deleteMessage", null);
+__decorate([
+    (0, common_1.Patch)('messages/:messageId/pin'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "pinMessage", null);
+__decorate([
+    (0, common_1.Delete)('messages/:messageId/pin'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "unpinMessage", null);
+__decorate([
+    (0, common_1.Delete)('conversations/:id/messages'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "clearConversationMessages", null);
 exports.MessageController = MessageController = __decorate([
     (0, common_1.Controller)('chat'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
