@@ -3,23 +3,7 @@ export declare class MessageController {
     private readonly messageService;
     constructor(messageService: MessageService);
     getConversationMessages(user: any, id: string, limit?: string, beforeId?: string): Promise<{
-        messages: {
-            id: string;
-            conversationId: any;
-            senderId: any;
-            type: any;
-            text: any;
-            mediaUrl: any;
-            fileName: any;
-            mimeType: any;
-            fileSize: any;
-            meta: any;
-            reactionCount: any;
-            viewerReaction: null;
-            createdAt: any;
-            updatedAt: any;
-            isDeleted: boolean;
-        }[];
+        messages: any;
     }>;
     sendMessage(user: any, id: string, body: any): Promise<{
         message: {

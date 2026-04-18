@@ -52,16 +52,5 @@ export class UserController {
         };
     }
 
-    @Post('ai/support')
-    aiSupport(@Body() body: { message: string }) {
-        const input = String(body?.message || '').trim();
-        return {
-            message: 'AI support demo response',
-            data: {
-                original: input,
-                suggestion:
-                    'Bạn có thể kiểm tra lại từ khóa tìm kiếm, trạng thái kết nối và quyền truy cập tài khoản trước khi thao tác.',
-            },
-        };
-    }
+
 }

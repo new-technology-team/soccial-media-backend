@@ -28,8 +28,8 @@ export declare class AuthService {
         emailOrPhone: string;
         code: string;
     }): Promise<{
-        accessToken: string;
-        refreshToken: string;
+        accessToken: any;
+        refreshToken: any;
         user: {
             id: number;
             username: string | null;
@@ -180,8 +180,8 @@ export declare class AuthService {
         };
     }>;
     refresh(refreshToken: string): Promise<{
-        accessToken: string;
-        refreshToken: string;
+        accessToken: any;
+        refreshToken: any;
         user: {
             id: number;
             username: string | null;

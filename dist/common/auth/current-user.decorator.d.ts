@@ -1,2 +1,2 @@
-export declare const CurrentUser: (...dataOrPipes: any[]) => ParameterDecorator;
+export declare const CurrentUser: any;
 //# sourceMappingURL=current-user.decorator.d.ts.map

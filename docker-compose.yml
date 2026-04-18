@@ -12,6 +12,15 @@ services:
       - mariadb_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  mongodb:
+    image: mongo:7
+    container_name: zalo_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
   backend:
     build: .
     container_name: zalo_backend
@@ -22,6 +31,8 @@ services:
       - .env
     depends_on:
       - mariadb
+      - mongodb
 
 volumes:
   mariadb_data:
+  mongodb_data:

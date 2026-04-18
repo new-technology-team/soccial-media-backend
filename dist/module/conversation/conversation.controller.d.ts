@@ -3,21 +3,7 @@ export declare class ConversationController {
     private readonly conversationService;
     constructor(conversationService: ConversationService);
     listConversations(user: any): Promise<{
-        conversations: {
-            id: string;
-            type: any;
-            name: any;
-            avatarUrl: any;
-            createdBy: any;
-            createdAt: any;
-            updatedAt: any;
-            members: any;
-            lastMessage: any;
-            pinnedMessageIds: any;
-            unreadCount: number;
-            role: string;
-            notificationsEnabled: boolean;
-        }[];
+        conversations: any;
     }>;
     createDirect(user: any, body: {
         userId: number;

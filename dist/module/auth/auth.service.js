@@ -48,6 +48,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 var AuthService_1;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -540,8 +541,6 @@ AuthService.pairingCounter = 1;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(2, (0, typeorm_1.InjectRepository)(auth_otp_entity_1.AuthOtp, 'mariadb')),
-    __metadata("design:paramtypes", [user_service_1.UserService,
-        jwt_1.JwtService,
-        typeorm_2.Repository])
+    __metadata("design:paramtypes", [user_service_1.UserService, typeof (_a = typeof jwt_1.JwtService !== "undefined" && jwt_1.JwtService) === "function" ? _a : Object, typeof (_b = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _b : Object])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

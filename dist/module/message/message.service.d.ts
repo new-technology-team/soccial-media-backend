@@ -12,23 +12,7 @@ export declare class MessageService {
     private mapMessage;
     private sanitizeFileName;
     listMessages(actorId: number, conversationId: string, limit?: number, beforeId?: string): Promise<{
-        messages: {
-            id: string;
-            conversationId: any;
-            senderId: any;
-            type: any;
-            text: any;
-            mediaUrl: any;
-            fileName: any;
-            mimeType: any;
-            fileSize: any;
-            meta: any;
-            reactionCount: any;
-            viewerReaction: null;
-            createdAt: any;
-            updatedAt: any;
-            isDeleted: boolean;
-        }[];
+        messages: any;
     }>;
     sendMessage(actorId: number, conversationId: string, body: any): Promise<{
         message: {

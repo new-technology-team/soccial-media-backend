@@ -14,21 +14,7 @@ export declare class ConversationService {
     private isLeaderOrDeputy;
     private enforceSingleLeaderSingleDeputy;
     listConversations(userId: number): Promise<{
-        conversations: {
-            id: string;
-            type: any;
-            name: any;
-            avatarUrl: any;
-            createdBy: any;
-            createdAt: any;
-            updatedAt: any;
-            members: any;
-            lastMessage: any;
-            pinnedMessageIds: any;
-            unreadCount: number;
-            role: string;
-            notificationsEnabled: boolean;
-        }[];
+        conversations: any;
     }>;
     createDirect(actorId: number, targetUserId: number): Promise<{
         conversation: {
@@ -64,8 +50,8 @@ export declare class ConversationService {
             notificationsEnabled: boolean;
         };
     }>;
-    getConversationById(conversationId: string): Promise<Conversation | null>;
-    ensureMembership(conversationId: string, userId: number): Promise<Conversation>;
+    getConversationById(conversationId: string): Promise<any>;
+    ensureMembership(conversationId: string, userId: number): Promise<any>;
     getConversationDetail(conversationId: string, userId: number): Promise<{
         conversation: {
             id: string;
