@@ -10,8 +10,8 @@ export declare class AuthController {
         emailOrPhone: string;
         code: string;
     }): Promise<{
-        accessToken: string;
-        refreshToken: string;
+        accessToken: any;
+        refreshToken: any;
         user: {
             id: number;
             username: string | null;
@@ -115,8 +115,8 @@ export declare class AuthController {
     refresh(body: {
         refreshToken: string;
     }): Promise<{
-        accessToken: string;
-        refreshToken: string;
+        accessToken: any;
+        refreshToken: any;
         user: {
             id: number;
             username: string | null;

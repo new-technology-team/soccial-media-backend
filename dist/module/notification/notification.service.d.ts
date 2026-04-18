@@ -9,18 +9,9 @@ export declare class NotificationService {
         title: string;
         body: string;
         meta?: any;
-    }): Promise<Notification>;
+    }): Promise<any>;
     listByUser(userId: number, limit?: number): Promise<{
-        notifications: {
-            id: string;
-            userId: any;
-            type: any;
-            title: any;
-            body: any;
-            meta: any;
-            isRead: boolean;
-            createdAt: any;
-        }[];
+        notifications: any;
     }>;
     markRead(userId: number, id: string): Promise<{
         message: string;

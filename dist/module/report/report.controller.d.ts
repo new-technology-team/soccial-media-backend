@@ -4,32 +4,32 @@ export declare class ReportController {
     constructor(reportService: ReportService);
     submitReport(user: any, body: any): Promise<{
         message: string;
-        report: import("./report.entity").Report;
+        report: any;
     }>;
     getModerationReports(user: any, status?: string, limit?: string): Promise<{
-        reports: import("./report.entity").Report[];
+        reports: any;
     }>;
     reviewModerationReport(user: any, id: string, body: any): Promise<{
         message: string;
-        report: import("./report.entity").Report;
+        report: any;
     }>;
     moderateFeedPost(user: any, postId: string, body: any): Promise<{
         message: string;
-        post: import("../post/post.entity").Post;
+        post: any;
     }>;
     getAdminStats(user: any): Promise<{
         stats: {
-            users: number;
-            reports: number;
-            posts: number;
+            users: any;
+            reports: any;
+            posts: any;
         };
     }>;
     getModerationUsers(user: any, q?: string, limit?: string): Promise<{
-        users: import("../user/user.entity").User[];
+        users: any;
     }>;
     updateModerationUserById(user: any, userId: string, body: any): Promise<{
         message: string;
-        user: import("../user/user.entity").User;
+        user: any;
     }>;
 }
 //# sourceMappingURL=report.controller.d.ts.map

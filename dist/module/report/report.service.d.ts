@@ -9,32 +9,32 @@ export declare class ReportService {
     constructor(reportRepository: Repository<Report>, userRepository: Repository<User>, postRepository: Repository<Post>);
     submitReport(actorId: number, body: any): Promise<{
         message: string;
-        report: Report;
+        report: any;
     }>;
     listReports(actor: any, status?: string, limit?: number): Promise<{
-        reports: Report[];
+        reports: any;
     }>;
     reviewReport(actor: any, reportId: number, body: any): Promise<{
         message: string;
-        report: Report;
+        report: any;
     }>;
     moderatePost(actor: any, postId: string, body: any): Promise<{
         message: string;
-        post: Post;
+        post: any;
     }>;
     getAdminStats(actor: any): Promise<{
         stats: {
-            users: number;
-            reports: number;
-            posts: number;
+            users: any;
+            reports: any;
+            posts: any;
         };
     }>;
     listUsers(actor: any, keyword?: string, limit?: number): Promise<{
-        users: User[];
+        users: any;
     }>;
     updateUser(actor: any, userId: number, body: any): Promise<{
         message: string;
-        user: User;
+        user: any;
     }>;
 }
 //# sourceMappingURL=report.service.d.ts.map
