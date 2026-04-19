@@ -353,6 +353,48 @@ export class ConversationService {
 		return { message: 'Đã xóa thành viên' };
 	}
 
+	async leaveGroup(conversationId: string, actorId: number) {
+		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') {
+			throw new BadRequestException('Chỉ hỗ trợ rời khỏi nhóm chat');
+		}
+
+		const actor = this.getMemberByUserId(conversation, actorId);
+		if (!actor) {
+			throw new NotFoundException('Thành viên không tồn tại trong nhóm');
+		}
+
+		const actorRole = this.normalizeRole(actor.role);
+		if (actorRole === 'leader') {
+			const deputy = (conversation.members || []).find(
+				(item: any) => this.normalizeRole(item.role) === 'deputy' && Number(item.userId) !== Number(actorId),
+			);
+
+			if (!deputy) {
+				throw new BadRequestException('Trưởng nhóm cần chỉ định phó nhóm trước khi rời nhóm');
+			}
+
+			conversation.members = (conversation.members || [])
+				.filter((item: any) => Number(item.userId) !== Number(actorId))
+				.map((item: any) => {
+					if (Number(item.userId) === Number(deputy.userId)) {
+						return { ...item, role: 'leader' };
+					}
+					if (this.normalizeRole(item.role) === 'leader') {
+						return { ...item, role: 'member' };
+					}
+					return item;
+				});
+
+			await this.conversationRepository.save(conversation);
+			return { message: 'Bạn đã rời nhóm. Quyền trưởng nhóm đã được chuyển cho phó nhóm.' };
+		}
+
+		conversation.members = (conversation.members || []).filter((item: any) => Number(item.userId) !== Number(actorId));
+		await this.conversationRepository.save(conversation);
+		return { message: 'Bạn đã rời nhóm chat' };
+	}
+
 	async transferLeader(conversationId: string, actorId: number, targetUserId: number) {
 		const conversation = await this.ensureMembership(conversationId, actorId);
 		if (conversation.type !== 'group') {

@@ -95,6 +95,9 @@ export declare class ConversationService {
     removeMember(conversationId: string, actorId: number, targetUserId: number): Promise<{
         message: string;
     }>;
+    leaveGroup(conversationId: string, actorId: number): Promise<{
+        message: string;
+    }>;
     transferLeader(conversationId: string, actorId: number, targetUserId: number): Promise<{
         message: string;
     }>;

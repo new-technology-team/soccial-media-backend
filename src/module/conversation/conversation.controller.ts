@@ -52,6 +52,11 @@ export class ConversationController {
 		return this.conversationService.removeMember(id, user.id, Number(userId));
 	}
 
+	@Delete('conversations/:id/leave')
+	leaveGroup(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.leaveGroup(id, user.id);
+	}
+
 	@Patch('conversations/:id/admins')
 	updateAdmin(
 		@CurrentUser() user: any,

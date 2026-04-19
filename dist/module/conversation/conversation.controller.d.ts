@@ -92,6 +92,9 @@ export declare class ConversationController {
     removeMember(user: any, id: string, userId: string): Promise<{
         message: string;
     }>;
+    leaveGroup(user: any, id: string): Promise<{
+        message: string;
+    }>;
     updateAdmin(user: any, id: string, body: {
         userId: number;
         isAdmin: boolean;

@@ -45,6 +45,9 @@ let ConversationController = class ConversationController {
     removeMember(user, id, userId) {
         return this.conversationService.removeMember(id, user.id, Number(userId));
     }
+    leaveGroup(user, id) {
+        return this.conversationService.leaveGroup(id, user.id);
+    }
     updateAdmin(user, id, body) {
         return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
     }
@@ -126,6 +129,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", void 0)
 ], ConversationController.prototype, "removeMember", null);
+__decorate([
+    (0, common_1.Delete)('conversations/:id/leave'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ConversationController.prototype, "leaveGroup", null);
 __decorate([
     (0, common_1.Patch)('conversations/:id/admins'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
