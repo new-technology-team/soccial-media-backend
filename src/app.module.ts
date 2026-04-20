@@ -13,6 +13,7 @@ import { FriendshipModule } from './module/friendship/friendship.module';
 import { MessageModule } from './module/message/message.module';
 import { NotificationModule } from './module/notification/notification.module';
 import { ReportModule } from './module/report/report.module';
+import { AiModule } from './module/ai/ai.module';
 import { Message } from './module/message/message.entity';
 import { Conversation } from './module/conversation/conversation.entity';
 import { Friendship } from './module/friendship/friendship.entity';
@@ -70,7 +71,8 @@ function buildMongoUrl(): string {
     NotificationModule,
     PostModule,
     ReportModule,
-    UserModule
+    UserModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
