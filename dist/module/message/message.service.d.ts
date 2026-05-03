@@ -16,7 +16,9 @@ export declare class MessageService {
         messages: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -36,7 +38,9 @@ export declare class MessageService {
         message: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -60,7 +64,9 @@ export declare class MessageService {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -81,7 +87,9 @@ export declare class MessageService {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -102,7 +110,9 @@ export declare class MessageService {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -123,7 +133,9 @@ export declare class MessageService {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;

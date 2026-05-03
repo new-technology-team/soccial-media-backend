@@ -65,7 +65,11 @@ let MessageService = class MessageService {
         this.notificationService = notificationService;
         this.allowedMessageReactions = new Set(['smile', 'sad', 'like', 'love', 'wow', 'cry', 'angry']);
     }
-    mapMessage(row, viewerUserId) {
+    mapMessage(row, viewerUserId, conversation) {
+        const senderId = Number(row.senderId || 0);
+        const senderMember = (conversation?.members || []).find((item) => Number(item.userId) === senderId);
+        const senderName = row.senderName || row.meta?.senderName || senderMember?.fullName || `Người dùng #${senderId}`;
+        const senderAvatar = row.senderAvatar || row.meta?.senderAvatar || senderMember?.avatarUrl || null;
         const reactions = (row.reactions || []).map((item) => ({
             userId: Number(item.userId),
             reaction: String(item.type || item.reaction || 'like'),
@@ -75,7 +79,9 @@ let MessageService = class MessageService {
         return {
             id: String(row._id),
             conversationId: row.conversationId,
-            senderId: row.senderId,
+            senderId,
+            senderName,
+            senderAvatar,
             type: row.type,
             text: row.isRecalled ? 'Tin nhắn đã được thu hồi' : row.text || null,
             mediaUrl: row.isRecalled ? null : row.mediaUrl || null,
@@ -98,7 +104,7 @@ let MessageService = class MessageService {
             .slice(0, 120);
     }
     async listMessages(actorId, conversationId, limit = 30, beforeId) {
-        await this.conversationService.ensureMembership(conversationId, actorId);
+        const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
         const rows = await this.messageRepository.find({
             where: { conversationId },
             order: { createdAt: 'DESC' },
@@ -108,7 +114,7 @@ let MessageService = class MessageService {
         const filtered = beforeId
             ? visible.filter((item) => String(item._id) < beforeId)
             : visible;
-        return { messages: filtered.reverse().map((item) => this.mapMessage(item, actorId)) };
+        return { messages: filtered.reverse().map((item) => this.mapMessage(item, actorId, conversation)) };
     }
     async sendMessage(actorId, conversationId, body) {
         const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
@@ -133,10 +139,12 @@ let MessageService = class MessageService {
             isRecalled: false,
             deletedForUserIds: [],
         }));
-        const payload = this.mapMessage(created, actorId);
+        const payload = this.mapMessage(created, actorId, conversation);
         await this.conversationService.touchLastMessage(conversationId, {
             id: payload.id,
             senderId: payload.senderId,
+            senderName: payload.senderName,
+            senderAvatar: payload.senderAvatar,
             type: payload.type,
             text: payload.text,
             mediaUrl: payload.mediaUrl,
@@ -162,18 +170,26 @@ let MessageService = class MessageService {
             throw new common_1.BadRequestException('Thiếu từ khóa tìm kiếm');
         }
         const rows = await this.messageRepository.find();
+        const conversationCache = new Map();
         const matched = [];
         for (const item of rows) {
-            const isJoined = await this.conversationService.ensureMembership(item.conversationId, actorId)
-                .then(() => true)
-                .catch(() => false);
+            let conversation = conversationCache.get(String(item.conversationId));
+            if (!conversation) {
+                conversation = await this.conversationService.ensureMembership(item.conversationId, actorId)
+                    .then((result) => {
+                    conversationCache.set(String(item.conversationId), result);
+                    return result;
+                })
+                    .catch(() => null);
+            }
+            const isJoined = Boolean(conversation);
             if (!isJoined)
                 continue;
             if ((item.deletedForUserIds || []).some((uid) => Number(uid) === Number(actorId)))
                 continue;
             if (!String(item.text || '').toLowerCase().includes(keyword))
                 continue;
-            matched.push(this.mapMessage(item, actorId));
+            matched.push(this.mapMessage(item, actorId, conversation));
         }
         return { messages: matched };
     }
@@ -182,7 +198,7 @@ let MessageService = class MessageService {
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
-        await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         const reactionType = String(type || 'like');
         if (!this.allowedMessageReactions.has(reactionType)) {
             throw new common_1.BadRequestException('Cảm xúc tin nhắn không hợp lệ');
@@ -192,7 +208,7 @@ let MessageService = class MessageService {
         message.reactions = reactions;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        const payload = this.mapMessage(saved);
+        const payload = this.mapMessage(saved, actorId, conversation);
         (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
             conversationId: message.conversationId,
             message: payload,
@@ -204,11 +220,11 @@ let MessageService = class MessageService {
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
-        await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         message.reactions = (message.reactions || []).filter((item) => item.userId !== actorId);
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        const payload = this.mapMessage(saved);
+        const payload = this.mapMessage(saved, actorId, conversation);
         (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
             conversationId: message.conversationId,
             message: payload,
@@ -220,14 +236,14 @@ let MessageService = class MessageService {
         if (!message) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
-        await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         if (Number(message.senderId) !== Number(actorId)) {
             throw new common_1.ForbiddenException('Bạn chỉ có thể thu hồi tin nhắn của mình');
         }
         message.isRecalled = true;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        const payload = this.mapMessage(saved, actorId);
+        const payload = this.mapMessage(saved, actorId, conversation);
         (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
             conversationId: message.conversationId,
             message: payload,
@@ -239,7 +255,7 @@ let MessageService = class MessageService {
         if (!message || message.isRecalled) {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
-        await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const sourceConversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         const targetConversation = await this.conversationService.ensureMembership(targetConversationId, actorId);
         const now = new Date();
         const forwarded = await this.messageRepository.save(this.messageRepository.create({
@@ -262,10 +278,12 @@ let MessageService = class MessageService {
             isRecalled: false,
             deletedForUserIds: [],
         }));
-        const payload = this.mapMessage(forwarded, actorId);
+        const payload = this.mapMessage(forwarded, actorId, targetConversation);
         await this.conversationService.touchLastMessage(targetConversationId, {
             id: payload.id,
             senderId: payload.senderId,
+            senderName: payload.senderName,
+            senderAvatar: payload.senderAvatar,
             type: payload.type,
             text: payload.text,
             mediaUrl: payload.mediaUrl,

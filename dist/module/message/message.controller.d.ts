@@ -6,7 +6,9 @@ export declare class MessageController {
         messages: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -26,7 +28,9 @@ export declare class MessageController {
         message: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -63,7 +67,9 @@ export declare class MessageController {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -84,7 +90,9 @@ export declare class MessageController {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -105,7 +113,9 @@ export declare class MessageController {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;
@@ -128,7 +138,9 @@ export declare class MessageController {
         chatMessage: {
             id: string;
             conversationId: any;
-            senderId: any;
+            senderId: number;
+            senderName: any;
+            senderAvatar: any;
             type: any;
             text: any;
             mediaUrl: any;

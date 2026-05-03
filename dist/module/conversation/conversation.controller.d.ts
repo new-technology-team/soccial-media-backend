@@ -4,6 +4,7 @@ export declare class ConversationController {
     constructor(conversationService: ConversationService);
     listConversations(user: any): Promise<{
         conversations: {
+            unreadCount: number;
             id: string;
             type: any;
             name: any;
@@ -14,7 +15,6 @@ export declare class ConversationController {
             members: any;
             lastMessage: any;
             pinnedMessageIds: any;
-            unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
         }[];

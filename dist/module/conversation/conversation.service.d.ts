@@ -1,13 +1,17 @@
 import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
+import { Message } from "../message/message.entity";
 import { UserService } from "../user/user.service";
 import { FriendshipService } from "../friendship/friendship.service";
 export declare class ConversationService {
     private readonly conversationRepository;
+    private readonly messageRepository;
     private readonly userService;
     private readonly friendshipService;
-    constructor(conversationRepository: Repository<Conversation>, userService: UserService, friendshipService: FriendshipService);
+    constructor(conversationRepository: Repository<Conversation>, messageRepository: Repository<Message>, userService: UserService, friendshipService: FriendshipService);
     private mapConversation;
+    private getConversationSortKey;
+    private countUnreadMessages;
     private normalizeRole;
     private getMemberByUserId;
     private isLeader;
@@ -15,6 +19,7 @@ export declare class ConversationService {
     private enforceSingleLeaderSingleDeputy;
     listConversations(userId: number): Promise<{
         conversations: {
+            unreadCount: number;
             id: string;
             type: any;
             name: any;
@@ -25,7 +30,6 @@ export declare class ConversationService {
             members: any;
             lastMessage: any;
             pinnedMessageIds: any;
-            unreadCount: number;
             role: string;
             notificationsEnabled: boolean;
         }[];

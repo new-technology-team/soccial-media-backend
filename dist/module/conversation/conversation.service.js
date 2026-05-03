@@ -18,11 +18,13 @@ const typeorm_1 = require("@nestjs/typeorm");
 const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
 const conversation_entity_1 = require("./conversation.entity");
+const message_entity_1 = require("../message/message.entity");
 const user_service_1 = require("../user/user.service");
 const friendship_service_1 = require("../friendship/friendship.service");
 let ConversationService = class ConversationService {
-    constructor(conversationRepository, userService, friendshipService) {
+    constructor(conversationRepository, messageRepository, userService, friendshipService) {
         this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
         this.userService = userService;
         this.friendshipService = friendshipService;
     }
@@ -49,6 +51,31 @@ let ConversationService = class ConversationService {
             role: this.normalizeRole((conversation.members || []).find((item) => item.userId === viewerId)?.role),
             notificationsEnabled: (conversation.members || []).find((item) => item.userId === viewerId)?.notificationsEnabled !== false,
         };
+    }
+    getConversationSortKey(conversation) {
+        const raw = conversation?.lastMessage?.createdAt || conversation?.updatedAt || conversation?.createdAt || null;
+        const time = raw ? new Date(raw).getTime() : 0;
+        return Number.isNaN(time) ? 0 : time;
+    }
+    async countUnreadMessages(conversation, viewerId) {
+        const member = this.getMemberByUserId(conversation, viewerId);
+        const lastReadAt = member?.lastReadAt ? new Date(member.lastReadAt) : null;
+        const rows = await this.messageRepository.find({
+            where: { conversationId: String(conversation._id) },
+            order: { createdAt: 'ASC' },
+        });
+        return rows.filter((item) => {
+            if (!item || item.isRecalled)
+                return false;
+            if ((item.deletedForUserIds || []).some((uid) => Number(uid) === Number(viewerId)))
+                return false;
+            if (Number(item.senderId) === Number(viewerId))
+                return false;
+            if (!lastReadAt)
+                return true;
+            const createdAt = new Date(item.createdAt).getTime();
+            return !Number.isNaN(createdAt) && createdAt > lastReadAt.getTime();
+        }).length;
     }
     normalizeRole(role) {
         const raw = String(role || '').toLowerCase();
@@ -127,7 +154,12 @@ let ConversationService = class ConversationService {
             }
         }
         const mine = rows.filter((item) => (item.members || []).some((m) => m.userId === userId));
-        return { conversations: mine.map((item) => this.mapConversation(item, userId)) };
+        const sorted = [...mine].sort((a, b) => this.getConversationSortKey(b) - this.getConversationSortKey(a));
+        const conversations = await Promise.all(sorted.map(async (item) => ({
+            ...this.mapConversation(item, userId),
+            unreadCount: await this.countUnreadMessages(item, userId),
+        })));
+        return { conversations };
     }
     async createDirect(actorId, targetUserId) {
         if (actorId === targetUserId) {
@@ -462,7 +494,9 @@ exports.ConversationService = ConversationService;
 exports.ConversationService = ConversationService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(conversation_entity_1.Conversation, 'mongodb')),
+    __param(1, (0, typeorm_1.InjectRepository)(message_entity_1.Message, 'mongodb')),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         user_service_1.UserService,
         friendship_service_1.FriendshipService])
 ], ConversationService);

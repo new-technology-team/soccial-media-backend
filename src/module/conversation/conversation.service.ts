@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
+import { Message } from "../message/message.entity";
 import { UserService } from "../user/user.service";
 import { FriendshipService } from "../friendship/friendship.service";
 
@@ -11,6 +12,8 @@ export class ConversationService {
 	constructor(
 		@InjectRepository(Conversation, 'mongodb')
 		private readonly conversationRepository: Repository<Conversation>,
+		@InjectRepository(Message, 'mongodb')
+		private readonly messageRepository: Repository<Message>,
 		private readonly userService: UserService,
 		private readonly friendshipService: FriendshipService,
 	) {}
@@ -39,6 +42,30 @@ export class ConversationService {
 			notificationsEnabled:
 				(conversation.members || []).find((item: any) => item.userId === viewerId)?.notificationsEnabled !== false,
 		};
+	}
+
+	private getConversationSortKey(conversation: any) {
+		const raw = conversation?.lastMessage?.createdAt || conversation?.updatedAt || conversation?.createdAt || null;
+		const time = raw ? new Date(raw).getTime() : 0;
+		return Number.isNaN(time) ? 0 : time;
+	}
+
+	private async countUnreadMessages(conversation: any, viewerId: number) {
+		const member = this.getMemberByUserId(conversation, viewerId);
+		const lastReadAt = member?.lastReadAt ? new Date(member.lastReadAt) : null;
+		const rows = await this.messageRepository.find({
+			where: { conversationId: String(conversation._id) } as any,
+			order: { createdAt: 'ASC' },
+		});
+
+		return rows.filter((item: any) => {
+			if (!item || item.isRecalled) return false;
+			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(viewerId))) return false;
+			if (Number(item.senderId) === Number(viewerId)) return false;
+			if (!lastReadAt) return true;
+			const createdAt = new Date(item.createdAt).getTime();
+			return !Number.isNaN(createdAt) && createdAt > lastReadAt.getTime();
+		}).length;
 	}
 
 	private normalizeRole(role: unknown) {
@@ -121,7 +148,14 @@ export class ConversationService {
 			}
 		}
 		const mine = rows.filter((item: any) => (item.members || []).some((m: any) => m.userId === userId));
-		return { conversations: mine.map((item) => this.mapConversation(item, userId)) };
+		const sorted = [...mine].sort((a: any, b: any) => this.getConversationSortKey(b) - this.getConversationSortKey(a));
+		const conversations = await Promise.all(
+			sorted.map(async (item) => ({
+				...this.mapConversation(item, userId),
+				unreadCount: await this.countUnreadMessages(item, userId),
+			})),
+		);
+		return { conversations };
 	}
 
 	async createDirect(actorId: number, targetUserId: number) {
