@@ -12,6 +12,8 @@ import { emitToConversation } from "../../common/socket/chat-socket";
 
 @Injectable()
 export class MessageService {
+	private readonly allowedMessageReactions = new Set(['smile', 'sad', 'like', 'love', 'wow', 'cry', 'angry']);
+
 	constructor(
 		@InjectRepository(Message, 'mongodb')
 		private readonly messageRepository: Repository<Message>,
@@ -20,7 +22,14 @@ export class MessageService {
 		private readonly notificationService: NotificationService,
 	) {}
 
-	private mapMessage(row: any) {
+	private mapMessage(row: any, viewerUserId?: number) {
+		const reactions = (row.reactions || []).map((item: any) => ({
+			userId: Number(item.userId),
+			reaction: String(item.type || item.reaction || 'like'),
+			createdAt: item.createdAt || null,
+		}));
+		const viewerReaction = reactions.find((item: any) => Number(item.userId) === Number(viewerUserId))?.reaction || null;
+
 		return {
 			id: String(row._id),
 			conversationId: row.conversationId,
@@ -32,8 +41,9 @@ export class MessageService {
 			mimeType: row.mimeType || null,
 			fileSize: row.fileSize || null,
 			meta: row.meta || null,
-			reactionCount: (row.reactions || []).length,
-			viewerReaction: null,
+			reactionCount: reactions.length,
+			viewerReaction,
+			reactions,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
 			isDeleted: Boolean(row.isRecalled),
@@ -63,7 +73,7 @@ export class MessageService {
 			? visible.filter((item: any) => String(item._id) < beforeId)
 			: visible;
 
-		return { messages: filtered.reverse().map((item) => this.mapMessage(item)) };
+		return { messages: filtered.reverse().map((item) => this.mapMessage(item, actorId)) };
 	}
 
 	async sendMessage(actorId: number, conversationId: string, body: any) {
@@ -94,7 +104,7 @@ export class MessageService {
 			}),
 		);
 
-		const payload = this.mapMessage(created);
+		const payload = this.mapMessage(created, actorId);
 		await this.conversationService.touchLastMessage(conversationId, {
 			id: payload.id,
 			senderId: payload.senderId,
@@ -136,10 +146,10 @@ export class MessageService {
 			if (!isJoined) continue;
 			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId))) continue;
 			if (!String(item.text || '').toLowerCase().includes(keyword)) continue;
-			matched.push(item);
+			matched.push(this.mapMessage(item, actorId));
 		}
 
-		return { messages: matched.map((row) => this.mapMessage(row)) };
+		return { messages: matched };
 	}
 
 	async reactMessage(actorId: number, messageId: string, type: string) {
@@ -149,8 +159,12 @@ export class MessageService {
 		}
 
 		await this.conversationService.ensureMembership(message.conversationId, actorId);
+		const reactionType = String(type || 'like');
+		if (!this.allowedMessageReactions.has(reactionType)) {
+			throw new BadRequestException('Cảm xúc tin nhắn không hợp lệ');
+		}
 		const reactions = (message.reactions || []).filter((item: any) => item.userId !== actorId);
-		reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
+		reactions.push({ userId: actorId, type: reactionType, createdAt: new Date() });
 		message.reactions = reactions;
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
@@ -159,7 +173,7 @@ export class MessageService {
 			conversationId: message.conversationId,
 			message: payload,
 		});
-		return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: payload };
+		return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
 	}
 
 	async removeReaction(actorId: number, messageId: string) {
@@ -176,7 +190,7 @@ export class MessageService {
 			conversationId: message.conversationId,
 			message: payload,
 		});
-		return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: payload };
+		return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
 	}
 
 	async recallMessage(actorId: number, messageId: string) {
@@ -193,7 +207,7 @@ export class MessageService {
 		message.isRecalled = true;
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
-		const payload = this.mapMessage(saved);
+		const payload = this.mapMessage(saved, actorId);
 		emitToConversation(message.conversationId, 'message:updated', {
 			conversationId: message.conversationId,
 			message: payload,
@@ -234,7 +248,7 @@ export class MessageService {
 			}),
 		);
 
-		const payload = this.mapMessage(forwarded);
+		const payload = this.mapMessage(forwarded, actorId);
 		await this.conversationService.touchLastMessage(targetConversationId, {
 			id: payload.id,
 			senderId: payload.senderId,

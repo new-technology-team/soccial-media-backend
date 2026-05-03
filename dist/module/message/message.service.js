@@ -63,8 +63,15 @@ let MessageService = class MessageService {
         this.conversationService = conversationService;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.allowedMessageReactions = new Set(['smile', 'sad', 'like', 'love', 'wow', 'cry', 'angry']);
     }
-    mapMessage(row) {
+    mapMessage(row, viewerUserId) {
+        const reactions = (row.reactions || []).map((item) => ({
+            userId: Number(item.userId),
+            reaction: String(item.type || item.reaction || 'like'),
+            createdAt: item.createdAt || null,
+        }));
+        const viewerReaction = reactions.find((item) => Number(item.userId) === Number(viewerUserId))?.reaction || null;
         return {
             id: String(row._id),
             conversationId: row.conversationId,
@@ -76,8 +83,9 @@ let MessageService = class MessageService {
             mimeType: row.mimeType || null,
             fileSize: row.fileSize || null,
             meta: row.meta || null,
-            reactionCount: (row.reactions || []).length,
-            viewerReaction: null,
+            reactionCount: reactions.length,
+            viewerReaction,
+            reactions,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
             isDeleted: Boolean(row.isRecalled),
@@ -100,7 +108,7 @@ let MessageService = class MessageService {
         const filtered = beforeId
             ? visible.filter((item) => String(item._id) < beforeId)
             : visible;
-        return { messages: filtered.reverse().map((item) => this.mapMessage(item)) };
+        return { messages: filtered.reverse().map((item) => this.mapMessage(item, actorId)) };
     }
     async sendMessage(actorId, conversationId, body) {
         const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
@@ -125,7 +133,7 @@ let MessageService = class MessageService {
             isRecalled: false,
             deletedForUserIds: [],
         }));
-        const payload = this.mapMessage(created);
+        const payload = this.mapMessage(created, actorId);
         await this.conversationService.touchLastMessage(conversationId, {
             id: payload.id,
             senderId: payload.senderId,
@@ -165,9 +173,9 @@ let MessageService = class MessageService {
                 continue;
             if (!String(item.text || '').toLowerCase().includes(keyword))
                 continue;
-            matched.push(item);
+            matched.push(this.mapMessage(item, actorId));
         }
-        return { messages: matched.map((row) => this.mapMessage(row)) };
+        return { messages: matched };
     }
     async reactMessage(actorId, messageId, type) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -175,8 +183,12 @@ let MessageService = class MessageService {
             throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
         }
         await this.conversationService.ensureMembership(message.conversationId, actorId);
+        const reactionType = String(type || 'like');
+        if (!this.allowedMessageReactions.has(reactionType)) {
+            throw new common_1.BadRequestException('Cảm xúc tin nhắn không hợp lệ');
+        }
         const reactions = (message.reactions || []).filter((item) => item.userId !== actorId);
-        reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
+        reactions.push({ userId: actorId, type: reactionType, createdAt: new Date() });
         message.reactions = reactions;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
@@ -185,7 +197,7 @@ let MessageService = class MessageService {
             conversationId: message.conversationId,
             message: payload,
         });
-        return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: payload };
+        return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
     }
     async removeReaction(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -201,7 +213,7 @@ let MessageService = class MessageService {
             conversationId: message.conversationId,
             message: payload,
         });
-        return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: payload };
+        return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
     }
     async recallMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
@@ -215,7 +227,7 @@ let MessageService = class MessageService {
         message.isRecalled = true;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
-        const payload = this.mapMessage(saved);
+        const payload = this.mapMessage(saved, actorId);
         (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
             conversationId: message.conversationId,
             message: payload,
@@ -250,7 +262,7 @@ let MessageService = class MessageService {
             isRecalled: false,
             deletedForUserIds: [],
         }));
-        const payload = this.mapMessage(forwarded);
+        const payload = this.mapMessage(forwarded, actorId);
         await this.conversationService.touchLastMessage(targetConversationId, {
             id: payload.id,
             senderId: payload.senderId,

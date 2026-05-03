@@ -21,14 +21,40 @@ docker compose up -d
 - Swagger: `http://localhost:5000/api-docs`
 - Health check: `http://localhost:5000/health`
 
+### Email Configuration (SMTP)
+
+To enable email functionality for registration verification, password reset, and notifications:
+
+1. Copy `.env.example` to `.env` (if not already done)
+2. Configure SMTP settings in `.env`:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-app-specific-password
+   SMTP_FROM=noreply@zzchat.com
+   ```
+
+3. For Gmail:
+   - Enable "Less secure app access" or use App Password
+   - Go to https://myaccount.google.com/apppasswords
+   - Generate an app password and use it in `SMTP_PASSWORD`
+
+4. For other email providers (Outlook, SendGrid, etc.):
+   - Update `SMTP_HOST` to your provider's SMTP server
+   - Update port and security settings accordingly
+
+The system will automatically send OTP codes via email when users register or request password reset.
+
 ### Endpoint auth
 
-- `POST /api/auth/register`
-- `POST /api/auth/verify-registration`
-- `POST /api/auth/resend-verification`
+- `POST /api/auth/register` - Send verification OTP to email/phone
+- `POST /api/auth/verify-registration` - Verify registration with OTP code
+- `POST /api/auth/resend-verification` - Resend verification OTP
 - `POST /api/auth/login`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
+- `POST /api/auth/forgot-password` - Send password reset OTP to email
+- `POST /api/auth/reset-password` - Reset password with OTP code
 - `POST /api/auth/refresh`
 - `GET /api/auth/me` (Bearer token)
 - `PUT /api/auth/me` (Bearer token)

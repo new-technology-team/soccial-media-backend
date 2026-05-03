@@ -15,7 +15,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -34,7 +35,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -52,23 +54,7 @@ export declare class MessageController {
         note: string;
     }>;
     searchMessages(user: any, q: string): Promise<{
-        messages: {
-            id: string;
-            conversationId: any;
-            senderId: any;
-            type: any;
-            text: any;
-            mediaUrl: any;
-            fileName: any;
-            mimeType: any;
-            fileSize: any;
-            meta: any;
-            reactionCount: any;
-            viewerReaction: null;
-            createdAt: any;
-            updatedAt: any;
-            isDeleted: boolean;
-        }[];
+        messages: any[];
     }>;
     reactMessage(user: any, messageId: string, body: {
         type: string;
@@ -86,7 +72,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -106,7 +93,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -126,7 +114,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -148,7 +137,8 @@ export declare class MessageController {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;

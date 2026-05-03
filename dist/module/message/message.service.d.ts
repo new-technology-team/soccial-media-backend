@@ -8,6 +8,7 @@ export declare class MessageService {
     private readonly conversationService;
     private readonly userService;
     private readonly notificationService;
+    private readonly allowedMessageReactions;
     constructor(messageRepository: Repository<Message>, conversationService: ConversationService, userService: UserService, notificationService: NotificationService);
     private mapMessage;
     private sanitizeFileName;
@@ -24,7 +25,8 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -43,30 +45,15 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
         };
     }>;
     searchMessages(actorId: number, q: string): Promise<{
-        messages: {
-            id: string;
-            conversationId: any;
-            senderId: any;
-            type: any;
-            text: any;
-            mediaUrl: any;
-            fileName: any;
-            mimeType: any;
-            fileSize: any;
-            meta: any;
-            reactionCount: any;
-            viewerReaction: null;
-            createdAt: any;
-            updatedAt: any;
-            isDeleted: boolean;
-        }[];
+        messages: any[];
     }>;
     reactMessage(actorId: number, messageId: string, type: string): Promise<{
         message: string;
@@ -82,7 +69,8 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -102,7 +90,8 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -122,7 +111,8 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
@@ -142,7 +132,8 @@ export declare class MessageService {
             fileSize: any;
             meta: any;
             reactionCount: any;
-            viewerReaction: null;
+            viewerReaction: any;
+            reactions: any;
             createdAt: any;
             updatedAt: any;
             isDeleted: boolean;
