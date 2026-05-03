@@ -15,14 +15,18 @@ export class CommentService {
 		private readonly postService: PostService,
 	) {}
 
-	async listPostComments(postId: string, viewerUserId?: number) {
+	async listPostComments(postId: string, viewerUserId?: number, limit = 20, offset = 0) {
 		const rows = await this.commentRepository.find({
 			where: { postId } as any,
 			order: { createdAt: 'ASC' },
 		});
+		const visibleRows = (rows as any[]).filter((row) => row.status === 'visible');
+		const safeOffset = Math.max(Number(offset || 0), 0);
+		const safeLimit = Math.min(Math.max(Number(limit || 20), 1), 50);
+		const pagedRows = visibleRows.slice(safeOffset, safeOffset + safeLimit);
 
 		const comments: any[] = [];
-		for (const row of rows as any[]) {
+		for (const row of pagedRows) {
 			const author = await this.userService.findOne(row.userId);
 			comments.push({
 				id: String(row._id),
@@ -40,7 +44,13 @@ export class CommentService {
 			});
 		}
 
-		return { comments };
+		return {
+			comments,
+			total: visibleRows.length,
+			limit: safeLimit,
+			offset: safeOffset,
+			hasMore: safeOffset + comments.length < visibleRows.length,
+		};
 	}
 
 	async createComment(actorId: number, postId: string, content: string) {

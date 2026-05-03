@@ -7,8 +7,12 @@ export declare class CommentService {
     private readonly userService;
     private readonly postService;
     constructor(commentRepository: Repository<Comment>, userService: UserService, postService: PostService);
-    listPostComments(postId: string, viewerUserId?: number): Promise<{
+    listPostComments(postId: string, viewerUserId?: number, limit?: number, offset?: number): Promise<{
         comments: any[];
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
     }>;
     createComment(actorId: number, postId: string, content: string): Promise<{
         comment: any;

@@ -21,8 +21,8 @@ let CommentController = class CommentController {
     constructor(commentService) {
         this.commentService = commentService;
     }
-    getFeedComments(user, postId) {
-        return this.commentService.listPostComments(postId, user?.id);
+    getFeedComments(user, postId, limit, offset) {
+        return this.commentService.listPostComments(postId, user?.id, Number(limit || 20), Number(offset || 0));
     }
     createFeedComment(user, postId, body) {
         return this.commentService.createComment(user.id, postId, body?.content);
@@ -39,8 +39,10 @@ __decorate([
     (0, common_1.Get)('posts/:postId/comments'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('postId')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('offset')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CommentController.prototype, "getFeedComments", null);
 __decorate([

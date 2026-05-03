@@ -2,8 +2,12 @@ import { CommentService } from "./comment.service";
 export declare class CommentController {
     private readonly commentService;
     constructor(commentService: CommentService);
-    getFeedComments(user: any, postId: string): Promise<{
+    getFeedComments(user: any, postId: string, limit?: string, offset?: string): Promise<{
         comments: any[];
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
     }>;
     createFeedComment(user: any, postId: string, body: {
         content: string;

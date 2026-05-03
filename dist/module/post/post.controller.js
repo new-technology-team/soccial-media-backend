@@ -31,6 +31,18 @@ let PostController = class PostController {
     createFeedPost(user, body) {
         return this.postService.createFeedPost(user.id, body);
     }
+    getFeedPost(user, postId) {
+        return this.postService.getFeedPost(postId, user?.id);
+    }
+    uploadPostBase64(user, body) {
+        return this.postService.uploadPostBase64(user.id, body);
+    }
+    updateFeedPost(user, postId, body) {
+        return this.postService.updateFeedPost(user.id, postId, body);
+    }
+    deleteFeedPost(user, postId) {
+        return this.postService.deleteFeedPost(user.id, postId);
+    }
     reactPost(user, postId, body) {
         return this.postService.reactPost(user.id, postId, body?.type || 'like');
     }
@@ -65,6 +77,42 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], PostController.prototype, "createFeedPost", null);
+__decorate([
+    (0, common_1.Get)('posts/:postId'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('postId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], PostController.prototype, "getFeedPost", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('posts/upload-base64'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], PostController.prototype, "uploadPostBase64", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Patch)('posts/:postId'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('postId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], PostController.prototype, "updateFeedPost", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Delete)('posts/:postId'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('postId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], PostController.prototype, "deleteFeedPost", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)('posts/:postId/reaction'),

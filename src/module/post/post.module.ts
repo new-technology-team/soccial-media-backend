@@ -4,10 +4,12 @@ import { PostController } from "./post.controller";
 import { PostService } from "./post.service";
 import { Post } from "./post.entity";
 import { User } from "../user/user.entity";
+import { Comment } from "../comment/comment.entity";
 
 @Module({
 	imports: [
 		TypeOrmModule.forFeature([Post], 'mongodb'),
+		TypeOrmModule.forFeature([Comment], 'mongodb'),
 		TypeOrmModule.forFeature([User], 'mariadb'),
 	],
 	controllers: [PostController],

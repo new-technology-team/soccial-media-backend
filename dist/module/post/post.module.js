@@ -13,6 +13,7 @@ const post_controller_1 = require("./post.controller");
 const post_service_1 = require("./post.service");
 const post_entity_1 = require("./post.entity");
 const user_entity_1 = require("../user/user.entity");
+const comment_entity_1 = require("../comment/comment.entity");
 let PostModule = class PostModule {
 };
 exports.PostModule = PostModule;
@@ -20,6 +21,7 @@ exports.PostModule = PostModule = __decorate([
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([post_entity_1.Post], 'mongodb'),
+            typeorm_1.TypeOrmModule.forFeature([comment_entity_1.Comment], 'mongodb'),
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User], 'mariadb'),
         ],
         controllers: [post_controller_1.PostController],

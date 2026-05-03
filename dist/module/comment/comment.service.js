@@ -26,13 +26,17 @@ let CommentService = class CommentService {
         this.userService = userService;
         this.postService = postService;
     }
-    async listPostComments(postId, viewerUserId) {
+    async listPostComments(postId, viewerUserId, limit = 20, offset = 0) {
         const rows = await this.commentRepository.find({
             where: { postId },
             order: { createdAt: 'ASC' },
         });
+        const visibleRows = rows.filter((row) => row.status === 'visible');
+        const safeOffset = Math.max(Number(offset || 0), 0);
+        const safeLimit = Math.min(Math.max(Number(limit || 20), 1), 50);
+        const pagedRows = visibleRows.slice(safeOffset, safeOffset + safeLimit);
         const comments = [];
-        for (const row of rows) {
+        for (const row of pagedRows) {
             const author = await this.userService.findOne(row.userId);
             comments.push({
                 id: String(row._id),
@@ -49,7 +53,13 @@ let CommentService = class CommentService {
                 updatedAt: row.updatedAt,
             });
         }
-        return { comments };
+        return {
+            comments,
+            total: visibleRows.length,
+            limit: safeLimit,
+            offset: safeOffset,
+            hasMore: safeOffset + comments.length < visibleRows.length,
+        };
     }
     async createComment(actorId, postId, content) {
         await this.postService.getPostById(postId);
