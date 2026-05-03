@@ -191,16 +191,21 @@ export class PostService {
 
         if (bucket) {
             const key = `uploads/posts/${actorId}/${outputName}`;
-            await this.getS3Client().send(new PutObjectCommand({
-                Bucket: bucket,
-                Key: key,
-                Body: buffer,
-                ContentType: contentType,
-            }));
-            return {
-                message: 'Da tai media bai viet len S3',
-                mediaUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
-            };
+            try {
+                await this.getS3Client().send(new PutObjectCommand({
+                    Bucket: bucket,
+                    Key: key,
+                    Body: buffer,
+                    ContentType: contentType,
+                }));
+                return {
+                    message: 'Da tai media bai viet len S3',
+                    mediaUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
+                };
+            } catch (error) {
+                // Fallback to local storage when S3 credentials/signature are invalid.
+                console.warn('S3 upload failed, fallback to local uploads:', error instanceof Error ? error.message : error);
+            }
         }
 
         const outputDir = path.join(process.cwd(), 'uploads', 'posts', String(actorId));
