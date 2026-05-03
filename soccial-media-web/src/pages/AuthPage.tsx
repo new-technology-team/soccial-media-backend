@@ -54,7 +54,7 @@ export function AuthPage({ onLoginSuccess, onSwitchToVerify }: Props) {
         setMode("verify");
       } else if (mode === "verify") {
         const data = await api.verifyRegistration({ emailOrPhone, code });
-        authStorage.setTokens(data.accessToken, data.refreshToken);
+        authStorage.setTokens(data.access_token, data.refresh_token);
         setMessage("Xác thực OTP thành công.");
         setMode("login");
         await onLoginSuccess();
@@ -75,7 +75,7 @@ export function AuthPage({ onLoginSuccess, onSwitchToVerify }: Props) {
         setMode("login");
       } else {
         const data = await api.login({ emailOrPhone, password });
-        authStorage.setTokens(data.accessToken, data.refreshToken);
+        authStorage.setTokens(data.access_token, data.refresh_token);
         await onLoginSuccess();
         setMessage("Đăng nhập thành công.");
       }

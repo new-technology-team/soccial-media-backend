@@ -1,0 +1,99 @@
+.page {
+  width: min(1100px, calc(100% - 1rem));
+  margin: 0.75rem auto 1.4rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.hero {
+  border: 1px solid rgba(171, 173, 174, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(120deg, #fff, #edf3fd);
+  padding: 0.9rem;
+}
+
+.hero p {
+  margin: 0;
+  color: #0052ce;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.25rem 0 0;
+}
+
+.tableWrap {
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: #f4f7fb;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.62rem;
+  border-bottom: 1px solid rgba(171, 173, 174, 0.18);
+}
+
+.table th {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  color: #68757e;
+}
+
+.table td b {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.table td small {
+  color: #68757f;
+}
+
+.actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  border: 1px solid rgba(171, 173, 174, 0.24);
+  background: #f7f9fc;
+  border-radius: 9px;
+  padding: 0.38rem 0.48rem;
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.empty {
+  padding: 0.7rem;
+  color: #6f7c85;
+  text-align: center;
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+@media (max-width: 840px) {
+  .tableWrap {
+    overflow-x: auto;
+  }
+}

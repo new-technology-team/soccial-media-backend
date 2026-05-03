@@ -11,8 +11,8 @@ export type AuthUser = {
 };
 
 export type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
   user: AuthUser;
 };
 

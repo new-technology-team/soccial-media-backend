@@ -1,0 +1,274 @@
+.page {
+  width: min(1160px, calc(100% - 1rem));
+  margin: 0.9rem auto 1.1rem;
+  min-height: calc(100vh - 64px);
+}
+
+.hero {
+  border: 1px solid rgba(19, 27, 36, 0.1);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f4f7ff 0%, #ffffff 52%, #eef8ff 100%);
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #63717b;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.45rem, 3.6vw, 2.1rem);
+  color: #10202a;
+}
+
+.heroSub {
+  margin: 0.42rem 0 0;
+  color: #596773;
+  max-width: 44ch;
+}
+
+.markAllBtn {
+  border: 0;
+  border-radius: 12px;
+  background: #0b5fff;
+  color: #fff;
+  height: 40px;
+  padding: 0 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filterRow {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.filterBtn {
+  border: 1px solid rgba(19, 27, 36, 0.18);
+  border-radius: 999px;
+  background: #fff;
+  color: #1b2a35;
+  height: 34px;
+  padding: 0 0.82rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filterBtnActive {
+  border-color: #0b5fff;
+  background: rgba(11, 95, 255, 0.12);
+  color: #063ea5;
+}
+
+.layout {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 0.75rem;
+}
+
+.mainPanel,
+.sidePanel {
+  border: 1px solid rgba(19, 27, 36, 0.1);
+  border-radius: 18px;
+  background: #fff;
+  padding: 0.8rem;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+}
+
+.panelHead h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1a2732;
+}
+
+.panelHead span {
+  font-size: 0.78rem;
+  color: #667581;
+}
+
+.list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.item {
+  width: 100%;
+  border: 1px solid rgba(19, 27, 36, 0.1);
+  background: #fff;
+  border-radius: 13px;
+  padding: 0.68rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover {
+  box-shadow: 0 10px 24px rgba(14, 26, 39, 0.09);
+}
+
+.itemUnread {
+  border-color: rgba(11, 95, 255, 0.42);
+  background: rgba(11, 95, 255, 0.04);
+}
+
+.itemIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, #0b5fff, #5ca9ff);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.itemTypeIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.itemBody {
+  min-width: 0;
+}
+
+.itemBody p {
+  margin: 0;
+  color: #1a2732;
+  font-size: 0.92rem;
+  line-height: 1.38;
+}
+
+.itemBody small {
+  display: block;
+  margin-top: 0.22rem;
+  color: #6b7a85;
+  font-size: 0.73rem;
+}
+
+.itemActions {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.acceptBtn,
+.deleteBtn {
+  border: 0;
+  height: 30px;
+  border-radius: 8px;
+  padding: 0 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acceptBtn {
+  background: #0b5fff;
+  color: #fff;
+}
+
+.deleteBtn {
+  background: #e8ecef;
+  color: #31414c;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #0b5fff;
+}
+
+.sidePanel {
+  display: grid;
+  gap: 0.6rem;
+  align-content: flex-start;
+}
+
+.statCard {
+  border: 1px solid rgba(19, 27, 36, 0.08);
+  border-radius: 14px;
+  background: #f7fafc;
+  padding: 0.75rem;
+}
+
+.statCard h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #263846;
+}
+
+.statValue {
+  margin: 0.45rem 0 0;
+  font-size: 1.8rem;
+  line-height: 1;
+  font-weight: 800;
+  color: #0b5fff;
+}
+
+.statCard span {
+  margin-top: 0.34rem;
+  display: block;
+  font-size: 0.78rem;
+  color: #65727d;
+}
+
+.statCard ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1rem;
+  color: #41515f;
+  font-size: 0.83rem;
+  display: grid;
+  gap: 0.38rem;
+}
+
+.empty {
+  margin: 0.4rem 0 0;
+  color: #697986;
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .markAllBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

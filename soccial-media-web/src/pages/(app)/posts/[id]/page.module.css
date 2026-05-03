@@ -1,0 +1,199 @@
+.page {
+  min-height: calc(100vh - 64px);
+  padding: 1rem 0 1.8rem;
+}
+
+.container {
+  width: min(760px, calc(100% - 1.2rem));
+  margin: 0 auto;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.header {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(233, 241, 255, 0.72), rgba(255, 255, 255, 0.96));
+  padding: 1rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  color: #1f2d36;
+}
+
+.header p {
+  margin: 0.35rem 0 0;
+  color: #596972;
+  font-size: 0.9rem;
+}
+
+.infoCard {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 14px;
+  background: #fff;
+  padding: 1rem;
+  text-align: center;
+  color: #647179;
+}
+
+.postCard,
+.commentCard {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 21, 28, 0.08);
+  padding: 0.95rem;
+}
+
+.postHeader h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #22313a;
+}
+
+.postHeader a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.postHeader a:hover {
+  text-decoration: underline;
+}
+
+.postHeader p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #68757e;
+}
+
+.postContent {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #2f3a3f;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.postMedia {
+  display: block;
+  margin-top: 0.75rem;
+  width: 100%;
+  border-radius: 12px;
+  max-height: 420px;
+  object-fit: cover;
+}
+
+.postMeta {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(171, 173, 174, 0.2);
+  color: #66757e;
+  font-size: 0.83rem;
+}
+
+.commentCard h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #22313a;
+}
+
+.commentForm {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.commentTextarea {
+  width: 100%;
+  min-height: 100px;
+  max-width: 100%;
+  border: 1px solid rgba(171, 173, 174, 0.28);
+  border-radius: 10px;
+  padding: 0.62rem;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.commentTextarea:focus {
+  border-color: rgba(0, 82, 206, 0.55);
+  box-shadow: 0 0 0 3px rgba(0, 82, 206, 0.12);
+}
+
+.submitBtn {
+  border: 0;
+  border-radius: 10px;
+  height: 38px;
+  background: #0052ce;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.commentList {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.commentItem {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 12px;
+  background: #f9fbfd;
+  padding: 0.65rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.commentAvatarWrap {
+  padding-top: 0.1rem;
+}
+
+.commentBody {
+  min-width: 0;
+}
+
+.commentAuthor {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: #22313a;
+}
+
+.commentAuthor a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.commentAuthor a:hover {
+  text-decoration: underline;
+}
+
+.commentText {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  color: #2f3c45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.commentTime {
+  margin: 0.25rem 0 0;
+  font-size: 0.76rem;
+  color: #6d7a82;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #66757e;
+}

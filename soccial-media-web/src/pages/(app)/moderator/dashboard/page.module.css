@@ -1,0 +1,143 @@
+.page {
+  width: min(1120px, calc(100% - 1rem));
+  margin: 0.75rem auto 1.5rem;
+  display: grid;
+  gap: 0.78rem;
+}
+
+.hero {
+  border: 1px solid rgba(171, 173, 174, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(120deg, #f8f9fb 0%, #ecf1f9 65%, #e6edf8 100%);
+  padding: 1rem;
+}
+
+.hero p {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #0052ce;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.35rem, 2.8vw, 1.9rem);
+}
+
+.hero span {
+  display: block;
+  margin-top: 0.35rem;
+  color: #63717a;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.statCard {
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 13px;
+  background: #fff;
+  padding: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statCard small {
+  display: block;
+  color: #67747d;
+}
+
+.statCard strong {
+  margin-top: 0.2rem;
+  display: block;
+  font-size: 1.5rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0.7rem;
+}
+
+.panel {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.82rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.priorityList {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.priorityList > div {
+  border: 1px solid rgba(171, 173, 174, 0.24);
+  border-radius: 10px;
+  padding: 0.5rem;
+  background: #fbfcfe;
+}
+
+.priorityList b {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.priorityList small,
+.priorityList p {
+  color: #66747d;
+  font-size: 0.77rem;
+  margin: 0.2rem 0 0;
+}
+
+.quickList {
+  margin-top: 0.6rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.quickItem {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 11px;
+  text-decoration: none;
+  color: #24343d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem;
+}
+
+.quickItem:hover {
+  background: #f5f8fd;
+}
+
+.quickItem b {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.quickItem small {
+  color: #6b7881;
+}
+
+@media (max-width: 900px) {
+  .statGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+}

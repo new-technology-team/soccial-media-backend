@@ -1,0 +1,341 @@
+.page {
+  width: min(1240px, calc(100% - 1rem));
+  margin: 0.5rem auto 1.6rem;
+  display: grid;
+  gap: 0.9rem;
+  font-family: 'Plus Jakarta Sans', 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.denied {
+  width: min(680px, calc(100% - 1rem));
+  margin: 1.2rem auto;
+  border: 1px solid rgba(190, 40, 52, 0.25);
+  border-radius: 14px;
+  background: #fff3f4;
+  color: #91212a;
+  padding: 0.9rem;
+  text-align: center;
+}
+
+.hero {
+  border: 1px solid rgba(89, 150, 149, 0.3);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(96, 220, 201, 0.24), transparent 35%),
+    linear-gradient(120deg, #ffffff 0%, #f1fffb 45%, #effaf8 100%);
+  padding: 1rem 1rem 0.85rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0f8a7a;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.28rem 0 0;
+  font-size: clamp(1.3rem, 3vw, 1.95rem);
+}
+
+.hero p {
+  margin: 0.32rem 0 0;
+  color: #46625d;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.card {
+  border: 1px solid rgba(171, 173, 174, 0.18);
+  border-radius: 16px;
+  background: #fff;
+  padding: 0.82rem;
+  box-shadow: 0 12px 28px rgba(16, 20, 26, 0.07);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #647079;
+  font-size: 0.78rem;
+}
+
+.card strong {
+  margin-top: 0.35rem;
+  display: block;
+  font-size: 1.5rem;
+}
+
+.panel {
+  border: 1px solid rgba(171, 173, 174, 0.18);
+  border-radius: 16px;
+  background: #fff;
+  padding: 0.82rem;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(140px, 180px)) auto auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.searchBox {
+  min-height: 38px;
+  border: 1px solid rgba(141, 151, 166, 0.34);
+  border-radius: 10px;
+  padding: 0 0.62rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: #63737d;
+  background: #fff;
+}
+
+.searchBox input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  font-size: 0.84rem;
+  color: #25323a;
+}
+
+.panel select,
+.refreshBtn {
+  min-height: 38px;
+  border: 1px solid rgba(141, 151, 166, 0.34);
+  border-radius: 10px;
+  background: #fff;
+  color: #25323a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0 0.62rem;
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.visibilityStats {
+  margin-top: 0.72rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.visibilityStats span {
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f8fbfd;
+  font-size: 0.84rem;
+}
+
+.bulkBar {
+  margin-top: 0.72rem;
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 12px;
+  background: #f8fbfd;
+  min-height: 44px;
+  padding: 0.45rem 0.62rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.bulkBar span {
+  color: #3c4c56;
+  font-size: 0.82rem;
+}
+
+.bulkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.bulkBtn {
+  border: 1px solid rgba(141, 151, 166, 0.34);
+  border-radius: 9px;
+  min-height: 30px;
+  padding: 0 0.52rem;
+  background: #fff;
+  color: #2f3f49;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bulkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulkDanger {
+  border-color: rgba(179, 27, 37, 0.34);
+  color: #a0242c;
+  background: #fff5f6;
+}
+
+.error {
+  margin: 0.7rem 0 0;
+  border: 1px solid rgba(190, 40, 52, 0.25);
+  border-radius: 12px;
+  background: #fff3f4;
+  color: #91212a;
+  font-size: 0.83rem;
+  padding: 0.58rem 0.66rem;
+}
+
+.notice {
+  margin: 0.7rem 0 0;
+  border: 1px solid rgba(15, 138, 122, 0.25);
+  border-radius: 12px;
+  background: #eefbf8;
+  color: #0b665a;
+  font-size: 0.83rem;
+  padding: 0.58rem 0.66rem;
+}
+
+.tableWrap {
+  margin-top: 0.78rem;
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 14px;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid rgba(171, 173, 174, 0.2);
+  text-align: left;
+  vertical-align: top;
+  padding: 0.6rem 0.66rem;
+  font-size: 0.81rem;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f7fbff;
+  color: #42525d;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.table th:first-child,
+.table td:first-child {
+  width: 44px;
+  text-align: center;
+}
+
+.table input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #0f8a7a;
+  cursor: pointer;
+}
+
+.content {
+  margin: 0;
+  color: #2f3f49;
+  max-width: 360px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.inlineEdit {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 250px;
+}
+
+.inlineEdit textarea,
+.inlineEdit input {
+  width: 100%;
+  border: 1px solid rgba(141, 151, 166, 0.34);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.81rem;
+  color: #25323a;
+  padding: 0.46rem 0.52rem;
+}
+
+.inlineEdit textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.actions button {
+  border: 1px solid rgba(141, 151, 166, 0.32);
+  border-radius: 9px;
+  min-height: 30px;
+  padding: 0 0.52rem;
+  background: #fff;
+  color: #2f3f49;
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  cursor: pointer;
+}
+
+.danger {
+  border-color: rgba(179, 27, 37, 0.34) !important;
+  color: #a0242c !important;
+  background: #fff5f6 !important;
+}
+
+.empty {
+  margin: 0.76rem 0 0;
+  color: #647079;
+  font-size: 0.83rem;
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .bulkBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

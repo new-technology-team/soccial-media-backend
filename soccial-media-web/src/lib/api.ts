@@ -10,6 +10,11 @@ import type {
   UserSettings
 } from "../types";
 
+export function isAuthExpiredError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /unauthorized|token.*expired|401/i.test(msg);
+}
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -282,6 +287,125 @@ export const api = {
   readAllNotifications: () =>
     request<{ message: string }>("/api/social/notifications/read-all", {
       method: "PATCH"
+    }),
+
+  // ─── Feed / Posts ───────────────────────────────────────────────
+  listFeed: (limit = 30) =>
+    request<{ posts: unknown[] }>(`/api/social/feed?limit=${limit}`),
+
+  createPost: (payload: { content: string; mediaUrl?: string; visibility?: string }) =>
+    request<{ post: unknown }>("/api/social/posts", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  getPost: (id: string) =>
+    request<{ post: unknown }>(`/api/social/posts/${id}`),
+
+  updatePost: (id: string, payload: { content?: string; mediaUrl?: string; visibility?: string }) =>
+    request<{ post: unknown }>(`/api/social/posts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+
+  deletePost: (id: string) =>
+    request<{ message: string }>(`/api/social/posts/${id}`, {
+      method: "DELETE"
+    }),
+
+  reactPost: (id: string, type = "like") =>
+    request<{ message: string }>(`/api/social/posts/${id}/reaction`, {
+      method: "POST",
+      body: JSON.stringify({ type })
+    }),
+
+  unreactPost: (id: string) =>
+    request<{ message: string }>(`/api/social/posts/${id}/reaction`, {
+      method: "DELETE"
+    }),
+
+  uploadPostMediaBase64: (payload: { fileName: string; contentType: string; base64Data: string }) =>
+    request<{ mediaUrl: string; key: string }>("/api/social/posts/media/upload-base64", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  // ─── Comments ──────────────────────────────────────────────────
+  addComment: (postId: string, content: string, parentId?: string) =>
+    request<{ comment: unknown }>(`/api/social/posts/${postId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content, parentId })
+    }),
+
+  listComments: (postId: string) =>
+    request<{ comments: unknown[] }>(`/api/social/posts/${postId}/comments`),
+
+  reactComment: (id: string, type = "like") =>
+    request<{ message: string }>(`/api/social/comments/${id}/reaction`, {
+      method: "POST",
+      body: JSON.stringify({ type })
+    }),
+
+  unreactComment: (id: string) =>
+    request<{ message: string }>(`/api/social/comments/${id}/reaction`, {
+      method: "DELETE"
+    }),
+
+  deleteComment: (id: string) =>
+    request<{ message: string }>(`/api/social/comments/${id}`, {
+      method: "DELETE"
+    }),
+
+  // ─── Reports ────────────────────────────────────────────────────
+  submitReport: (payload: { targetType: string; targetId: string | number; reason: string; details?: string }) =>
+    request<{ message: string }>("/api/social/reports", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  // ─── Admin ──────────────────────────────────────────────────────
+  adminStats: () =>
+    request<{ stats: unknown }>("/api/admin/stats"),
+
+  adminPosts: (page = 1, limit = 20) =>
+    request<{ posts: unknown[]; total: number }>(`/api/admin/posts?page=${page}&limit=${limit}`),
+
+  adminUsers: (page = 1, limit = 20) =>
+    request<{ users: unknown[]; total: number }>(`/api/admin/users?page=${page}&limit=${limit}`),
+
+  moderationUsers: (page = 1, limit = 20) =>
+    request<{ users: unknown[]; total: number }>(`/api/admin/users?page=${page}&limit=${limit}`),
+
+  moderationReports: (page = 1, limit = 20) =>
+    request<{ reports: unknown[]; total: number }>(`/api/admin/reports?page=${page}&limit=${limit}`),
+
+  updateAdminPost: (id: number, payload: { isHidden?: boolean; isPinned?: boolean }) =>
+    request<{ message: string }>(`/api/admin/posts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+
+  deleteAdminPost: (id: number) =>
+    request<{ message: string }>(`/api/admin/posts/${id}`, {
+      method: "DELETE"
+    }),
+
+  updateAdminUser: (id: number, payload: { accountStatus?: string; role?: string }) =>
+    request<{ message: string }>(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
+
+  resolveReport: (id: number) =>
+    request<{ message: string }>(`/api/admin/reports/${id}/resolve`, {
+      method: "PATCH"
+    }),
+
+  // ─── AI Chat ────────────────────────────────────────────────────
+  aiChat: (message: string, history?: Array<{ role: string; content: string }>) =>
+    request<{ reply: string }>("/api/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, history })
     }),
 
   logout: () => request<{ message: string }>("/api/auth/logout", { method: "POST" })
