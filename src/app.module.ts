@@ -22,6 +22,7 @@ import { Comment } from './module/comment/comment.entity';
 import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
+import { AiMessage } from './module/ai/ai-message.entity';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
@@ -61,7 +62,7 @@ function buildMongoUrl(): string {
       type: 'mongodb',
       url: buildMongoUrl(),
       synchronize: true,
-      entities: [Comment, Conversation, Message, Notification, Post],
+      entities: [Comment, Conversation, Message, Notification, Post, AiMessage],
     }),
     AuthModule,
     CommentModule,

@@ -1,0 +1,32 @@
+[
+  {
+    "category": "Nhắn tin",
+    "feature": "Các tính năng cơ bản",
+    "description": "ZChat hỗ trợ nhắn tin 1-1 và nhắn tin nhóm. Người dùng có thể gửi tin nhắn văn bản, hình ảnh, video, sticker, biểu tượng cảm xúc. Ngoài ra, người dùng còn có thể ghim tin nhắn quan trọng, thu hồi tin nhắn đã gửi sai, và chuyển tiếp tin nhắn cho người khác."
+  },
+  {
+    "category": "Nhắn tin",
+    "feature": "Gọi điện Video & Gọi Thoại",
+    "description": "ZChat hiện CÓ HỖ TRỢ tính năng gọi điện thoại âm thanh (Voice Call) và gọi video trực tiếp (Video Call) cho bạn bè và người thân. Để gọi điện, bạn có thể nhấn vào biểu tượng Gọi Video hoặc Điện thoại ở góc trên cùng bên phải trong cửa sổ chat 1-1."
+  },
+  {
+    "category": "Bạn bè",
+    "feature": "Quản lý bạn bè",
+    "description": "Người dùng có thể tìm kiếm bạn bè qua số điện thoại hoặc email. Hệ thống cho phép gửi lời mời kết bạn, chấp nhận hoặc từ chối lời mời. Danh sách bạn bè được quản lý trong tab Bạn bè."
+  },
+  {
+    "category": "Mạng xã hội",
+    "feature": "Bài đăng (Feed)",
+    "description": "ZChat có một bảng tin (Feed) hoạt động như mạng xã hội. Người dùng có thể đăng bài (trạng thái văn bản hoặc hình ảnh). Người dùng có thể thả tim (reaction), bình luận vào bài đăng của người khác. Mỗi bài đăng có thể thiết lập quyền riêng tư (công khai hoặc chỉ mình tôi)."
+  },
+  {
+    "category": "Tài khoản",
+    "feature": "Quản lý hồ sơ",
+    "description": "Hệ thống hỗ trợ đăng ký tài khoản bằng email hoặc số điện thoại có xác thực OTP. Người dùng có thể đăng nhập, đổi mật khẩu, cập nhật hồ sơ cá nhân và ảnh đại diện (avatar)."
+  },
+  {
+    "category": "Thông báo",
+    "feature": "Cập nhật thông báo",
+    "description": "ZChat có hệ thống thông báo realtime để báo cho người dùng biết khi có tin nhắn mới, lời mời kết bạn, bài đăng được thả tim, hay được nhắc đến trong bình luận."
+  }
+]

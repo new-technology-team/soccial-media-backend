@@ -1,0 +1,1 @@
+{"version":3,"file":"summarize-chat.dto.d.ts","sourceRoot":"","sources":["../../../../src/module/ai/dto/summarize-chat.dto.ts"],"names":[],"mappings":"AAWA,qBAAa,cAAc;IAGzB,MAAM,EAAE,MAAM,CAAC;IAIf,OAAO,EAAE,MAAM,CAAC;IAIhB,SAAS,CAAC,EAAE,MAAM,CAAC;CACpB;AAED,qBAAa,gBAAgB;IAK3B,QAAQ,EAAE,cAAc,EAAE,CAAC;CAC5B"}
