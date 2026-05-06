@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '@/lib/types'
+import { authStorage } from '@/lib/auth'
 
 type AuthState = {
   accessToken: string | null
@@ -16,13 +17,19 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
-      setAuth: (payload) =>
+      setAuth: (payload) => {
+        // Sync to authStorage so api.ts request() can read the token
+        authStorage.setTokens(payload.accessToken, payload.refreshToken);
         set({
           accessToken: payload.accessToken,
           refreshToken: payload.refreshToken,
           user: payload.user,
-        }),
-      clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
+        });
+      },
+      clearAuth: () => {
+        authStorage.clear();
+        set({ accessToken: null, refreshToken: null, user: null });
+      },
     }),
     {
       name: 'abc-auth-storage',

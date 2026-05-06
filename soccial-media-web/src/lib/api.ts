@@ -30,7 +30,24 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
-  const accessToken = authStorage.getAccessToken();
+  // Try authStorage first (synced on new logins), then fall back to Zustand persisted state
+  let accessToken = authStorage.getAccessToken();
+  if (!accessToken) {
+    try {
+      const stored = localStorage.getItem('abc-auth-storage');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        accessToken = parsed?.state?.accessToken ?? null;
+        // Sync back to authStorage so future calls are faster
+        const refreshToken = parsed?.state?.refreshToken ?? null;
+        if (accessToken && refreshToken) {
+          authStorage.setTokens(accessToken, refreshToken);
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
 
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
