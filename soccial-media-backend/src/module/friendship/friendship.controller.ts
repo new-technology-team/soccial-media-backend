@@ -1,4 +1,14 @@
-﻿import { Controller, Get, Post, Delete, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
+﻿import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { FriendshipService } from './friendship.service';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
@@ -9,7 +19,9 @@ export class FriendshipController {
   @Get('friends')
   @UseGuards(JwtAuthGuard)
   listFriends(@Req() req: any) {
-    return this.friendshipService.listFriends(req.user.sub);
+    return this.friendshipService.listFriends(req.user.sub).then((friends) => ({
+      friends,
+    }));
   }
 
   @Post('friends/request')
@@ -21,18 +33,26 @@ export class FriendshipController {
   @Post('friends/:userId/accept')
   @UseGuards(JwtAuthGuard)
   acceptRequest(@Param('userId') userId: string, @Req() req: any) {
-    return this.friendshipService.acceptRequest(req.user.sub, parseInt(userId, 10));
+    return this.friendshipService.acceptRequest(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
   }
 
   @Delete('friends/:userId')
   @UseGuards(JwtAuthGuard)
   removeFriend(@Param('userId') userId: string, @Req() req: any) {
-    return this.friendshipService.removeFriend(req.user.sub, parseInt(userId, 10));
+    return this.friendshipService.removeFriend(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
   }
 
   @Get('users/search')
   @UseGuards(JwtAuthGuard)
   searchUsers(@Query('q') q: string) {
-    return this.friendshipService.searchUsers(q || '', 20);
+    return this.friendshipService.searchUsers(q || '', 20).then((users) => ({
+      users,
+    }));
   }
 }

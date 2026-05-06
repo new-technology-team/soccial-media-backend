@@ -57,6 +57,7 @@ export function FeedScreen({
       const res = await api.listFeed();
       setPosts(res.posts || []);
     } catch (err) {
+      console.error("Failed to load feed", err);
       setError(err instanceof Error ? err.message : "Tải bảng tin thất bại");
     } finally {
       setIsLoading(false);
