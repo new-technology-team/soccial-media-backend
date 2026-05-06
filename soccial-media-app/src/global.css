@@ -1,0 +1,25 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+@source "../App.tsx";
+@source "./**/*.{ts,tsx}";
+
+@theme {
+  --color-primary: #0052cc;
+  --color-primary-light: #789dff;
+  --color-primary-dark: #003d9a;
+  --color-background: #f3f5f8;
+  --color-foreground: #2c2f30;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #e8edef;
+  --color-muted: #e8edef;
+  --color-muted-foreground: #595c5d;
+  --color-border: #c2ced4;
+  --color-input: #ffffff;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+}

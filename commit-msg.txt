@@ -1,9 +1,0 @@
-feat: add web frontend assets, config files and api client
-
-- Public assets: favicons, placeholder images
-- Web scripts and documentation
-- Uploaded media files (messages, posts)
-- API client with all backend endpoints
-- Auth page component with token mapping
-- Socket.io client setup
-- TypeScript config and global types

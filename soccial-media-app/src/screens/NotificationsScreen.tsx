@@ -1,0 +1,106 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { View, FlatList, RefreshControl } from "react-native";
+import { TopBar } from "../components/common/TopBar";
+import { EmptyState } from "../components/common/EmptyState";
+import { NotificationItem } from "../components/notifications/NotificationItem";
+import { api } from "../lib/api";
+import type { Notification } from "../types";
+
+interface NotificationsScreenProps {
+  onOpenPost?: (postId: string, options?: { openComments?: boolean }) => void;
+}
+
+export function NotificationsScreen({ onOpenPost }: NotificationsScreenProps) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await api.notifications();
+      setNotifications(res.notifications || []);
+    } catch {
+      /* silent */
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      load();
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [load]);
+
+  const handlePressNotification = async (item: Notification) => {
+    const isRead = Boolean(item.isRead ?? item.is_read);
+    if (!isRead) {
+      try {
+        await api.readNotification(item.id);
+        setNotifications((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, isRead: true, is_read: true }
+              : entry,
+          ),
+        );
+      } catch {
+        /* silent */
+      }
+    }
+
+    const postId =
+      item.meta?.postId ||
+      (typeof item.meta?.targetId === "string"
+        ? item.meta.targetId
+        : undefined);
+
+    if (!postId || !onOpenPost) return;
+    const openComments = String(item.type || "").includes("comment");
+    onOpenPost(String(postId), { openComments });
+  };
+
+  return (
+    <View className="flex-1 bg-background">
+      <TopBar title="Thông báo" />
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <NotificationItem
+            notification={item}
+            onPress={() => {
+              void handlePressNotification(item);
+            }}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor="#0052ce"
+          />
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <EmptyState
+              icon="🔔"
+              title="Không có thông báo nào"
+              subtitle="Bạn sẽ nhận thông báo khi có hoạt động mới"
+            />
+          ) : null
+        }
+      />
+    </View>
+  );
+}
