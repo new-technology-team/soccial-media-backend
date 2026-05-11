@@ -1,9 +1,11 @@
 import {
+  Inject,              // ← thêm Inject vào đây
   Injectable,
   InternalServerErrorException,
   Logger,
   OnModuleInit,
 } from "@nestjs/common";
+import { GEMINI_CHAT_MODEL, GEMINI_EMBEDDINGS } from './ai.provider';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
@@ -19,44 +21,40 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
-import {
-  GEMINI_MODEL,
-  MAX_HISTORY_TURNS,
-  ZCHAT_SYSTEM_PROMPT,
-} from "./ai.constants";
+import { GEMINI_MODEL, MAX_HISTORY_TURNS, ZCHAT_SYSTEM_PROMPT } from "./ai.constants";
 import { AiChatDto, ChatHistoryEntryDto } from "./dto/ai-chat.dto";
 import { AiMessage as AiMessageEntity } from "./ai-message.entity";
 
+interface KnowledgeEntry {
+  id?: string;
+  category: string;
+  feature: string;
+  description: string;
+  howTo?: string;
+  faq?: string[];
+  keywords?: string[];
+}
 @Injectable()
 export class AiService implements OnModuleInit {
   private readonly logger = new Logger(AiService.name);
-  private chatModel: ChatGoogleGenerativeAI;
-  private embeddings: GoogleGenerativeAIEmbeddings;
   private vectorStore: Chroma | null = null;
   private qnaChain: RunnableSequence | null = null;
   private ragReady = false;
 
   constructor(
     private readonly config: ConfigService,
-    @InjectRepository(AiMessageEntity, 'mongodb')
+    @InjectRepository(AiMessageEntity, "mongodb")
     private readonly aiMessageRepo: Repository<AiMessageEntity>,
+
+    // ✅ Inject từ provider thay vì tự khởi tạo
+    @Inject(GEMINI_CHAT_MODEL)
+    private readonly chatModel: ChatGoogleGenerativeAI,
+
+    @Inject(GEMINI_EMBEDDINGS)
+    private readonly embeddings: GoogleGenerativeAIEmbeddings,
   ) {
-    const apiKey = this.config.get<string>("GEMINI_API_KEY") || "";
-    if (!apiKey) {
-      this.logger.warn(
-        "GEMINI_API_KEY chưa được cấu hình – AI sẽ không hoạt động.",
-      );
-    }
 
-    this.chatModel = new ChatGoogleGenerativeAI({
-      apiKey: apiKey,
-      model: GEMINI_MODEL,
-    });
 
-    this.embeddings = new GoogleGenerativeAIEmbeddings({
-      apiKey: apiKey,
-      model: "gemini-embedding-2",
-    });
   }
 
   async onModuleInit() {
@@ -78,17 +76,152 @@ export class AiService implements OnModuleInit {
 
       this.setupRagChain();
       this.ragReady = true;
-      this.logger.log("✅ Chroma Vector Store & RAG Chain khởi tạo thành công.");
+      this.logger.log(
+        "✅ Chroma Vector Store & RAG Chain khởi tạo thành công.",
+      );
     } catch (e) {
       this.logger.warn(
-        `⚠️  ChromaDB chưa sẵn sàng (${chromaUrl}). AI sẽ dùng chế độ Direct Chat (không RAG). Lỗi: ${
-          e instanceof Error ? e.message : String(e)
+        `⚠️  ChromaDB chưa sẵn sàng (${chromaUrl}). AI sẽ dùng chế độ Direct Chat (không RAG). Lỗi: ${e instanceof Error ? e.message : String(e)
         }`,
       );
       this.vectorStore = null;
       this.qnaChain = null;
       this.ragReady = false;
     }
+  }
+
+  /**
+   * Nhận diện category từ câu hỏi của user dựa trên keyword matching.
+   * Trả về tên category khớp với metadata trong ChromaDB, hoặc null nếu không xác định được.
+   */
+  private detectCategory(question: string): string | null {
+    const q = question.toLowerCase();
+
+    const categoryMap: Record<string, string[]> = {
+      "Nhắn tin": [
+        "tin nhắn",
+        "nhắn tin",
+        "chat",
+        "gửi",
+        "thu hồi",
+        "ghim",
+        "chuyển tiếp",
+        "sticker",
+        "emoji",
+        "hình ảnh",
+        "video",
+        "ảnh",
+        "đính kèm",
+        "file",
+        "gọi thoại",
+        "gọi video",
+        "voice call",
+        "video call",
+        "gọi điện",
+        "nhóm",
+        "group",
+        "tạo nhóm",
+        "thành viên",
+        "rời nhóm",
+        "forward",
+        "unsend",
+        "recall",
+        "pin",
+        "media",
+      ],
+      "Bạn bè": [
+        "bạn bè",
+        "kết bạn",
+        "lời mời",
+        "thêm bạn",
+        "xóa bạn",
+        "chặn",
+        "block",
+        "danh sách bạn",
+        "friend",
+        "add friend",
+        "chấp nhận",
+        "từ chối",
+        "friend request",
+      ],
+      "Mạng xã hội": [
+        "bài đăng",
+        "đăng bài",
+        "feed",
+        "bảng tin",
+        "bình luận",
+        "comment",
+        "reaction",
+        "like",
+        "tim",
+        "thả tim",
+        "quyền riêng tư",
+        "privacy",
+        "public",
+        "private",
+        "post",
+        "trạng thái",
+        "status",
+      ],
+      "Tài khoản": [
+        "đăng ký",
+        "đăng nhập",
+        "mật khẩu",
+        "tài khoản",
+        "hồ sơ",
+        "avatar",
+        "ảnh đại diện",
+        "otp",
+        "xác thực",
+        "profile",
+        "login",
+        "register",
+        "sign up",
+        "sign in",
+        "đổi mật khẩu",
+        "tên hiển thị",
+        "cập nhật thông tin",
+      ],
+      "Thông báo": [
+        "thông báo",
+        "notification",
+        "push",
+        "chuông",
+        "báo",
+        "nhận thông báo",
+        "tắt thông báo",
+      ],
+      "Trí tuệ nhân tạo (AI)": [
+        "ai",
+        "trí tuệ nhân tạo",
+        "tóm tắt",
+        "phân tích",
+        "cảm xúc",
+        "sentiment",
+        "dịch",
+        "translate",
+        "phiên dịch",
+        "gợi ý",
+        "smart reply",
+        "trả lời nhanh",
+        "tự động"
+      ]
+    };
+
+    // Đếm số keyword khớp cho từng category → chọn category có nhiều nhất
+    let bestCategory: string | null = null;
+    let bestScore = 0;
+
+    for (const [category, keywords] of Object.entries(categoryMap)) {
+      const score = keywords.filter((kw) => q.includes(kw)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCategory = category;
+      }
+    }
+
+    // Chỉ filter khi có ít nhất 1 keyword khớp rõ ràng
+    return bestScore > 0 ? bestCategory : null;
   }
 
   /**
@@ -101,8 +234,6 @@ export class AiService implements OnModuleInit {
 
     const promptTemplate = PromptTemplate.fromTemplate(`
       {system_prompt}
-      
-      Bạn là trợ lý AI thông minh cho ứng dụng Zalo Clone của chúng tôi. Hãy trả lời câu hỏi dựa trên các tài liệu nội bộ (context) được cung cấp dưới đây. Nếu thông tin không có trong tài liệu, hãy sử dụng kiến thức kết hợp nhưng vẫn giữ nguyên tinh thần hỗ trợ người dùng ứng dụng.
       
       Dữ liệu nội bộ (Context):
       {context}
@@ -119,10 +250,9 @@ export class AiService implements OnModuleInit {
       {
         context: async (input: { question: string; history: string }) => {
           try {
-            const docs = await retriever.invoke(input.question);
+            const docs = await this.retrieveWithFilter(input.question);
             return docs.map((d) => d.pageContent).join("\n\n");
           } catch {
-            // Nếu ChromaDB lỗi trong lúc query, trả về context rỗng
             return "";
           }
         },
@@ -139,6 +269,51 @@ export class AiService implements OnModuleInit {
   }
 
   /**
+   * Retrieve documents từ ChromaDB với metadata filter nếu detect được category.
+   * Nếu filter trả về ít hơn 2 kết quả → fallback về tìm không filter để tránh bỏ sót.
+   */
+  private async retrieveWithFilter(question: string) {
+    const category = this.detectCategory(question);
+
+    // Có detect được category → thử tìm có filter trước
+    if (category) {
+      this.logger.debug(
+        `Detected category: "${category}" cho câu hỏi: "${question}"`,
+      );
+
+      try {
+        const filteredDocs = await this.vectorStore!.similaritySearch(
+          question,
+          4, // Lấy top-4 trong category đó
+          { category }, // Metadata filter — khớp với field category trong metadatas khi seed
+        );
+
+        // Đủ kết quả → dùng luôn
+        if (filteredDocs.length >= 2) {
+          this.logger.debug(
+            `Filter trả về ${filteredDocs.length} docs từ category "${category}"`,
+          );
+          return filteredDocs;
+        }
+
+        // Ít hơn 2 kết quả → có thể category detect sai hoặc knowledge thiếu
+        this.logger.debug(
+          `Filter chỉ trả về ${filteredDocs.length} docs, fallback về tìm không filter`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `similaritySearch có filter lỗi: ${err}, fallback về không filter`,
+        );
+      }
+    } else {
+      this.logger.debug(`Không detect được category, tìm không filter`);
+    }
+
+    // Fallback — tìm toàn bộ collection không filter
+    return this.vectorStore!.similaritySearch(question, 3);
+  }
+
+  /**
    * Tự động khởi tạo dữ liệu vào ChromaDB nếu database trống.
    * Giúp tiết kiệm chi phí không phải gọi embedding API nhiều lần.
    */
@@ -146,39 +321,97 @@ export class AiService implements OnModuleInit {
     if (!this.vectorStore) return;
 
     try {
-      // Đếm số lượng document hiện có
-      let count = 0;
-      const collection = (this.vectorStore as any).collection;
-      if (collection && typeof collection.count === 'function') {
-        count = await collection.count();
-      } else {
-        // Fallback nếu không gọi được count()
-        const testResult = await this.vectorStore.similaritySearch("", 1);
-        count = testResult.length > 0 ? 1 : 0; // Giả lập có dữ liệu
-      }
-
+      // ✅ Lấy count trực tiếp từ ChromaDB client — không cần embed gì cả
+      const count = await this.getCollectionCount();
       if (count === 0) {
-        this.logger.log("ChromaDB đang trống. Tiến hành seed dữ liệu từ knowledge.json...");
-        const filePath = path.join(process.cwd(), 'src', 'module', 'ai', 'data', 'knowledge.json');
+        this.logger.log(
+          "ChromaDB đang trống. Tiến hành seed dữ liệu từ knowledge.json...",
+        );
+        const filePath = path.join(
+          process.cwd(),
+          "src",
+          "module",
+          "ai",
+          "data",
+          "knowledge.json",
+        );
 
-        if (fs.existsSync(filePath)) {
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          const data = JSON.parse(fileContent);
-
-          const texts = data.map((item: any) => `${item.category} - ${item.feature}\n${item.description}`);
-          const metadatas = data.map((item: any) => ({ category: item.category, feature: item.feature }));
-
-          await this.ingestKnowledgeBase(texts, metadatas);
-          this.logger.log("✅ Seed dữ liệu thành công!");
-        } else {
-          this.logger.warn(`Không tìm thấy file knowledge.json tại ${filePath}`);
+        if (!fs.existsSync(filePath)) {
+          this.logger.warn(
+            `Không tìm thấy file knowledge.json tại ${filePath}`,
+          );
+          return;
         }
+
+        const data: KnowledgeEntry[] = JSON.parse(
+          fs.readFileSync(filePath, "utf8"),
+        );
+
+        // ✅ Embed đủ 5 field thay vì chỉ 3 field như trước
+        const texts = data.map((item) => {
+          const parts = [
+            `${item.category} - ${item.feature}`,
+            item.description,
+            item.howTo ? `Cách thực hiện: ${item.howTo}` : "",
+            item.faq?.length
+              ? `Câu hỏi thường gặp: ${item.faq.join(". ")}`
+              : "",
+            item.keywords?.length ? `Từ khóa: ${item.keywords.join(", ")}` : "",
+          ];
+          return parts.filter(Boolean).join("\n");
+        });
+
+        const metadatas = data.map((item) => ({
+          id: item.id ?? "",
+          category: item.category ?? "",
+          feature: item.feature ?? "",
+        }));
+
+        await this.ingestKnowledgeBase(texts, metadatas);
+        this.logger.log(`✅ Seed thành công ${data.length} entries!`);
       } else {
-        this.logger.log(`ChromaDB đã có sẵn dữ liệu (${count} docs). Bỏ qua seed để tiết kiệm chi phí.`);
+        this.logger.log(`ChromaDB đã có ${count} docs. Bỏ qua seed.`);
       }
     } catch (error) {
-      this.logger.error("Lỗi khi seed dữ liệu vào ChromaDB:", error);
+      this.logger.error("Lỗi khi seed ChromaDB:", error);
     }
+  }
+
+  private async getCollectionCount(): Promise<number> {
+    const store = this.vectorStore as any;
+
+    if (store.collection?.count) {
+      try {
+        return await store.collection.count();
+      } catch {
+        this.logger.debug("getCollectionCount: cách 1 thất bại, thử cách 2");
+      }
+    }
+
+    if (store._client?.getCollection) {
+      try {
+        const col = await store._client.getCollection({
+          name: store.collectionName ?? "app_docs",
+        });
+        return await col.count();
+      } catch {
+        this.logger.debug("getCollectionCount: cách 2 thất bại, thử cách 3");
+      }
+    }
+
+    if (store.collection?.peek) {
+      try {
+        const peeked = await store.collection.peek({ limit: 1 });
+        return peeked?.ids?.length ?? 0;
+      } catch {
+        this.logger.debug("getCollectionCount: cách 3 thất bại, mặc định seed");
+      }
+    }
+
+    this.logger.warn(
+      "Không lấy được collection count, tiến hành seed để an toàn",
+    );
+    return 0;
   }
 
   /**
@@ -187,9 +420,9 @@ export class AiService implements OnModuleInit {
   async getHistory(userId: number) {
     const messages = await this.aiMessageRepo.find({
       where: { userId },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: "ASC" },
     });
-    return messages.map(msg => ({
+    return messages.map((msg) => ({
       role: msg.role,
       text: msg.text,
     }));
@@ -209,25 +442,25 @@ export class AiService implements OnModuleInit {
       );
     }
 
-    // 1. Lưu tin nhắn của user vào DB
-    await this.aiMessageRepo.save({
-      userId,
-      role: 'user',
-      text: dto.message,
-    });
-
-    // 2. Lấy lịch sử từ DB (thay vì frontend truyền lên)
+    // 1. Lấy lịch sử trước- Lúc này db chưa có tin nhắn hiện tại
     const historyDocs = await this.aiMessageRepo.find({
       where: { userId },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: "ASC" },
       take: MAX_HISTORY_TURNS * 2,
     });
-    
+
     // Convert to ChatHistoryEntryDto format
-    const history: ChatHistoryEntryDto[] = historyDocs.map(doc => ({
+    const history: ChatHistoryEntryDto[] = historyDocs.map((doc) => ({
       role: doc.role,
-      text: doc.text
+      text: doc.text,
     }));
+
+    // 2. Lưu tin nhắn của user vào DB sau khi đã lấy History (để tránh lấy luôn tin nhắn hiện tại vào history)
+    await this.aiMessageRepo.save({
+      userId,
+      role: "user",
+      text: dto.message,
+    });
 
     let reply = "";
 
@@ -273,7 +506,7 @@ export class AiService implements OnModuleInit {
     // 3. Lưu câu trả lời của AI vào DB
     await this.aiMessageRepo.save({
       userId,
-      role: 'model',
+      role: "model",
       text: reply,
     });
 

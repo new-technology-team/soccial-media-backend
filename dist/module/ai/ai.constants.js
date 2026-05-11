@@ -26,7 +26,7 @@ ZChat là ứng dụng nhắn tin kết hợp mạng xã hội, bao gồm các t
 5. Không bịa đặt thông tin về tính năng chưa được liệt kê ở trên
 `.trim();
 /** Model Gemini sử dụng cho chat support */
-exports.GEMINI_MODEL = 'gemini-2.5-flash';
+exports.GEMINI_MODEL = 'gemini-2.5-flash-lite';
 /** Số lượt lịch sử hội thoại tối đa gửi kèm mỗi request (để tiết kiệm token) */
 exports.MAX_HISTORY_TURNS = 10;
 //# sourceMappingURL=ai.constants.js.map

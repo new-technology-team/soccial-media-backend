@@ -1,32 +1,552 @@
 [
   {
+    "id": "msg-001",
     "category": "Nhắn tin",
-    "feature": "Các tính năng cơ bản",
-    "description": "ZChat hỗ trợ nhắn tin 1-1 và nhắn tin nhóm. Người dùng có thể gửi tin nhắn văn bản, hình ảnh, video, sticker, biểu tượng cảm xúc. Ngoài ra, người dùng còn có thể ghim tin nhắn quan trọng, thu hồi tin nhắn đã gửi sai, và chuyển tiếp tin nhắn cho người khác."
+    "feature": "Gửi tin nhắn văn bản",
+    "description": "ZChat hỗ trợ gửi tin nhắn văn bản trong chat 1-1 và nhóm. Tin nhắn được gửi realtime nhờ WebSocket.",
+    "howTo": "Nhập nội dung vào ô chat ở phía dưới màn hình, sau đó nhấn Enter hoặc nhấn nút Gửi (biểu tượng mũi tên) để gửi tin nhắn.",
+    "faq": [
+      "Tin nhắn có được mã hóa không?",
+      "Gửi tin nhắn dài có bị giới hạn không?"
+    ],
+    "keywords": [
+      "nhắn tin",
+      "tin nhắn",
+      "chat",
+      "gửi",
+      "văn bản",
+      "text",
+      "message"
+    ]
   },
   {
+    "id": "msg-002",
     "category": "Nhắn tin",
-    "feature": "Gọi điện Video & Gọi Thoại",
-    "description": "ZChat hiện CÓ HỖ TRỢ tính năng gọi điện thoại âm thanh (Voice Call) và gọi video trực tiếp (Video Call) cho bạn bè và người thân. Để gọi điện, bạn có thể nhấn vào biểu tượng Gọi Video hoặc Điện thoại ở góc trên cùng bên phải trong cửa sổ chat 1-1."
+    "feature": "Gửi hình ảnh và video",
+    "description": "Người dùng có thể gửi hình ảnh (JPG, PNG, GIF) và video trực tiếp trong cuộc hội thoại. File được upload lên server và hiển thị inline trong khung chat.",
+    "howTo": "Nhấn vào biểu tượng đính kèm (📎) hoặc biểu tượng hình ảnh trong thanh công cụ chat, chọn file từ thiết bị, sau đó nhấn Gửi.",
+    "faq": [
+      "Dung lượng file tối đa là bao nhiêu?",
+      "Định dạng ảnh nào được hỗ trợ?",
+      "Làm sao tải ảnh về máy?"
+    ],
+    "keywords": [
+      "hình ảnh",
+      "ảnh",
+      "video",
+      "đính kèm",
+      "upload",
+      "file",
+      "media",
+      "gửi ảnh"
+    ]
   },
   {
+    "id": "msg-003",
+    "category": "Nhắn tin",
+    "feature": "Gửi sticker và biểu tượng cảm xúc",
+    "description": "ZChat có thư viện sticker và emoji phong phú để người dùng bày tỏ cảm xúc sinh động hơn trong cuộc trò chuyện.",
+    "howTo": "Nhấn vào biểu tượng mặt cười (😊) ở thanh công cụ chat để mở bảng chọn emoji và sticker, sau đó nhấn vào sticker hoặc emoji muốn gửi.",
+    "faq": [
+      "Có bao nhiêu sticker?",
+      "Có thể thêm sticker tùy chỉnh không?"
+    ],
+    "keywords": [
+      "sticker",
+      "emoji",
+      "biểu tượng cảm xúc",
+      "cảm xúc",
+      "icon",
+      "mặt cười"
+    ]
+  },
+  {
+    "id": "msg-004",
+    "category": "Nhắn tin",
+    "feature": "Thu hồi tin nhắn",
+    "description": "Người dùng có thể thu hồi tin nhắn đã gửi. Sau khi thu hồi, tin nhắn sẽ hiển thị dòng chữ 'Tin nhắn đã được thu hồi' với tất cả thành viên trong cuộc hội thoại.",
+    "howTo": "Nhấn giữ (long press) vào tin nhắn muốn thu hồi → chọn 'Thu hồi' trong menu hiện ra → xác nhận thu hồi.",
+    "faq": [
+      "Thu hồi có giới hạn thời gian không?",
+      "Người nhận có biết mình thu hồi tin nhắn không?",
+      "Thu hồi được ảnh và video không?"
+    ],
+    "keywords": [
+      "thu hồi",
+      "xóa tin nhắn",
+      "unsend",
+      "recall",
+      "rút lại",
+      "hủy tin nhắn"
+    ]
+  },
+  {
+    "id": "msg-005",
+    "category": "Nhắn tin",
+    "feature": "Ghim tin nhắn",
+    "description": "Người dùng có thể ghim những tin nhắn quan trọng để dễ tìm lại sau này. Tin nhắn được ghim sẽ hiển thị ở phần đầu cuộc hội thoại.",
+    "howTo": "Nhấn giữ tin nhắn muốn ghim → chọn 'Ghim tin nhắn' → tin nhắn sẽ xuất hiện ở khu vực ghim phía trên màn hình chat.",
+    "faq": [
+      "Ghim được bao nhiêu tin nhắn?",
+      "Làm sao bỏ ghim tin nhắn?",
+      "Tin nhắn ghim có thông báo cho người khác không?"
+    ],
+    "keywords": [
+      "ghim",
+      "pin",
+      "tin nhắn quan trọng",
+      "đánh dấu",
+      "lưu tin nhắn",
+      "ghim tin nhắn"
+    ]
+  },
+  {
+    "id": "msg-006",
+    "category": "Nhắn tin",
+    "feature": "Chuyển tiếp tin nhắn",
+    "description": "Người dùng có thể chuyển tiếp (forward) một tin nhắn sang cuộc hội thoại khác hoặc cho người dùng khác mà không cần sao chép thủ công.",
+    "howTo": "Nhấn giữ tin nhắn muốn chuyển tiếp → chọn 'Chuyển tiếp' → chọn người hoặc nhóm muốn gửi đến → xác nhận.",
+    "faq": [
+      "Chuyển tiếp có kèm thông tin người gửi gốc không?",
+      "Có thể chuyển tiếp nhiều tin nhắn cùng lúc không?"
+    ],
+    "keywords": [
+      "chuyển tiếp",
+      "forward",
+      "chia sẻ tin nhắn",
+      "gửi lại",
+      "chuyển tin"
+    ]
+  },
+  {
+    "id": "call-001",
+    "category": "Nhắn tin",
+    "feature": "Gọi thoại (Voice Call)",
+    "description": "ZChat hỗ trợ gọi điện thoại âm thanh (Voice Call) 1-1 trực tiếp trong ứng dụng, không tốn phí cuộc gọi thông thường, chỉ cần kết nối internet.",
+    "howTo": "Mở cuộc hội thoại 1-1 với người muốn gọi → nhấn vào biểu tượng Điện thoại (☎️) ở góc trên bên phải → chờ người kia bắt máy.",
+    "faq": [
+      "Gọi thoại có tốn phí không?",
+      "Chất lượng âm thanh như thế nào?",
+      "Có thể gọi nhóm không?"
+    ],
+    "keywords": [
+      "gọi thoại",
+      "voice call",
+      "gọi điện",
+      "cuộc gọi",
+      "điện thoại",
+      "âm thanh",
+      "gọi âm thanh"
+    ]
+  },
+  {
+    "id": "call-002",
+    "category": "Nhắn tin",
+    "feature": "Gọi video (Video Call)",
+    "description": "ZChat hỗ trợ gọi video trực tiếp (Video Call) cho bạn bè và người thân. Tính năng này cho phép nhìn thấy hình ảnh người đối diện trong thời gian thực.",
+    "howTo": "Mở cuộc hội thoại 1-1 → nhấn vào biểu tượng Camera (📹) ở góc trên bên phải → chờ người kia chấp nhận cuộc gọi video.",
+    "faq": [
+      "Có thể tắt camera trong khi gọi video không?",
+      "Gọi video có hỗ trợ nhóm không?",
+      "Cần tốc độ mạng bao nhiêu để gọi video mượt?"
+    ],
+    "keywords": [
+      "gọi video",
+      "video call",
+      "gọi hình",
+      "cuộc gọi video",
+      "camera",
+      "facetime",
+      "gọi mặt"
+    ]
+  },
+  {
+    "id": "group-001",
+    "category": "Nhắn tin",
+    "feature": "Tạo nhóm chat",
+    "description": "ZChat cho phép tạo nhóm chat với nhiều thành viên để trò chuyện, chia sẻ thông tin hoặc làm việc nhóm. Nhóm có thể đặt tên và ảnh đại diện riêng.",
+    "howTo": "Vào tab Tin nhắn → nhấn biểu tượng Tạo nhóm (hoặc nhấn dấu +) → chọn các thành viên muốn thêm vào → đặt tên nhóm → nhấn Tạo nhóm.",
+    "faq": [
+      "Nhóm tối đa bao nhiêu thành viên?",
+      "Ai có thể thêm thành viên vào nhóm?",
+      "Làm sao đổi tên hoặc ảnh đại diện nhóm?"
+    ],
+    "keywords": [
+      "nhóm",
+      "group",
+      "tạo nhóm",
+      "chat nhóm",
+      "nhóm chat",
+      "group chat",
+      "thêm thành viên"
+    ]
+  },
+  {
+    "id": "group-002",
+    "category": "Nhắn tin",
+    "feature": "Quản lý thành viên nhóm",
+    "description": "Trưởng nhóm có thể thêm hoặc xóa thành viên. Thành viên thường cũng có thể tự rời nhóm bất kỳ lúc nào.",
+    "howTo": "Vào cuộc hội thoại nhóm → nhấn vào tên nhóm ở phía trên để vào Cài đặt nhóm → chọn 'Thành viên' → thêm hoặc xóa thành viên.",
+    "faq": [
+      "Làm sao rời nhóm?",
+      "Ai có quyền xóa thành viên?",
+      "Có thể chuyển quyền trưởng nhóm không?"
+    ],
+    "keywords": [
+      "rời nhóm",
+      "xóa thành viên",
+      "thêm thành viên",
+      "trưởng nhóm",
+      "admin nhóm",
+      "quản lý nhóm",
+      "leave group"
+    ]
+  },
+  {
+    "id": "friend-001",
     "category": "Bạn bè",
-    "feature": "Quản lý bạn bè",
-    "description": "Người dùng có thể tìm kiếm bạn bè qua số điện thoại hoặc email. Hệ thống cho phép gửi lời mời kết bạn, chấp nhận hoặc từ chối lời mời. Danh sách bạn bè được quản lý trong tab Bạn bè."
+    "feature": "Tìm kiếm và gửi lời mời kết bạn",
+    "description": "Người dùng có thể tìm kiếm người dùng khác qua số điện thoại hoặc email để gửi lời mời kết bạn. Hệ thống sẽ gửi thông báo đến người được mời.",
+    "howTo": "Vào tab Bạn bè → nhấn biểu tượng Tìm kiếm hoặc Thêm bạn → nhập số điện thoại hoặc email → nhấn 'Gửi lời mời kết bạn'.",
+    "faq": [
+      "Tìm bạn bằng username được không?",
+      "Lời mời kết bạn có hết hạn không?",
+      "Có thể gửi tin nhắn trước khi kết bạn không?"
+    ],
+    "keywords": [
+      "kết bạn",
+      "thêm bạn",
+      "lời mời",
+      "tìm kiếm bạn bè",
+      "add friend",
+      "gửi lời mời",
+      "số điện thoại",
+      "email"
+    ]
   },
   {
+    "id": "friend-002",
+    "category": "Bạn bè",
+    "feature": "Chấp nhận hoặc từ chối lời mời kết bạn",
+    "description": "Khi nhận được lời mời kết bạn, người dùng có thể chấp nhận để trở thành bạn bè hoặc từ chối mà không cần giải thích. Người gửi lời mời sẽ được thông báo kết quả.",
+    "howTo": "Vào tab Bạn bè → chọn mục 'Lời mời kết bạn' → nhấn Chấp nhận (✓) hoặc Từ chối (✗) bên cạnh tên người gửi lời mời.",
+    "faq": [
+      "Từ chối có thông báo cho người kia không?",
+      "Có thể chặn luôn sau khi từ chối không?",
+      "Lời mời nằm ở đâu trong ứng dụng?"
+    ],
+    "keywords": [
+      "chấp nhận kết bạn",
+      "từ chối kết bạn",
+      "lời mời",
+      "accept",
+      "decline",
+      "danh sách lời mời"
+    ]
+  },
+  {
+    "id": "friend-003",
+    "category": "Bạn bè",
+    "feature": "Danh sách bạn bè",
+    "description": "Toàn bộ danh sách bạn bè của người dùng được quản lý trong tab Bạn bè. Có thể tìm kiếm nhanh theo tên trong danh sách.",
+    "howTo": "Nhấn vào tab Bạn bè ở thanh điều hướng phía dưới để xem toàn bộ danh sách bạn bè. Dùng ô tìm kiếm để lọc nhanh theo tên.",
+    "faq": [
+      "Bạn bè được sắp xếp theo thứ tự nào?",
+      "Làm sao xóa bạn bè?",
+      "Có thể xem bạn bè đang online không?"
+    ],
+    "keywords": [
+      "danh sách bạn bè",
+      "tab bạn bè",
+      "friend list",
+      "bạn bè",
+      "xem bạn bè",
+      "tìm bạn"
+    ]
+  },
+  {
+    "id": "feed-001",
     "category": "Mạng xã hội",
-    "feature": "Bài đăng (Feed)",
-    "description": "ZChat có một bảng tin (Feed) hoạt động như mạng xã hội. Người dùng có thể đăng bài (trạng thái văn bản hoặc hình ảnh). Người dùng có thể thả tim (reaction), bình luận vào bài đăng của người khác. Mỗi bài đăng có thể thiết lập quyền riêng tư (công khai hoặc chỉ mình tôi)."
+    "feature": "Đăng bài lên bảng tin (Feed)",
+    "description": "ZChat có bảng tin (Feed) hoạt động như mạng xã hội. Người dùng có thể đăng bài viết dưới dạng trạng thái văn bản hoặc kèm hình ảnh.",
+    "howTo": "Vào tab Feed → nhấn nút 'Đăng bài' hoặc nhấn vào ô 'Bạn đang nghĩ gì?' → nhập nội dung, thêm ảnh nếu muốn → chọn quyền riêng tư → nhấn Đăng.",
+    "faq": [
+      "Bài đăng có thể chỉnh sửa sau khi đăng không?",
+      "Đăng được bao nhiêu ảnh một lúc?",
+      "Ai có thể thấy bài đăng của tôi?"
+    ],
+    "keywords": [
+      "bài đăng",
+      "đăng bài",
+      "feed",
+      "bảng tin",
+      "status",
+      "trạng thái",
+      "post",
+      "đăng trạng thái"
+    ]
   },
   {
+    "id": "feed-002",
+    "category": "Mạng xã hội",
+    "feature": "Reaction và bình luận bài đăng",
+    "description": "Người dùng có thể thả reaction (tim ❤️) hoặc viết bình luận vào bài đăng của bạn bè. Chủ bài đăng sẽ nhận thông báo khi có tương tác mới.",
+    "howTo": "Trên bài đăng trong Feed, nhấn vào biểu tượng Tim để thả reaction, hoặc nhấn vào biểu tượng Bình luận để nhập và gửi bình luận.",
+    "faq": [
+      "Có thể xóa bình luận của mình không?",
+      "Có bao nhiêu loại reaction?",
+      "Làm sao xem danh sách người đã react?"
+    ],
+    "keywords": [
+      "reaction",
+      "bình luận",
+      "comment",
+      "like",
+      "tim",
+      "thả tim",
+      "tương tác",
+      "react bài đăng"
+    ]
+  },
+  {
+    "id": "feed-003",
+    "category": "Mạng xã hội",
+    "feature": "Quyền riêng tư bài đăng",
+    "description": "Mỗi bài đăng có thể thiết lập quyền riêng tư: Công khai (tất cả bạn bè thấy) hoặc Chỉ mình tôi (chỉ bản thân xem được). Cài đặt này có thể thay đổi sau khi đăng.",
+    "howTo": "Khi tạo bài đăng, nhấn vào biểu tượng Quyền riêng tư (🌐 hoặc 🔒) → chọn 'Công khai' hoặc 'Chỉ mình tôi' → tiếp tục đăng bài.",
+    "faq": [
+      "Có thể thay đổi quyền riêng tư sau khi đăng không?",
+      "Bạn bè có thấy bài 'Chỉ mình tôi' không?",
+      "Có chế độ chỉ cho một số bạn thấy không?"
+    ],
+    "keywords": [
+      "quyền riêng tư",
+      "privacy",
+      "công khai",
+      "chỉ mình tôi",
+      "private",
+      "public",
+      "ẩn bài đăng"
+    ]
+  },
+  {
+    "id": "account-001",
     "category": "Tài khoản",
-    "feature": "Quản lý hồ sơ",
-    "description": "Hệ thống hỗ trợ đăng ký tài khoản bằng email hoặc số điện thoại có xác thực OTP. Người dùng có thể đăng nhập, đổi mật khẩu, cập nhật hồ sơ cá nhân và ảnh đại diện (avatar)."
+    "feature": "Đăng ký tài khoản",
+    "description": "Người dùng mới có thể đăng ký tài khoản ZChat bằng email hoặc số điện thoại. Hệ thống gửi mã OTP để xác thực và đảm bảo tài khoản hợp lệ.",
+    "howTo": "Mở ứng dụng ZChat → nhấn 'Đăng ký' → nhập email hoặc số điện thoại → nhập mã OTP nhận được → đặt mật khẩu → hoàn tất đăng ký.",
+    "faq": [
+      "Đăng ký bằng email hay số điện thoại?",
+      "OTP có hết hạn không?",
+      "Quên mật khẩu phải làm sao?"
+    ],
+    "keywords": [
+      "đăng ký",
+      "tạo tài khoản",
+      "register",
+      "sign up",
+      "OTP",
+      "xác thực",
+      "tài khoản mới"
+    ]
   },
   {
+    "id": "account-002",
+    "category": "Tài khoản",
+    "feature": "Đăng nhập",
+    "description": "Người dùng đã có tài khoản có thể đăng nhập vào ZChat bằng email hoặc số điện thoại kèm mật khẩu. Hệ thống hỗ trợ duy trì đăng nhập để không cần nhập lại mỗi lần mở app.",
+    "howTo": "Mở ứng dụng ZChat → nhấn 'Đăng nhập' → nhập email hoặc số điện thoại → nhập mật khẩu → nhấn 'Đăng nhập'.",
+    "faq": [
+      "Làm sao đăng nhập trên thiết bị mới?",
+      "Quên mật khẩu phải làm gì?",
+      "Đăng nhập trên bao nhiêu thiết bị cùng lúc?"
+    ],
+    "keywords": [
+      "đăng nhập",
+      "login",
+      "sign in",
+      "mật khẩu",
+      "tài khoản",
+      "vào ứng dụng"
+    ]
+  },
+  {
+    "id": "account-003",
+    "category": "Tài khoản",
+    "feature": "Đổi mật khẩu",
+    "description": "Người dùng có thể đổi mật khẩu tài khoản bất kỳ lúc nào trong phần Cài đặt. Nếu quên mật khẩu, có thể đặt lại qua email hoặc OTP điện thoại.",
+    "howTo": "Vào Cài đặt → chọn 'Tài khoản' → chọn 'Đổi mật khẩu' → nhập mật khẩu cũ → nhập mật khẩu mới → xác nhận.",
+    "faq": [
+      "Mật khẩu tối thiểu bao nhiêu ký tự?",
+      "Quên mật khẩu cũ thì đổi bằng cách nào?",
+      "Đổi mật khẩu có bị đăng xuất không?"
+    ],
+    "keywords": [
+      "đổi mật khẩu",
+      "change password",
+      "quên mật khẩu",
+      "reset password",
+      "mật khẩu mới",
+      "bảo mật tài khoản"
+    ]
+  },
+  {
+    "id": "account-004",
+    "category": "Tài khoản",
+    "feature": "Cập nhật hồ sơ cá nhân",
+    "description": "Người dùng có thể cập nhật thông tin hồ sơ cá nhân như tên hiển thị, ảnh đại diện (avatar), và thông tin giới thiệu bản thân.",
+    "howTo": "Vào tab Cá nhân (hoặc nhấn vào ảnh đại diện của bạn) → nhấn 'Chỉnh sửa hồ sơ' → cập nhật thông tin mong muốn → nhấn Lưu.",
+    "faq": [
+      "Tên hiển thị có được trùng không?",
+      "Ảnh đại diện hỗ trợ định dạng gì?",
+      "Bạn bè có thấy ngay khi tôi đổi thông tin không?"
+    ],
+    "keywords": [
+      "hồ sơ",
+      "profile",
+      "avatar",
+      "ảnh đại diện",
+      "tên hiển thị",
+      "cập nhật thông tin",
+      "chỉnh sửa hồ sơ",
+      "bio"
+    ]
+  },
+  {
+    "id": "notif-001",
     "category": "Thông báo",
-    "feature": "Cập nhật thông báo",
-    "description": "ZChat có hệ thống thông báo realtime để báo cho người dùng biết khi có tin nhắn mới, lời mời kết bạn, bài đăng được thả tim, hay được nhắc đến trong bình luận."
+    "feature": "Thông báo tin nhắn mới",
+    "description": "ZChat gửi thông báo realtime khi người dùng nhận được tin nhắn mới trong chat 1-1 hoặc nhóm, ngay cả khi ứng dụng đang chạy nền.",
+    "howTo": "Thông báo tự động hiển thị trên màn hình. Nhấn vào thông báo để mở trực tiếp cuộc hội thoại tương ứng.",
+    "faq": [
+      "Tắt thông báo cho một cuộc hội thoại cụ thể được không?",
+      "Thông báo có hiện nội dung tin nhắn không?",
+      "Tại sao tôi không nhận được thông báo?"
+    ],
+    "keywords": [
+      "thông báo",
+      "notification",
+      "tin nhắn mới",
+      "push notification",
+      "chuông",
+      "báo tin nhắn"
+    ]
+  },
+  {
+    "id": "notif-002",
+    "category": "Thông báo",
+    "feature": "Thông báo lời mời kết bạn",
+    "description": "Người dùng sẽ nhận thông báo realtime ngay khi có người gửi lời mời kết bạn đến họ.",
+    "howTo": "Khi có lời mời kết bạn, thông báo xuất hiện trên màn hình và biểu tượng tab Bạn bè sẽ hiện số badge. Nhấn vào để xem và phản hồi.",
+    "faq": [
+      "Lời mời kết bạn có hết hạn không?",
+      "Có thể tắt thông báo lời mời kết bạn không?"
+    ],
+    "keywords": [
+      "thông báo kết bạn",
+      "lời mời kết bạn",
+      "friend request notification",
+      "thông báo bạn bè"
+    ]
+  },
+  {
+    "id": "notif-003",
+    "category": "Thông báo",
+    "feature": "Thông báo tương tác bài đăng",
+    "description": "Khi có người thả tim hoặc bình luận vào bài đăng, ZChat sẽ gửi thông báo realtime cho chủ bài đăng. Khi bị nhắc đến trong bình luận (@mention), người được nhắc cũng nhận thông báo.",
+    "howTo": "Thông báo tương tác tự động xuất hiện. Nhấn vào thông báo để xem bài đăng và tương tác đó.",
+    "faq": [
+      "Có thể tắt thông báo react/comment không?",
+      "@mention hoạt động như thế nào?",
+      "Xem lại tất cả thông báo ở đâu?"
+    ],
+    "keywords": [
+      "thông báo bài đăng",
+      "thông báo react",
+      "thông báo comment",
+      "mention",
+      "@",
+      "tương tác",
+      "bình luận thông báo"
+    ]
+  },
+  {
+    "id": "ai-001",
+    "category": "Trí tuệ nhân tạo (AI)",
+    "feature": "Tóm tắt đoạn chat",
+    "description": "ZChat tích hợp AI để tự động tóm tắt nội dung 50 tin nhắn gần nhất trong cuộc hội thoại, giúp người dùng nhanh chóng nắm bắt ý chính mà không cần đọc lại toàn bộ.",
+    "howTo": "Trong màn hình chat, nhấn vào nút 'Tóm tắt (AI)' ở thanh chức năng phía trên. AI sẽ xử lý và hiển thị một khung tóm tắt ngắn gọn.",
+    "faq": [
+      "AI tóm tắt dựa trên bao nhiêu tin nhắn?",
+      "Tôi có thể tắt khung tóm tắt không?",
+      "AI có đọc được ảnh không?"
+    ],
+    "keywords": [
+      "tóm tắt",
+      "summarize",
+      "tóm tắt chat",
+      "tóm gọn",
+      "ý chính",
+      "nội dung chính",
+      "AI tóm tắt"
+    ]
+  },
+  {
+    "id": "ai-002",
+    "category": "Trí tuệ nhân tạo (AI)",
+    "feature": "Phân tích cảm xúc (Sentiment Analysis)",
+    "description": "ZChat AI có thể phân tích sắc thái và cảm xúc của cuộc trò chuyện hiện tại (Tích cực, Tiêu cực, hoặc Trung lập) kèm theo điểm số và các từ khóa cảm xúc.",
+    "howTo": "Trong màn hình chat, nhấn vào nút 'Phân tích (AI)'. Một thẻ (Card) sẽ hiện ra hiển thị thanh tiến trình cảm xúc, trạng thái (tích cực/tiêu cực) và lời nhận xét của AI.",
+    "faq": [
+      "Phân tích cảm xúc có chính xác không?",
+      "Điểm số phần trăm ý nghĩa là gì?"
+    ],
+    "keywords": [
+      "cảm xúc",
+      "phân tích cảm xúc",
+      "sentiment",
+      "thái độ",
+      "tích cực",
+      "tiêu cực",
+      "trung lập",
+      "AI phân tích"
+    ]
+  },
+  {
+    "id": "ai-003",
+    "category": "Trí tuệ nhân tạo (AI)",
+    "feature": "Dịch tin nhắn tự động",
+    "description": "AI của ZChat hỗ trợ dịch tự động bất kỳ tin nhắn nào trong cuộc trò chuyện sang tiếng Việt một cách mượt mà và tự nhiên.",
+    "howTo": "Nhấn vào biểu tượng 3 chấm (Menu) bên cạnh một tin nhắn bất kỳ → chọn 'Dịch (AI)'. Bản dịch sẽ hiển thị ngay bên dưới tin nhắn gốc.",
+    "faq": [
+      "Có thể dịch sang ngôn ngữ khác ngoài tiếng Việt không?",
+      "Tin nhắn dài có dịch được không?"
+    ],
+    "keywords": [
+      "dịch",
+      "translate",
+      "dịch tin nhắn",
+      "phiên dịch",
+      "tiếng Việt",
+      "ngôn ngữ"
+    ]
+  },
+  {
+    "id": "ai-004",
+    "category": "Trí tuệ nhân tạo (AI)",
+    "feature": "Gợi ý câu trả lời nhanh (Smart Reply)",
+    "description": "Dựa vào ngữ cảnh của 10 tin nhắn gần nhất, AI của ZChat sẽ đề xuất 3 câu trả lời ngắn gọn, tự nhiên để bạn có thể phản hồi nhanh chỉ bằng một cú click.",
+    "howTo": "Nhấn nút 'Gợi ý (AI)'. Các câu trả lời đề xuất sẽ hiện ra ngay trên khung nhập tin nhắn. Bạn chỉ cần bấm vào câu muốn gửi.",
+    "faq": [
+      "Câu gợi ý có thể tự chỉnh sửa không?"
+    ],
+    "keywords": [
+      "gợi ý trả lời",
+      "smart reply",
+      "trả lời nhanh",
+      "câu trả lời tự động",
+      "đề xuất",
+      "phản hồi nhanh"
+    ]
   }
 ]
