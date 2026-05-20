@@ -23,6 +23,7 @@ import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
+import { ChatGateway } from './common/socket/chat.gateway';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {

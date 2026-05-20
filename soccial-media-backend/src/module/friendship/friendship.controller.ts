@@ -8,8 +8,9 @@ export class FriendshipController {
 
   @Get('friends')
   @UseGuards(JwtAuthGuard)
-  listFriends(@Req() req: any) {
-    return this.friendshipService.listFriends(req.user.sub);
+  async listFriends(@Req() req: any) {
+    const friends = await this.friendshipService.listFriends(req.user.sub);
+    return { friends };
   }
 
   @Get('friends/pending')
@@ -44,7 +45,8 @@ export class FriendshipController {
 
   @Get('users/search')
   @UseGuards(JwtAuthGuard)
-  searchUsers(@Query('q') q: string) {
-    return this.friendshipService.searchUsers(q || '', 20);
+  async searchUsers(@Query('q') q: string) {
+    const users = await this.friendshipService.searchUsers(q || '', 20);
+    return { users };
   }
 }

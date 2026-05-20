@@ -22,7 +22,7 @@ export const AiProviders = [
                 );
             }
             return new ChatGoogleGenerativeAI({
-                apiKey,
+                apiKey: apiKey || 'missing-gemini-api-key',
                 model: GEMINI_MODEL,
                 temperature: 0.2,
                 maxRetries: 1,
@@ -38,7 +38,7 @@ export const AiProviders = [
             // temperature=0 — dùng cho analyzeSentiment và translateMessage
             // cần output JSON ổn định, không sáng tạo
             return new ChatGoogleGenerativeAI({
-                apiKey,
+                apiKey: apiKey || 'missing-gemini-api-key',
                 model: GEMINI_MODEL,
                 temperature: 0,
                 maxRetries: 1,
@@ -52,7 +52,7 @@ export const AiProviders = [
         useFactory: (config: ConfigService) => {
             const apiKey = config.get<string>('GEMINI_API_KEY') || '';
             return new GoogleGenerativeAIEmbeddings({
-                apiKey,
+                apiKey: apiKey || 'missing-gemini-api-key',
                 model: 'gemini-embedding-2',
                 maxRetries: 1,
             });

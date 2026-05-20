@@ -36,4 +36,19 @@ export class User {
 
   @Column({ type: 'enum', enum: ['ACTIVE', 'BLOCKED', 'RESTRICTED', 'HIDDEN'], default: 'ACTIVE' })
   status: string;
+
+  @Column({ default: true })
+  privacyLastSeen: boolean;
+
+  @Column({ default: true })
+  privacyProfilePhoto: boolean;
+
+  @Column({ default: true })
+  allowFriendRequests: boolean;
+
+  @Column({ default: true })
+  notificationMessages: boolean;
+
+  @Column({ default: true })
+  notificationCalls: boolean;
 }

@@ -58,6 +58,16 @@ export class AiService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    if (!this.config.get<string>("GEMINI_API_KEY")) {
+      this.logger.warn(
+        "GEMINI_API_KEY chưa được cấu hình. Bỏ qua khởi tạo Chroma/RAG.",
+      );
+      this.vectorStore = null;
+      this.qnaChain = null;
+      this.ragReady = false;
+      return;
+    }
+
     const chromaUrl =
       this.config.get<string>("CHROMA_URL") || "http://localhost:8000";
     this.logger.log(`Khởi tạo Chroma Vector Store tại ${chromaUrl}...`);

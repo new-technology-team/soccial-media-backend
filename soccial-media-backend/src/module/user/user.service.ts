@@ -90,4 +90,35 @@ export class UserService {
 
     return this.usersRepository.save(user);
   }
+
+  async updateSettings(userId: number, data: Partial<{
+    privacyLastSeen: boolean;
+    privacyProfilePhoto: boolean;
+    allowFriendRequests: boolean;
+    notificationMessages: boolean;
+    notificationCalls: boolean;
+  }>): Promise<User> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (data.privacyLastSeen !== undefined) {
+      user.privacyLastSeen = Boolean(data.privacyLastSeen);
+    }
+    if (data.privacyProfilePhoto !== undefined) {
+      user.privacyProfilePhoto = Boolean(data.privacyProfilePhoto);
+    }
+    if (data.allowFriendRequests !== undefined) {
+      user.allowFriendRequests = Boolean(data.allowFriendRequests);
+    }
+    if (data.notificationMessages !== undefined) {
+      user.notificationMessages = Boolean(data.notificationMessages);
+    }
+    if (data.notificationCalls !== undefined) {
+      user.notificationCalls = Boolean(data.notificationCalls);
+    }
+
+    return this.usersRepository.save(user);
+  }
 }
