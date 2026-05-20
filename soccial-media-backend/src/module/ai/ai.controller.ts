@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Post, Get, UseGuards } from "@nestjs/common";
 import { AiService } from "./ai.service";
 import { ChatAnalysisService } from "./chat-analysis.service";
 import { AiChatDto } from "./dto/ai-chat.dto";
@@ -6,7 +6,7 @@ import { SummarizeChatDto } from "./dto/summarize-chat.dto";
 import { SuggestRepliesDto } from "./dto/suggest-replies.dto";
 import { AnalyzeSentimentDto } from "./dto/analyze-sentiment.dto";
 import { TranslateMessageDto } from "./dto/translate-message.dto";
-import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
+import { JwtAuthGuard } from "../../common/guard/jwt-auth.guard";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 
 /**
@@ -14,7 +14,7 @@ import { CurrentUser } from "../../common/auth/current-user.decorator";
  * Frontend gọi endpoint này để chat với AI trợ lý ZChat.
  * Yêu cầu người dùng đã đăng nhập (JWT).
  */
-@Controller("social/ai")
+@Controller("api/social/ai")
 export class AiController {
   constructor(
     private readonly aiService: AiService,
@@ -25,14 +25,18 @@ export class AiController {
   @UseGuards(JwtAuthGuard)
   @Post("support")
   async support(@Body() dto: AiChatDto, @CurrentUser() user: any) {
-    return this.aiService.chat(dto, user.id);
+    return this.aiService.chat(dto, this.getUserId(user));
   }
 
   // Feature 1.1: Lấy lịch sử hỏi đáp
   @UseGuards(JwtAuthGuard)
   @Get("history")
   async getHistory(@CurrentUser() user: any) {
-    return this.aiService.getHistory(user.id);
+    return this.aiService.getHistory(this.getUserId(user));
+  }
+
+  private getUserId(user: any): number {
+    return Number(user?.sub ?? user?.userId ?? user?.id);
   }
 
   // Feature 2: Tóm tắt lịch sử nhắn tin

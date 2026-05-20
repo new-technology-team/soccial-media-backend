@@ -237,11 +237,10 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
   const handleReject = async (requesterUserId: number) => {
     setLoading(requesterUserId, true);
     try {
-      await api.removeFriend(requesterUserId);
+      await api.rejectFriendRequest(requesterUserId);
       setPendingRequests((prev) => prev.filter((p) => p.id !== requesterUserId));
-    } catch {
-      // fallback: xóa local nếu API lỗi
-      setPendingRequests((prev) => prev.filter((p) => p.id !== requesterUserId));
+    } catch (err) {
+      Alert.alert("Lỗi", err instanceof Error ? err.message : "Không thể từ chối");
     } finally {
       setLoading(requesterUserId, false);
     }

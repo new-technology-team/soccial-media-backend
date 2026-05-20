@@ -30,6 +30,12 @@ export class FriendshipController {
     return this.friendshipService.acceptRequest(req.user.sub, parseInt(userId, 10));
   }
 
+  @Post('friends/:userId/reject')
+  @UseGuards(JwtAuthGuard)
+  rejectRequest(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.rejectRequest(req.user.sub, parseInt(userId, 10));
+  }
+
   @Delete('friends/:userId')
   @UseGuards(JwtAuthGuard)
   removeFriend(@Param('userId') userId: string, @Req() req: any) {
