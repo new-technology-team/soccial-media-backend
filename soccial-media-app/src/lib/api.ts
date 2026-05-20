@@ -518,7 +518,7 @@ export const api = {
     }),
 
   aiHistory: () =>
-    request<{ messages?: any[]; history?: any[] }>("/api/social/ai/history"),
+    request<any>("/api/social/ai/history"),
 
   // Upload
   uploadAvatarBase64: (payload: {

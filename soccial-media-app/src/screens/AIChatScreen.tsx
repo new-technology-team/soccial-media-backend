@@ -90,7 +90,10 @@ export function AIChatScreen() {
     api
       .aiHistory()
       .then((res) => {
-        const rawHistory = res.messages || res.history || [];
+        // Backend trả về array trực tiếp
+        const rawHistory: any[] = Array.isArray(res)
+          ? res
+          : (res as any)?.messages || (res as any)?.history || [];
         if (rawHistory.length > 0) {
           const mapped: ChatMessage[] = rawHistory.map((item: any, idx: number) => ({
             id: `hist-${idx}`,
