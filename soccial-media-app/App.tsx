@@ -4,6 +4,8 @@ import {
   StatusBar,
   TouchableWithoutFeedback,
   Keyboard,
+  TouchableOpacity,
+  Text,
 } from "react-native";
 import "./src/global.css";
 import { AuthScreen } from "./src/screens/AuthScreen";
@@ -11,6 +13,7 @@ import { FeedScreen } from "./src/screens/FeedScreen";
 import { MessagesScreen } from "./src/screens/MessagesScreen";
 import { NotificationsScreen } from "./src/screens/NotificationsScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
+import { UserProfileScreen } from "./src/screens/UserProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { AIChatScreen } from "./src/screens/AIChatScreen";
 import { FriendsScreen } from "./src/screens/FriendsScreen";
@@ -26,6 +29,14 @@ export default function App() {
   const [feedOpenCommentsPostId, setFeedOpenCommentsPostId] = useState<
     string | null
   >(null);
+  const [messageTarget, setMessageTarget] = useState<{
+    userId: number;
+    routeKey: number;
+  } | null>(null);
+  const [profileRoute, setProfileRoute] = useState<{
+    userId: number;
+    returnTab: string;
+  } | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
@@ -79,6 +90,35 @@ export default function App() {
     setFeedOpenCommentsPostId(null);
   }, []);
 
+  const openDirectMessage = useCallback((userId: number) => {
+    setMessageTarget({ userId, routeKey: Date.now() });
+    setProfileRoute(null);
+    setActiveTab("messages");
+  }, []);
+
+  const handleMessageRouteConsumed = useCallback(() => {
+    setMessageTarget(null);
+  }, []);
+
+  const openUserProfile = useCallback(
+    (userId: number) => {
+      setProfileRoute({ userId, returnTab: activeTab });
+      setActiveTab("user-profile");
+    },
+    [activeTab],
+  );
+
+  const handleBackFromUserProfile = useCallback(() => {
+    setActiveTab(profileRoute?.returnTab || "friends");
+    setProfileRoute(null);
+  }, [profileRoute]);
+
+  const handleTabChange = useCallback((tab: string) => {
+    setProfileRoute(null);
+    setMessageTarget(null);
+    setActiveTab(tab);
+  }, []);
+
   if (isRestoring) {
     return <Loading message="Đang khôi phục phiên..." />;
   }
@@ -100,13 +140,48 @@ export default function App() {
           />
         );
       case "search":
-        return <SearchScreen onOpenPost={openPostInFeed} />;
+        return (
+          <SearchScreen
+            onOpenPost={openPostInFeed}
+            onOpenUserProfile={openUserProfile}
+            onOpenAIChat={() => setActiveTab("ai-chat")}
+          />
+        );
       case "messages":
-        return <MessagesScreen user={user} />;
+        return (
+          <MessagesScreen
+            user={user}
+            initialDirectUserId={messageTarget?.userId}
+            initialDirectRouteKey={messageTarget?.routeKey}
+            onInitialDirectHandled={handleMessageRouteConsumed}
+          />
+        );
       case "friends":
-        return <FriendsScreen user={user} />;
+        return (
+          <FriendsScreen
+            user={user}
+            onMessageFriend={openDirectMessage}
+            onOpenUserProfile={openUserProfile}
+          />
+        );
       case "ai-chat":
         return <AIChatScreen />;
+      case "user-profile":
+        return profileRoute ? (
+          <UserProfileScreen
+            currentUser={user}
+            userId={profileRoute.userId}
+            onBack={handleBackFromUserProfile}
+            onMessageUser={openDirectMessage}
+            onOpenPost={openPostInFeed}
+          />
+        ) : (
+          <FriendsScreen
+            user={user}
+            onMessageFriend={openDirectMessage}
+            onOpenUserProfile={openUserProfile}
+          />
+        );
       case "notifications":
         return <NotificationsScreen onOpenPost={openPostInFeed} />;
       case "profile":
@@ -135,7 +210,19 @@ export default function App() {
       <View className="flex-1 bg-background">
         <StatusBar />
         {renderScreen()}
-        <AppNavigator activeTab={activeTab} onTabChange={setActiveTab} />
+        {activeTab !== "ai-chat" &&
+        activeTab !== "messages" &&
+        activeTab !== "user-profile" ? (
+          <TouchableOpacity
+            className="absolute right-4 rounded-full bg-primary shadow-lg items-center justify-center"
+            style={{ bottom: 86, width: 56, height: 56 }}
+            activeOpacity={0.8}
+            onPress={() => setActiveTab("ai-chat")}
+          >
+            <Text className="text-2xl">🤖</Text>
+          </TouchableOpacity>
+        ) : null}
+        <AppNavigator activeTab={activeTab} onTabChange={handleTabChange} />
       </View>
     </TouchableWithoutFeedback>
   );

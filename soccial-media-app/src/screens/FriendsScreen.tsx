@@ -1,50 +1,62 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  Alert,
-  RefreshControl,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { TopBar } from "../components/common/TopBar";
 import { api } from "../lib/api";
 import type { AuthUser } from "../types";
 
-// ---- Types ----
-interface Friend {
+type Tab = "friends" | "pending" | "search";
+
+type Friend = {
   id: number;
   name: string;
   avatarUrl?: string;
-}
+};
 
-interface PendingRequest {
+type PendingRequest = {
   id: number;
   fullName: string;
   avatarUrl: string | null;
-}
+};
 
-interface SearchUser {
+type SearchUser = {
   id: number;
-  full_name?: string;
+  fullName: string;
   username?: string;
-  avatar_url?: string;
+  avatarUrl?: string;
+};
+
+interface FriendsScreenProps {
+  user: AuthUser;
+  onMessageFriend?: (userId: number) => void;
+  onOpenUserProfile?: (userId: number) => void;
 }
 
-type Tab = "friends" | "pending" | "search";
-
-// ---- Avatar nhỏ ----
-function SmallAvatar({ name, url, size = 48 }: { name: string; url?: string | null; size?: number }) {
-  const hasUrl = Boolean(String(url || "").trim());
+function SmallAvatar({
+  name,
+  avatarUrl,
+  size = 48,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  size?: number;
+}) {
   const initials = name
     .split(" ")
-    .map((w) => w[0])
+    .map((part) => part[0])
     .join("")
-    .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
+    .toUpperCase();
+  const hasAvatar = Boolean(String(avatarUrl || "").trim());
 
   return (
     <View
@@ -58,34 +70,36 @@ function SmallAvatar({ name, url, size = 48 }: { name: string; url?: string | nu
         overflow: "hidden",
       }}
     >
-      {hasUrl ? (
+      {hasAvatar ? (
         <Image
-          source={{ uri: String(url) }}
+          source={{ uri: String(avatarUrl) }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
           resizeMode="cover"
         />
       ) : (
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: size * 0.33 }}>{initials}</Text>
+        <Text style={{ color: "#fff", fontWeight: "700", fontSize: size * 0.34 }}>
+          {initials || "U"}
+        </Text>
       )}
     </View>
   );
 }
 
-// ---- Tab Button ----
 function TabButton({
   label,
-  count,
   active,
+  count,
   onPress,
 }: {
   label: string;
-  count?: number;
   active: boolean;
+  count?: number;
   onPress: () => void;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
+      activeOpacity={0.75}
       style={{
         flex: 1,
         alignItems: "center",
@@ -93,9 +107,8 @@ function TabButton({
         borderBottomWidth: 2,
         borderBottomColor: active ? "#0052ce" : "transparent",
       }}
-      activeOpacity={0.7}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
         <Text
           style={{
             fontSize: 13,
@@ -105,7 +118,7 @@ function TabButton({
         >
           {label}
         </Text>
-        {count !== undefined && count > 0 && (
+        {count && count > 0 ? (
           <View
             style={{
               backgroundColor: "#ef4444",
@@ -119,18 +132,17 @@ function TabButton({
           >
             <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>{count}</Text>
           </View>
-        )}
+        ) : null}
       </View>
     </TouchableOpacity>
   );
 }
 
-// ---- FriendsScreen ----
-interface FriendsScreenProps {
-  user: AuthUser;
-}
-
-export function FriendsScreen({ user }: FriendsScreenProps) {
+export function FriendsScreen({
+  user,
+  onMessageFriend,
+  onOpenUserProfile,
+}: FriendsScreenProps) {
   const [activeTab, setActiveTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
@@ -142,71 +154,91 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
 
-  // ---- Load friends ----
+  const setLoading = (id: number, value: boolean) => {
+    setActionLoading((prev) => ({ ...prev, [id]: value }));
+  };
+
   const loadFriends = useCallback(async () => {
     setIsLoadingFriends(true);
     try {
       const res = await api.listFriends();
-      setFriends(res.friends || []);
+      setFriends((res.friends || []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        avatarUrl: item.avatarUrl,
+      })));
     } catch {
-      /* ignore */
+      setFriends([]);
     } finally {
       setIsLoadingFriends(false);
       setRefreshing(false);
     }
   }, []);
 
-  // ---- Load pending requests ----
   const loadPending = useCallback(async () => {
     setIsLoadingPending(true);
     try {
       const res = await api.listPendingFriendRequests();
-      const list = Array.isArray(res) ? res : [];
-      setPendingRequests(list);
+      setPendingRequests(Array.isArray(res) ? res : []);
     } catch {
-      /* ignore */
+      setPendingRequests([]);
     } finally {
       setIsLoadingPending(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadFriends();
-    loadPending();
+    void loadFriends();
+    void loadPending();
   }, [loadFriends, loadPending]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    if (activeTab === "friends") loadFriends();
-    else if (activeTab === "pending") loadPending();
-    else setRefreshing(false);
+    if (activeTab === "friends") {
+      void loadFriends();
+      return;
+    }
+    if (activeTab === "pending") {
+      void loadPending();
+      return;
+    }
+    setRefreshing(false);
   };
 
-  // ---- Search ----
   useEffect(() => {
     if (activeTab !== "search") return;
-    if (searchKeyword.trim().length < 2) {
+    const query = searchKeyword.trim();
+    if (query.length < 2) {
       setSearchResults([]);
       return;
     }
+
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await api.searchUsers(searchKeyword.trim());
-        const filtered = (res.users || []).filter((u: any) => u.id !== user.id);
-        setSearchResults(filtered.slice(0, 20));
+        const res = await api.searchUsers(query);
+        const mapped = (res.users || [])
+          .filter((item) => item.id !== user.id)
+          .slice(0, 20)
+          .map((item) => ({
+            id: item.id,
+            fullName: item.fullName || "Người dùng",
+            username: item.email || item.phone || undefined,
+            avatarUrl: item.avatarUrl || undefined,
+          }));
+        setSearchResults(mapped);
       } catch {
         setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchKeyword, activeTab, user.id]);
+    }, 320);
 
-  // ---- Thao tác ----
-  const setLoading = (id: number, val: boolean) =>
-    setActionLoading((prev) => ({ ...prev, [id]: val }));
+    return () => clearTimeout(timer);
+  }, [activeTab, searchKeyword, user.id]);
+
+  const acceptedFriendIds = useMemo(() => new Set(friends.map((item) => item.id)), [friends]);
 
   const handleSendRequest = async (targetId: number, name: string) => {
     setLoading(targetId, true);
@@ -224,9 +256,9 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     setLoading(requesterUserId, true);
     try {
       await api.acceptFriendRequest(requesterUserId);
-      setPendingRequests((prev) => prev.filter((p) => p.id !== requesterUserId));
+      setPendingRequests((prev) => prev.filter((item) => item.id !== requesterUserId));
       await loadFriends();
-      Alert.alert("Thành công", "Đã chấp nhận lời mời kết bạn 🎉");
+      Alert.alert("Thành công", "Đã chấp nhận lời mời kết bạn");
     } catch (err) {
       Alert.alert("Lỗi", err instanceof Error ? err.message : "Không thể chấp nhận");
     } finally {
@@ -238,7 +270,7 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     setLoading(requesterUserId, true);
     try {
       await api.rejectFriendRequest(requesterUserId);
-      setPendingRequests((prev) => prev.filter((p) => p.id !== requesterUserId));
+      setPendingRequests((prev) => prev.filter((item) => item.id !== requesterUserId));
     } catch (err) {
       Alert.alert("Lỗi", err instanceof Error ? err.message : "Không thể từ chối");
     } finally {
@@ -256,7 +288,7 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
           setLoading(friendId, true);
           try {
             await api.removeFriend(friendId);
-            setFriends((prev) => prev.filter((f) => f.id !== friendId));
+            setFriends((prev) => prev.filter((item) => item.id !== friendId));
           } catch (err) {
             Alert.alert("Lỗi", err instanceof Error ? err.message : "Không thể xóa");
           } finally {
@@ -267,7 +299,6 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     ]);
   };
 
-  // ---- Render: Friends tab ----
   const renderFriend = ({ item }: { item: Friend }) => (
     <View
       style={{
@@ -280,16 +311,35 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
         borderBottomColor: "#f3f4f6",
       }}
     >
-      <SmallAvatar name={item.name} url={item.avatarUrl} />
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{item.name}</Text>
-        <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Bạn bè</Text>
-      </View>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+        activeOpacity={0.75}
+        onPress={() => onOpenUserProfile?.(item.id)}
+      >
+        <SmallAvatar name={item.name} avatarUrl={item.avatarUrl} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{item.name}</Text>
+          <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Bạn bè</Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => onMessageFriend?.(item.id)}
+        disabled={actionLoading[item.id] || !onMessageFriend}
+        style={{
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: 8,
+          backgroundColor: "#0052ce",
+          marginRight: 8,
+        }}
+      >
+        <Text style={{ fontSize: 12, color: "#fff", fontWeight: "700" }}>Nhắn tin</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={() => handleRemoveFriend(item.id, item.name)}
         disabled={actionLoading[item.id]}
         style={{
-          paddingHorizontal: 14,
+          paddingHorizontal: 12,
           paddingVertical: 7,
           borderRadius: 8,
           borderWidth: 1,
@@ -306,7 +356,6 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     </View>
   );
 
-  // ---- Render: Pending tab ----
   const renderPending = ({ item }: { item: PendingRequest }) => (
     <View
       style={{
@@ -319,11 +368,17 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
         borderBottomColor: "#f3f4f6",
       }}
     >
-      <SmallAvatar name={item.fullName} url={item.avatarUrl} />
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{item.fullName}</Text>
-        <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Muốn kết bạn với bạn</Text>
-      </View>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+        activeOpacity={0.75}
+        onPress={() => onOpenUserProfile?.(item.id)}
+      >
+        <SmallAvatar name={item.fullName} avatarUrl={item.avatarUrl} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{item.fullName}</Text>
+          <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Đang chờ bạn xác nhận</Text>
+        </View>
+      </TouchableOpacity>
       <View style={{ flexDirection: "row", gap: 6 }}>
         <TouchableOpacity
           onPress={() => handleAccept(item.id)}
@@ -359,10 +414,8 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     </View>
   );
 
-  // ---- Render: Search tab ----
   const renderSearchUser = ({ item }: { item: SearchUser }) => {
-    const name = item.full_name || item.username || "Người dùng";
-    const isFriend = friends.some((f) => f.id === item.id);
+    const isFriend = acceptedFriendIds.has(item.id);
     return (
       <View
         style={{
@@ -375,13 +428,19 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
           borderBottomColor: "#f3f4f6",
         }}
       >
-        <SmallAvatar name={name} url={(item as any).avatar_url} />
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{name}</Text>
-          {item.username ? (
-            <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>@{item.username}</Text>
-          ) : null}
-        </View>
+        <TouchableOpacity
+          style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+          activeOpacity={0.75}
+          onPress={() => onOpenUserProfile?.(item.id)}
+        >
+          <SmallAvatar name={item.fullName} avatarUrl={item.avatarUrl} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#111827" }}>{item.fullName}</Text>
+            {item.username ? (
+              <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{item.username}</Text>
+            ) : null}
+          </View>
+        </TouchableOpacity>
         {isFriend ? (
           <View
             style={{
@@ -391,11 +450,11 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
               backgroundColor: "#dcfce7",
             }}
           >
-            <Text style={{ fontSize: 12, color: "#16a34a", fontWeight: "600" }}>Bạn bè ✓</Text>
+            <Text style={{ fontSize: 12, color: "#16a34a", fontWeight: "600" }}>Bạn bè</Text>
           </View>
         ) : (
           <TouchableOpacity
-            onPress={() => handleSendRequest(item.id, name)}
+            onPress={() => handleSendRequest(item.id, item.fullName)}
             disabled={actionLoading[item.id]}
             style={{
               paddingHorizontal: 12,
@@ -415,12 +474,10 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
     );
   };
 
-  // ---- Render ----
   return (
     <View style={{ flex: 1, backgroundColor: "#f9fafb" }}>
       <TopBar title="Bạn bè" />
 
-      {/* Tab Bar */}
       <View
         style={{
           flexDirection: "row",
@@ -448,8 +505,7 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
         />
       </View>
 
-      {/* Search Bar (chỉ hiện khi tab search) */}
-      {activeTab === "search" && (
+      {activeTab === "search" ? (
         <View
           style={{
             flexDirection: "row",
@@ -478,21 +534,22 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
             onChangeText={setSearchKeyword}
             autoFocus
           />
-          {searchKeyword.length > 0 && (
+          {searchKeyword.length > 0 ? (
             <TouchableOpacity onPress={() => setSearchKeyword("")} style={{ marginLeft: 8 }}>
               <Text style={{ fontSize: 16, color: "#9ca3af" }}>✕</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
 
-      {/* Nội dung tab */}
-      {activeTab === "friends" && (
+      {activeTab === "friends" ? (
         <FlatList
           data={friends}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderFriend}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0052ce" />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0052ce" />
+          }
           ListEmptyComponent={
             isLoadingFriends ? (
               <View style={{ alignItems: "center", paddingTop: 60 }}>
@@ -505,21 +562,23 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
                   Chưa có bạn bè nào
                 </Text>
                 <Text style={{ fontSize: 13, color: "#6b7280", textAlign: "center" }}>
-                  Chuyển sang tab "Tìm bạn" để thêm bạn mới nhé!
+                  Chuyển sang tab Tìm bạn để kết nối thêm bạn mới.
                 </Text>
               </View>
             )
           }
           contentContainerStyle={{ paddingBottom: 100 }}
         />
-      )}
+      ) : null}
 
-      {activeTab === "pending" && (
+      {activeTab === "pending" ? (
         <FlatList
           data={pendingRequests}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderPending}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0052ce" />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0052ce" />
+          }
           ListEmptyComponent={
             isLoadingPending ? (
               <View style={{ alignItems: "center", paddingTop: 60 }}>
@@ -532,16 +591,16 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
                   Không có lời mời nào
                 </Text>
                 <Text style={{ fontSize: 13, color: "#6b7280", textAlign: "center" }}>
-                  Khi ai đó gửi lời mời kết bạn, nó sẽ hiện ở đây.
+                  Khi có người gửi lời mời kết bạn, chúng sẽ hiển thị ở đây.
                 </Text>
               </View>
             )
           }
           contentContainerStyle={{ paddingBottom: 100 }}
         />
-      )}
+      ) : null}
 
-      {activeTab === "search" && (
+      {activeTab === "search" ? (
         <FlatList
           data={searchResults}
           keyExtractor={(item) => String(item.id)}
@@ -562,15 +621,15 @@ export function FriendsScreen({ user }: FriendsScreenProps) {
                 </Text>
                 <Text style={{ fontSize: 13, color: "#6b7280", textAlign: "center" }}>
                   {searchKeyword.length >= 2
-                    ? "Thử tìm bằng từ khóa khác"
-                    : "Nhập tên hoặc email để tìm bạn"}
+                    ? "Thử lại với từ khóa khác"
+                    : "Nhập ít nhất 2 ký tự để tìm bạn"}
                 </Text>
               </View>
             ) : null
           }
           contentContainerStyle={{ paddingBottom: 100 }}
         />
-      )}
+      ) : null}
     </View>
   );
 }

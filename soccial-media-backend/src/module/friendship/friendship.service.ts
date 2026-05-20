@@ -176,4 +176,53 @@ export class FriendshipService {
       is_verified: 0,
     }));
   }
+
+  async getUserProfile(viewerId: number, targetUserId: number) {
+    const user = await this.userService.findOne(targetUserId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const friendship =
+      viewerId === targetUserId
+        ? null
+        : await this.friendshipRepo.findOne({
+            where: [
+              { userId1: viewerId, userId2: targetUserId },
+              { userId1: targetUserId, userId2: viewerId },
+            ],
+          });
+
+    let relationshipStatus:
+      | 'self'
+      | 'none'
+      | 'pending_sent'
+      | 'pending_received'
+      | 'friends' = viewerId === targetUserId ? 'self' : 'none';
+
+    if (friendship?.status === FriendshipStatus.ACCEPTED) {
+      relationshipStatus = 'friends';
+    } else if (friendship?.status === FriendshipStatus.PENDING) {
+      relationshipStatus =
+        friendship.userId1 === viewerId ? 'pending_sent' : 'pending_received';
+    }
+
+    return {
+      user: {
+        id: user.userId,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl || null,
+        dateOfBirth: user.dateOfBirth || null,
+        gender: user.sex === 1 ? 'Nam' : user.sex === 2 ? 'Nữ' : null,
+      },
+      relationship: {
+        status: relationshipStatus,
+        friendshipId: friendship?.id || null,
+        requestedByMe: friendship?.userId1 === viewerId,
+      },
+    };
+  }
 }

@@ -445,7 +445,8 @@ export class AiService implements OnModuleInit {
    * - Nếu ChromaDB chưa sẵn sàng: fallback về Direct Chat với Gemini
    */
   async chat(dto: AiChatDto, userId: number): Promise<{ reply: string }> {
-    const apiKey = this.config.get<string>("GEMINI_API_KEY") || "";
+    const apiKey =
+      this.config.get<string>("GEMINI_API_KEY") || "missing-gemini-api-key";
     if (!apiKey) {
       throw new InternalServerErrorException(
         "GEMINI_API_KEY chưa được cấu hình trên server.",
@@ -474,8 +475,13 @@ export class AiService implements OnModuleInit {
 
     let reply = "";
 
+    if (apiKey === "missing-gemini-api-key") {
+      reply =
+        "AI đang chờ cấu hình GEMINI_API_KEY trên server. Bạn vẫn có thể tiếp tục dùng các chức năng khác.";
+    }
+
     // --- Chế độ RAG (nếu ChromaDB sẵn sàng) ---
-    if (this.ragReady && this.qnaChain) {
+    if (!reply && this.ragReady && this.qnaChain) {
       try {
         const formattedHistory = this.formatHistory(history);
         reply = await this.qnaChain.invoke({

@@ -68,13 +68,22 @@ export class ConversationService {
 
   private toResponse(conv: Conversation, currentUserId?: number) {
     const lastMsg = conv.lastMessage;
+    const members = (conv.members || []) as MemberLike[];
+    const isGroup =
+      conv.type === 'group' || Boolean(String(conv.conversationName || '').trim());
+    const directPeer = !isGroup
+      ? members.find((member) => Number(member.userId) !== Number(currentUserId))
+      : undefined;
+    const displayName = isGroup
+      ? conv.conversationName || null
+      : directPeer?.displayName || directPeer?.fullName || null;
 
     return {
       id: String(conv._id),
-      name: conv.conversationName || null,
+      name: displayName,
       type: conv.type || (conv.conversationName ? 'group' : 'direct'),
-      isGroup: Boolean(conv.conversationName),
-      members: ((conv.members || []) as MemberLike[]).map((member) => ({
+      isGroup,
+      members: members.map((member) => ({
         userId: member.userId,
         fullName: member.displayName || member.fullName || 'Người dùng',
         avatarUrl: member.avatarUrl || null,
@@ -133,15 +142,8 @@ export class ConversationService {
   }
 
   async createDirect(userId: number, targetUserId: number) {
-    const existing = await this.convRepo.findOne({
-      where: {
-        type: 'direct',
-        memberIds: { $all: [String(userId), String(targetUserId)] },
-      } as any,
-    });
-
-    if (existing) {
-      return { conversation: this.toResponse(existing, userId) };
+    if (Number(userId) === Number(targetUserId)) {
+      throw new BadRequestException('Khong the tao hoi thoai voi chinh minh');
     }
 
     const [user, targetUser] = await Promise.all([
@@ -151,27 +153,54 @@ export class ConversationService {
 
     if (!user || !targetUser) throw new NotFoundException('User not found');
 
+    const members = [
+      {
+        userId: user.userId,
+        displayName: user.fullName,
+        avatarUrl: user.avatarUrl,
+        roleInConversation: 'MEMBER',
+      },
+      {
+        userId: targetUser.userId,
+        displayName: targetUser.fullName,
+        avatarUrl: targetUser.avatarUrl,
+        roleInConversation: 'MEMBER',
+      },
+    ] as any;
+
+    const memberIds = [String(user.userId), String(targetUser.userId)];
+    const existing = await this.convRepo.findOne({
+      where: {
+        type: 'direct',
+        memberIds: { $all: memberIds },
+      } as any,
+    });
+
+    if (existing) {
+      const existingMembers = (existing.members || []) as MemberLike[];
+      const hasBothMembers = [user.userId, targetUser.userId].every((id) =>
+        existingMembers.some((member) => Number(member.userId) === Number(id)),
+      );
+
+      if (!hasBothMembers) {
+        existing.members = members;
+        existing.memberIds = memberIds;
+        existing.type = 'direct';
+        existing.status = existing.status || 'active';
+        await this.convRepo.save(existing);
+      }
+
+      return { conversation: this.toResponse(existing, userId) };
+    }
+
     const conv = this.convRepo.create({
       type: 'direct',
       conversationName: '',
       status: 'active',
       createdAt: new Date(),
       lastMessageAt: new Date(),
-      members: [
-        {
-          userId: user.userId,
-          displayName: user.fullName,
-          avatarUrl: user.avatarUrl,
-          roleInConversation: 'MEMBER',
-        },
-        {
-          userId: targetUser.userId,
-          displayName: targetUser.fullName,
-          avatarUrl: targetUser.avatarUrl,
-          roleInConversation: 'MEMBER',
-        },
-      ] as any,
-      memberIds: [String(user.userId), String(targetUser.userId)],
+      members,
+      memberIds,
     });
 
     const saved = await this.convRepo.save(conv);

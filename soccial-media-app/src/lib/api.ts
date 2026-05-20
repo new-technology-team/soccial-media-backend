@@ -110,6 +110,22 @@ function resolveAssetUrl(value: unknown): string | undefined {
   return `${API_ORIGIN}/${raw.replace(/^\/+/, "")}`;
 }
 
+function mapAuthUser(raw: any): AuthUser {
+  return {
+    id: Number(raw?.id ?? raw?.userId ?? raw?.user_id ?? 0),
+    email: raw?.email || null,
+    phone: raw?.phone || null,
+    fullName: String(raw?.fullName || raw?.full_name || raw?.displayName || "Người dùng"),
+    avatarUrl: resolveAssetUrl(raw?.avatarUrl || raw?.avatar_url) || null,
+    dateOfBirth: raw?.dateOfBirth ? String(raw.dateOfBirth) : null,
+    gender: raw?.gender || null,
+    isVerified: Boolean(raw?.isVerified ?? raw?.is_verified ?? false),
+    role: raw?.role,
+    accountStatus: raw?.accountStatus || raw?.status,
+    createdAt: raw?.createdAt ? String(raw.createdAt) : undefined,
+  };
+}
+
 function mapFeedPost(raw: any): FeedPost {
   const owner = raw?.owner || {};
   return {
@@ -458,9 +474,35 @@ export const api = {
 
   // Search
   searchUsers: (keyword: string) =>
-    request<{ users: AuthUser[] }>(
+    request<{ users: any[] }>(
       `/api/social/users/search?q=${encodeURIComponent(keyword)}`,
-    ),
+    ).then((res) => ({
+      users: (res.users || []).map(mapAuthUser),
+    })),
+
+  getUserProfile: (userId: number) =>
+    request<{ user: any; relationship: any }>(
+      `/api/social/users/${encodeURIComponent(String(userId))}/profile`,
+    ).then((res) => ({
+      user: mapAuthUser(res.user),
+      relationship: {
+        status: String(res.relationship?.status || "none") as
+          | "self"
+          | "none"
+          | "pending_sent"
+          | "pending_received"
+          | "friends",
+        friendshipId: res.relationship?.friendshipId || null,
+        requestedByMe: Boolean(res.relationship?.requestedByMe),
+      },
+    })),
+
+  listUserPosts: (userId: number) =>
+    request<{ posts: any[] }>(
+      `/api/social/users/${encodeURIComponent(String(userId))}/posts`,
+    ).then((res) => ({
+      posts: (res.posts || []).map(mapFeedPost),
+    })),
 
   // Reports
   submitReport: (payload: {

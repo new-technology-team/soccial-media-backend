@@ -13,7 +13,6 @@ const TABS: Tab[] = [
   { key: "search", label: "Tìm kiếm", icon: "🔍" },
   { key: "messages", label: "Tin nhắn", icon: "💬" },
   { key: "friends", label: "Bạn bè", icon: "👥" },
-  { key: "ai-chat", label: "AI Chat", icon: "🤖" },
   { key: "notifications", label: "Thông báo", icon: "🔔" },
   { key: "profile", label: "Hồ sơ", icon: "👤" },
 ];

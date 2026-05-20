@@ -27,7 +27,7 @@ export class Conversation {
   @Column({ default: 0 })
   unreadCount: number;
 
-  @Column(() => Member)
+  @Column()
   members: Member[];
 
   @Column({ type: 'simple-array', nullable: true })

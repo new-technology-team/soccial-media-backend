@@ -49,4 +49,13 @@ export class FriendshipController {
     const users = await this.friendshipService.searchUsers(q || '', 20);
     return { users };
   }
+
+  @Get('users/:userId/profile')
+  @UseGuards(JwtAuthGuard)
+  getUserProfile(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.getUserProfile(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 }

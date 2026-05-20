@@ -22,6 +22,16 @@ export class PostController {
     return { posts };
   }
 
+  @Get('users/:userId/posts')
+  @UseGuards(JwtAuthGuard)
+  async getUserPosts(@Param('userId') userId: string, @Req() req: any) {
+    const posts = await this.postService.findByUser(
+      parseInt(userId, 10),
+      req.user.sub,
+    );
+    return { posts };
+  }
+
   @Get('posts/:id')
   async getPost(@Param('id') id: string, @Req() req: any) {
     const post = await this.postService.findById(id, req.user?.sub);

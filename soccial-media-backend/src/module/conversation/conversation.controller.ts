@@ -58,6 +58,15 @@ export class ConversationController {
     );
   }
 
+  @Post('conversations/:id/messages')
+  sendMessage(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: { type?: string; text?: string; mediaUrl?: string },
+  ) {
+    return this.conversationService.sendMessage(id, req.user.sub, body);
+  }
+
   @Patch('conversations/:id/seen')
   seen(@Req() req: any, @Param('id') id: string) {
     return this.conversationService.setSeen(id, req.user.sub);

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, FlatList, Text, TouchableOpacity } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { TopBar } from "../components/common/TopBar";
 import { EmptyState } from "../components/common/EmptyState";
 import { SearchBar } from "../components/search/SearchBar";
@@ -9,9 +9,15 @@ import type { AuthUser, FeedPost } from "../types";
 
 interface SearchScreenProps {
   onOpenPost?: (postId: string) => void;
+  onOpenUserProfile?: (userId: number) => void;
+  onOpenAIChat?: () => void;
 }
 
-export function SearchScreen({ onOpenPost }: SearchScreenProps) {
+export function SearchScreen({
+  onOpenPost,
+  onOpenUserProfile,
+  onOpenAIChat,
+}: SearchScreenProps) {
   const [keyword, setKeyword] = useState("");
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -67,13 +73,28 @@ export function SearchScreen({ onOpenPost }: SearchScreenProps) {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => handleSearch(keyword), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => {
+      void handleSearch(keyword);
+    }, 280);
+    return () => clearTimeout(timer);
   }, [keyword, handleSearch]);
 
   return (
     <View className="flex-1 bg-background">
-      <TopBar title="Tìm kiếm" />
+      <TopBar
+        title="Tìm kiếm"
+        rightAction={
+          onOpenAIChat ? (
+            <TouchableOpacity
+              className="px-3 py-1.5 rounded-full bg-primary"
+              activeOpacity={0.8}
+              onPress={onOpenAIChat}
+            >
+              <Text className="text-white text-xs font-semibold">AI</Text>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       <SearchBar
         value={keyword}
         onChangeText={setKeyword}
@@ -84,7 +105,10 @@ export function SearchScreen({ onOpenPost }: SearchScreenProps) {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) =>
           item.kind === "user" ? (
-            <UserResultItem user={item.user} />
+            <UserResultItem
+              user={item.user}
+              onPress={() => onOpenUserProfile?.(item.user.id)}
+            />
           ) : (
             <TouchableOpacity
               className="px-4 py-4 bg-surface border-b border-border"

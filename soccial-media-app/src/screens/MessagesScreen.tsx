@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -29,9 +29,18 @@ type FriendCandidate = {
 interface MessagesScreenProps {
   user: AuthUser;
   mode?: "all" | "groups";
+  initialDirectUserId?: number;
+  initialDirectRouteKey?: number;
+  onInitialDirectHandled?: () => void;
 }
 
-export function MessagesScreen({ user, mode = "all" }: MessagesScreenProps) {
+export function MessagesScreen({
+  user,
+  mode = "all",
+  initialDirectUserId,
+  initialDirectRouteKey,
+  onInitialDirectHandled,
+}: MessagesScreenProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +57,7 @@ export function MessagesScreen({ user, mode = "all" }: MessagesScreenProps) {
   const [groupMemberIds, setGroupMemberIds] = useState<number[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [isSubmittingCompose, setIsSubmittingCompose] = useState(false);
+  const handledInitialDirectKey = useRef<number | undefined>(undefined);
 
   const filteredConversations = useMemo(() => {
     const q = conversationKeyword.trim().toLowerCase();
@@ -182,15 +192,20 @@ export function MessagesScreen({ user, mode = "all" }: MessagesScreenProps) {
     });
   };
 
-  const handleCreateDirect = async (targetUserId: number) => {
+  const handleCreateDirect = async (
+    targetUserId: number,
+    options?: { closeCompose?: boolean },
+  ) => {
     setIsSubmittingCompose(true);
     try {
       const res = await api.createDirectConversation(targetUserId);
       upsertConversation(res.conversation);
       setSelectedConv(res.conversation);
       await loadMessages(res.conversation.id);
-      setShowComposeModal(false);
-      resetCompose();
+      if (options?.closeCompose !== false) {
+        setShowComposeModal(false);
+        resetCompose();
+      }
     } catch (err) {
       Alert.alert(
         "Không thể tạo hội thoại",
@@ -200,6 +215,16 @@ export function MessagesScreen({ user, mode = "all" }: MessagesScreenProps) {
       setIsSubmittingCompose(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialDirectUserId || !initialDirectRouteKey) return;
+    if (handledInitialDirectKey.current === initialDirectRouteKey) return;
+
+    handledInitialDirectKey.current = initialDirectRouteKey;
+    void handleCreateDirect(initialDirectUserId, { closeCompose: false }).finally(
+      () => onInitialDirectHandled?.(),
+    );
+  }, [initialDirectUserId, initialDirectRouteKey, onInitialDirectHandled]);
 
   const toggleGroupMember = (userId: number) => {
     setGroupMemberIds((prev) =>
@@ -353,11 +378,13 @@ export function MessagesScreen({ user, mode = "all" }: MessagesScreenProps) {
               paddingVertical: 12,
             }}
           />
-          <MessageInput
-            value={messageText}
-            onChangeText={setMessageText}
-            onSend={handleSend}
-          />
+          <View style={{ marginBottom: 70 }}>
+            <MessageInput
+              value={messageText}
+              onChangeText={setMessageText}
+              onSend={handleSend}
+            />
+          </View>
         </View>
       )}
 
