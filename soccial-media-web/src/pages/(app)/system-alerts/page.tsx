@@ -18,22 +18,22 @@ const allAlerts: AlertItem[] = [
   {
     id: 1,
     type: 'security',
-    title: 'Phát hiện đăng nhập bất thường',
-    body: 'Một đăng nhập đã bị chặn từ địa chỉ IP chưa xác minh. Hãy kiểm tra tài khoản ngay.',
-    time: '12 phút trước',
+    title: 'Phát hiĂ¡»‡n đăng nhĂ¡º­p bĂ¡º¥t thường',
+    body: 'MĂ¡»™t đăng nhĂ¡º­p đã bĂ¡»‹ chặn tĂ¡»Ă¡»ừ đĂ¡»‹a chỉ IP chưa xác minh. Hãy kiểm tra tài khoĂ¡º£n ngay.',
+    time: '12 phút trưĂ¡»›c',
   },
   {
     id: 2,
     type: 'update',
     title: 'ZChat Core v2.4.0 đã phát hành',
-    body: 'Bản cập nhật mới cải thiện tốc độ bảng tin và trải nghiệm trò chuyện mật độ cao.',
-    time: '2 giờ trước',
+    body: 'BĂ¡º£n cĂ¡º­p nhĂ¡º­t mĂ¡»›i cĂ¡º£i thiĂ¡»‡n tốc đĂ¡»™ bĂ¡º£ng tin và trĂ¡º£i nghiĂ¡»‡m trò chuyĂ¡»‡n mĂ¡º­t đĂ¡»™ cao.',
+    time: '2 giờ trưĂ¡»›c',
   },
   {
     id: 3,
     type: 'maintenance',
-    title: 'Lịch bảo trì API',
-    body: 'Hệ thống sẽ tối ưu cơ sở dữ liệu vào Chủ nhật lúc 02:00 UTC.',
+    title: 'LĂ¡»‹ch bĂ¡º£o trì API',
+    body: 'HĂ¡»‡ thống sẽ tối ưu cơ sĂ¡» dữ liĂ¡»‡u vào Chủ nhĂ¡º­t lúc 02:00 UTC.',
     time: 'Hôm qua',
   },
 ]
@@ -56,20 +56,20 @@ export default function SystemAlertsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Cảnh báo hệ thống</h1>
-          <p>Theo dõi cập nhật bảo mật, phát hành và lịch bảo trì.</p>
+          <h1>CĂ¡º£nh báo hĂ¡»‡ thống</h1>
+          <p>Theo dõi cĂ¡º­p nhĂ¡º­t bĂ¡º£o mĂ¡º­t, phát hành và lĂ¡»‹ch bĂ¡º£o trì.</p>
         </div>
         <div className={styles.filterRow}>
-          <button type="button" className={filter === 'all' ? styles.active : ''} onClick={() => setFilter('all')}>Tất cả</button>
-          <button type="button" className={filter === 'security' ? styles.active : ''} onClick={() => setFilter('security')}>Bảo mật</button>
-          <button type="button" className={filter === 'maintenance' ? styles.active : ''} onClick={() => setFilter('maintenance')}>Bảo trì</button>
+          <button type="button" className={filter === 'all' ? styles.active : ''} onClick={() => setFilter('all')}>TĂ¡º¥t cĂ¡º£</button>
+          <button type="button" className={filter === 'security' ? styles.active : ''} onClick={() => setFilter('security')}>BĂ¡º£o mĂ¡º­t</button>
+          <button type="button" className={filter === 'maintenance' ? styles.active : ''} onClick={() => setFilter('maintenance')}>BĂ¡º£o trì</button>
         </div>
       </header>
 
       <section className={styles.hero}>
         <div>
-          <p>Trạng thái hệ thống</p>
-          <h2>Tất cả dịch vụ đang hoạt động ổn định</h2>
+          <p>Trạng thái hĂ¡»‡ thống</p>
+          <h2>TĂ¡º¥t cĂ¡º£ dĂ¡»‹ch vĂ¡»¥ đang hoạt đĂ¡»™ng Ă¡»•n đĂ¡»‹nh</h2>
           <div className={styles.badges}>
             <span>Core Engine</span>
             <span>Security Wall</span>

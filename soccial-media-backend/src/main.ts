@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
@@ -19,8 +19,7 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
 
   const port = process.env.PORT || 5000;
-  const host = process.env.HOST || '0.0.0.0';
-  await app.listen(port, host);
-  console.log(`Server running on http://${host}:${port}`);
+  await app.listen(port);
+  console.log(`Server running on http://localhost:${port}`);
 }
 void bootstrap();

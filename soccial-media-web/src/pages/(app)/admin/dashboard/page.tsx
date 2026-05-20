@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Users, FileText, AlertTriangle, CheckCircle2, Activity, ArrowUpRight } from 'lucide-react'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
 import styles from './page.module.css'
 
 export default function AdminDashboard() {
@@ -21,7 +21,7 @@ export default function AdminDashboard() {
         setError('')
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu admin dashboard')
+        setError(err instanceof Error ? err.message : 'Không thể tĂ¡º£i dĂ¡»¯ liĂ¡»‡u admin dashboard')
       })
   }, [])
 
@@ -44,8 +44,8 @@ export default function AdminDashboard() {
     }
   }, [rawStats])
 
-  if (user?.role?.toLowerCase() !== 'admin') {
-    return <div className={styles.denied}>Bạn không có quyền truy cập khu vực admin.</div>
+  if (user?.role !== 'admin') {
+    return <div className={styles.denied}>Bạn không có quyĂ¡»n truy cĂ¡º­p khu vĂ¡»±c admin.</div>
   }
 
   return (
@@ -53,19 +53,19 @@ export default function AdminDashboard() {
       <header className={styles.hero}>
         <div className={styles.heroTop}>
           <p className={styles.eyebrow}>Admin Control Room</p>
-          <h1>Dashboard vận hành hệ thống</h1>
+          <h1>Dashboard vĂ¡º­n hành hĂ¡»‡ thống</h1>
           <p>
-            Tổng quan realtime cho khu admin riêng: theo dõi user, nội dung, báo cáo và chuyển nhanh tới tác vụ quản trị.
+            TĂ¡»•ng quan realtime cho khu admin riêng: theo dõi user, nĂ¡»™i dung, báo cáo và chuyĂ¡»ƒn nhanh tĂ¡»›i tác vĂ¡»¥ quĂ¡º£n trĂ¡»‹.
           </p>
         </div>
       </header>
 
       <section className={styles.statGrid}>
         {[
-          { label: 'Tổng người dùng', value: stats.totalUsers, icon: Users, tone: 'blue' },
-          { label: 'Tổng bài viết', value: stats.totalPosts, icon: FileText, tone: 'teal' },
-          { label: 'Báo cáo chờ xử lý', value: stats.pendingReports, icon: AlertTriangle, tone: 'amber' },
-          { label: 'Báo cáo đã xử lý', value: stats.resolvedReports, icon: CheckCircle2, tone: 'green' },
+          { label: 'TĂ¡»•ng ngưĂ¡»i dùng', value: stats.totalUsers, icon: Users, tone: 'blue' },
+          { label: 'TĂ¡»•ng bài viết', value: stats.totalPosts, icon: FileText, tone: 'teal' },
+          { label: 'Báo cáo chĂ¡» xĂ¡»  lý', value: stats.pendingReports, icon: AlertTriangle, tone: 'amber' },
+          { label: 'Báo cáo đã xĂ¡»  lý', value: stats.resolvedReports, icon: CheckCircle2, tone: 'green' },
         ].map((item) => {
           const Icon = item.icon
           return (
@@ -84,10 +84,10 @@ export default function AdminDashboard() {
 
       <section className={styles.contentGrid}>
         <article className={styles.panel}>
-          <h2>Nhịp vận hành nền tảng</h2>
+          <h2>NhĂ¡»‹p vĂ¡º­n hành nĂ¡»n tĂ¡º£ng</h2>
           <div className={styles.progressList}>
             <div>
-              <span>Độ ổn định hệ thống</span>
+              <span>ĐĂ¡»™ Ă¡»•n đĂ¡»‹nh hĂ¡»‡ thống</span>
               <b>99.9%</b>
             </div>
             <div className={styles.progressTrack}>
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             </div>
 
             <div>
-              <span>Chỉ số tương tác / bài viết</span>
+              <span>ChĂ¡»‰ sĂ¡»‘ tương tác / bài viết</span>
               <b>{stats.engagementScore}</b>
             </div>
             <div className={styles.progressTrack}>
@@ -103,33 +103,33 @@ export default function AdminDashboard() {
             </div>
 
             <div>
-              <span>Tổng tương tác (bình luận + cảm xúc)</span>
+              <span>TĂ¡»•ng tương tác (bình luĂ¡º­n + cĂ¡º£m xúc)</span>
               <b>{(stats.totalComments + stats.totalReactions).toLocaleString('vi-VN')}</b>
             </div>
           </div>
         </article>
 
         <article className={styles.panel}>
-          <h2>Điều phối quản trị</h2>
+          <h2>ĐiĂ¡»u phĂ¡»‘i quĂ¡º£n trĂ¡»‹</h2>
           <div className={styles.linkList}>
             <Link to="/admin/posts" className={styles.quickLink}>
               <span>
-                <b>Quản lý bài viết</b>
-                <small>Vào CRM nội dung để lọc, sửa, ẩn/xóa bài viết hàng loạt</small>
+                <b>QuĂ¡º£n lý bài viết</b>
+                <small>Vào CRM nĂ¡»™i dung để lĂ¡»c, sĂ¡»­a, ẩn/xóa bài viết hàng loạt</small>
               </span>
               <ArrowUpRight size={16} />
             </Link>
             <Link to="/admin/users" className={styles.quickLink}>
               <span>
-                <b>Quản lý người dùng</b>
-                <small>Giám sát tăng trưởng user, vai trò và trạng thái tài khoản</small>
+                <b>QuĂ¡º£n lý ngưĂ¡»i dùng</b>
+                <small>Giám sát tăng trưĂ¡»Ÿng user, vai trò và trạng thái tài khoĂ¡º£n</small>
               </span>
               <ArrowUpRight size={16} />
             </Link>
             <Link to="/moderator/reports" className={styles.quickLink}>
               <span>
-                <b>Bảng xử lý báo cáo</b>
-                <small>Phối hợp với moderator để xử lý vi phạm khẩn</small>
+                <b>BĂ¡º£ng xĂ¡»  lý báo cáo</b>
+                <small>PhĂ¡»‘i hĂ¡»£p vĂ¡»›i moderator để xĂ¡»  lý vi phạm khẩn</small>
               </span>
               <Activity size={16} />
             </Link>
@@ -139,3 +139,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import * as React from 'react'
 import * as LabelPrimitive from '@radix-ui/react-label'
@@ -13,7 +13,7 @@ import {
   type FieldValues,
 } from 'react-hook-form'
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/utils'
 import { Label } from '@/components/ui/label'
 
 const Form = FormProvider
@@ -165,3 +165,4 @@ export {
   FormMessage,
   FormField,
 }
+

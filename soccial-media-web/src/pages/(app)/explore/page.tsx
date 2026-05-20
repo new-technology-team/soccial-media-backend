@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Heart, MessageCircle, Search, Share2, UserPlus } from 'lucide-react'
-import { api, isAuthExpiredError } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
-import type { FeedPost } from '@/lib/types'
+import { api, isAuthExpiredError } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
+import type { FeedPost } from '@/types'
 import styles from './page.module.css'
 
 /** Transform backend post response to FeedPost. */
@@ -119,28 +119,28 @@ export default function ExplorePage() {
     <div className={styles.page}>
       <section className={styles.topSearch}>
         <Search size={16} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm kiếm toàn cục..." />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm kiĂ¡º¿m toàn cĂ¡»¥c..." />
       </section>
 
       <section className={styles.header}>
         <div>
-          <h1>Kết quả tìm kiếm</h1>
+          <h1>KĂ¡º¿t quĂ¡º£ tìm kiĂ¡º¿m</h1>
           <p>
-            Hiển thị {filteredPosts.length} kết quả cho <span>"{query || 'tất cả'}"</span>
+            HiĂ¡»ƒn thĂ¡»‹ {filteredPosts.length} kĂ¡º¿t quĂ¡º£ cho <span>"{query || 'tĂ¡º¥t cĂ¡º£'}"</span>
           </p>
         </div>
         <div className={styles.filters}>
-          <button type="button" className={sortMode === 'all' ? styles.filterActive : ''} onClick={() => setSortMode('all')}>Tất cả</button>
+          <button type="button" className={sortMode === 'all' ? styles.filterActive : ''} onClick={() => setSortMode('all')}>TĂ¡º¥t cĂ¡º£</button>
           <button type="button" className={sortMode === 'recent' ? styles.filterActive : ''} onClick={() => setSortMode('recent')}>Gần đây</button>
-          <button type="button" className={sortMode === 'popular' ? styles.filterActive : ''} onClick={() => setSortMode('popular')}>Nổi bật</button>
+          <button type="button" className={sortMode === 'popular' ? styles.filterActive : ''} onClick={() => setSortMode('popular')}>NĂ¡»•i bĂ¡º­t</button>
         </div>
       </section>
 
       <div className={styles.grid}>
         <section className={styles.peopleCol}>
           <div className={styles.sectionHead}>
-            <h2>Mọi người</h2>
-            <Link to="/friends">Xem tất cả</Link>
+            <h2>MĂ¡»i ngưĂ¡»i</h2>
+            <Link to="/friends">Xem tĂ¡º¥t cĂ¡º£</Link>
           </div>
 
           <div className={styles.peopleList}>
@@ -154,13 +154,13 @@ export default function ExplorePage() {
                 <UserPlus size={14} />
               </Link>
             ))}
-            {people.length === 0 ? <p className={styles.empty}>Không có người dùng phù hợp.</p> : null}
+            {people.length === 0 ? <p className={styles.empty}>Không có ngưĂ¡»i dùng phù hĂ¡»£p.</p> : null}
           </div>
 
           <div className={styles.box}>
             <div className={styles.sectionHead}>
-              <h2>Chủ đề liên quan</h2>
-              <Link to="/feed">Xem tất cả</Link>
+              <h2>ChĂ¡»§ đĂ¡» liên quan</h2>
+              <Link to="/feed">Xem tĂ¡º¥t cĂ¡º£</Link>
             </div>
             {relatedTopics.map(([tag, count], idx) => (
               <Link key={tag} to={`/explore?q=${encodeURIComponent(tag)}`} className={styles.groupItem}>
@@ -171,14 +171,14 @@ export default function ExplorePage() {
                 </span>
               </Link>
             ))}
-            {relatedTopics.length === 0 ? <p className={styles.empty}>Chưa có hashtag phù hợp.</p> : null}
+            {relatedTopics.length === 0 ? <p className={styles.empty}>Chưa có hashtag phù hĂ¡»£p.</p> : null}
           </div>
         </section>
 
         <section className={styles.postsCol}>
           <div className={styles.sectionHead}>
-            <h2>Bài viết nổi bật</h2>
-            <Link to="/feed">Xem tất cả</Link>
+            <h2>Bài viĂ¡º¿t nĂ¡»•i bĂ¡º­t</h2>
+            <Link to="/feed">Xem tĂ¡º¥t cĂ¡º£</Link>
           </div>
 
           {topPosts.map((post, idx) => (
@@ -214,9 +214,10 @@ export default function ExplorePage() {
             </article>
           ))}
 
-          {topPosts.length === 0 ? <p className={styles.empty}>Không có bài viết phù hợp.</p> : null}
+          {topPosts.length === 0 ? <p className={styles.empty}>Không có bài viết phù hĂ¡»£p.</p> : null}
         </section>
       </div>
     </div>
   )
 }
+

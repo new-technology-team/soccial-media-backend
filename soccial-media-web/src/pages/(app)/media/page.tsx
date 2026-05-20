@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { Search, Upload, FileText, PlayCircle } from 'lucide-react'
-import { api, isAuthExpiredError } from '@/lib/api'
-import type { FeedPost } from '@/lib/types'
-import { useAuthStore } from '@/lib/store/auth-store'
+import { api, isAuthExpiredError } from '@/api/client'
+import type { FeedPost } from '@/types'
+import { useAuthStore } from '@/contexts/auth-store'
 import styles from './page.module.css'
 
 type MediaType = 'image' | 'video' | 'doc' | 'file'
@@ -82,8 +82,8 @@ export default function MediaPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Thư viện media</h1>
-          <p>Quản lý ảnh, video và tài liệu dùng trong bài viết của bạn.</p>
+          <h1>Thư viĂ¡»‡n media</h1>
+          <p>QuĂ¡º£n lý Ă¡º£nh, video và tài liĂ¡»‡u dùng trong bài viết của bạn.</p>
         </div>
         <div className={styles.searchWrap}>
           <Search size={16} />
@@ -93,14 +93,14 @@ export default function MediaPage() {
 
       <div className={styles.tabRow}>
         <div className={styles.tabs}>
-          <button type="button" className={typeFilter === 'all' ? styles.tabActive : ''} onClick={() => setTypeFilter('all')}>Tất cả</button>
-          <button type="button" className={typeFilter === 'image' ? styles.tabActive : ''} onClick={() => setTypeFilter('image')}>Ảnh</button>
+          <button type="button" className={typeFilter === 'all' ? styles.tabActive : ''} onClick={() => setTypeFilter('all')}>TĂ¡º¥t cĂ¡º£</button>
+          <button type="button" className={typeFilter === 'image' ? styles.tabActive : ''} onClick={() => setTypeFilter('image')}>Ă¡º¢nh</button>
           <button type="button" className={typeFilter === 'video' ? styles.tabActive : ''} onClick={() => setTypeFilter('video')}>Video</button>
-          <button type="button" className={typeFilter === 'doc' ? styles.tabActive : ''} onClick={() => setTypeFilter('doc')}>Tài liệu</button>
+          <button type="button" className={typeFilter === 'doc' ? styles.tabActive : ''} onClick={() => setTypeFilter('doc')}>Tài liĂ¡»‡u</button>
         </div>
         <div className={styles.switchWrap}>
-          <button type="button" className={scope === 'sent' ? styles.tabActive : ''} onClick={() => setScope('sent')}>Của tôi</button>
-          <button type="button" className={scope === 'community' ? styles.tabActive : ''} onClick={() => setScope('community')}>Cộng đồng</button>
+          <button type="button" className={scope === 'sent' ? styles.tabActive : ''} onClick={() => setScope('sent')}>CĂ¡»§a tôi</button>
+          <button type="button" className={scope === 'community' ? styles.tabActive : ''} onClick={() => setScope('community')}>CĂ¡»™ng đĂ¡»“ng</button>
         </div>
       </div>
 
@@ -116,7 +116,7 @@ export default function MediaPage() {
             </div>
           </article>
         ))}
-        {filteredItems.length === 0 ? <p className={styles.empty}>Chưa có media phù hợp với bộ lọc hiện tại.</p> : null}
+        {filteredItems.length === 0 ? <p className={styles.empty}>Chưa có media phù hĂ¡»£p vĂ¡»›i bĂ¡»™ lĂ¡»c hiĂ¡»‡n tại.</p> : null}
       </section>
 
       <Link to="/feed?compose=1" className={styles.uploadBtn}>
@@ -125,3 +125,4 @@ export default function MediaPage() {
     </div>
   )
 }
+

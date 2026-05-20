@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, CheckCircle2, EyeOff, ShieldAlert, Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
-import type { FeedPost } from '@/lib/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
+import type { FeedPost } from '@/types'
 import styles from './page.module.css'
 
 type ReportStatus = 'all' | 'pending' | 'reviewed' | 'resolved'
@@ -126,7 +126,7 @@ export default function ModeratorReportsPage() {
     <div className={styles.page}>
       <header className={styles.hero}>
         <p>Stitch4 / Reports</p>
-        <h1>Quản lý báo cáo khiếu nại</h1>
+        <h1>QuĂ¡º£n lý báo cáo khiĂ¡º¿u nại</h1>
       </header>
 
       <section className={styles.filters}>
@@ -148,21 +148,21 @@ export default function ModeratorReportsPage() {
           <input
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Tìm theo lý do / chi tiết báo cáo..."
+            placeholder="Tìm theo lý do / chi tiĂ¡º¿t báo cáo..."
           />
         </label>
 
         <select value={targetType} onChange={(event) => setTargetType(event.target.value as TargetFilter)}>
-          <option value="all">Tất cả đối tượng</option>
-          <option value="post">Bài viết</option>
-          <option value="comment">Bình luận</option>
-          <option value="user">Người dùng</option>
-          <option value="message">Tin nhắn</option>
+          <option value="all">TĂ¡º¥t cĂ¡º£ đĂ¡»‘i tưĂ¡»£ng</option>
+          <option value="post">Bài viĂ¡º¿t</option>
+          <option value="comment">Bình luĂ¡º­n</option>
+          <option value="user">NgưĂ¡»i dùng</option>
+          <option value="message">Tin nhĂ¡º¯n</option>
         </select>
 
         <div className={styles.summaryStat}>
           <b>{filtered.length}</b>
-          <span>kết quả lọc</span>
+          <span>kĂ¡º¿t quĂ¡º£ lĂ¡»c</span>
         </div>
       </section>
 
@@ -182,7 +182,11 @@ export default function ModeratorReportsPage() {
                   <div>
                     <b>Báo cáo #{id}</b>
                     <small>
-                      {String(report.targetType || 'unknown')} · đối tượng #{String(report.targetId || '-')}
+<<<<<<< HEAD
+                      {String(report.targetType || 'unknown')} 킷 đĂ¡»‘i tưĂ¡»£ng #{String(report.targetId || '-')}
+=======
+                      {String(report.targetType || 'unknown')} • đối tượng #{String(report.targetId || '-')}
+>>>>>>> e1e0f981eaeaaf7229c1f05934c42d2d9ef91993
                     </small>
                   </div>
                   <span>{String(report.status || 'pending')}</span>
@@ -192,14 +196,14 @@ export default function ModeratorReportsPage() {
 
                 <div className={styles.actions}>
                   <button type="button" onClick={() => resolve(id, 'reviewed')}>
-                    <AlertTriangle size={15} /> Đánh dấu đã xem
+                    <AlertTriangle size={15} /> ĐĂ¡nh dĂ¡º¥u đã xem
                   </button>
                   <button type="button" onClick={() => resolve(id, 'resolved')}>
-                    <CheckCircle2 size={15} /> Đóng báo cáo
+                    <CheckCircle2 size={15} /> ĐĂ³ng báo cáo
                   </button>
                   {isPending ? (
                     <button type="button" onClick={() => hidePost(report)}>
-                      <EyeOff size={15} /> Ẩn bài liên quan
+                      <EyeOff size={15} /> Ă¡º¨n bài liên quan
                     </button>
                   ) : null}
                 </div>
@@ -209,14 +213,14 @@ export default function ModeratorReportsPage() {
 
           {filtered.length === 0 ? (
             <div className={styles.empty}>
-              <ShieldAlert size={16} /> Không có báo cáo phù hợp bộ lọc.
+              <ShieldAlert size={16} /> Không có báo cáo phù hĂ¡»£p bĂ¡»™ lĂ¡»c.
             </div>
           ) : null}
 
           {filtered.length > 0 ? (
             <div className={styles.pagination}>
               <button type="button" disabled={currentPage <= 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}>
-                <ChevronLeft size={15} /> Trước
+                <ChevronLeft size={15} /> TrưĂ¡»›c
               </button>
               <span>Trang {currentPage}/{totalPages}</span>
               <button
@@ -234,50 +238,55 @@ export default function ModeratorReportsPage() {
           {selectedReport ? (
             <>
               <div className={styles.sideHead}>
-                <h2>Chi tiết report</h2>
+                <h2>Chi tiĂ¡º¿t report</h2>
                 <button type="button" onClick={() => setSelectedReportId(null)}>
                   <X size={15} />
                 </button>
               </div>
               <div className={styles.sideBlock}>
-                <b>#{String(selectedReport.id)} · {String(selectedReport.status || 'pending')}</b>
+<<<<<<< HEAD
+                <b>#{String(selectedReport.id)} 킷 {String(selectedReport.status || 'pending')}</b>
+=======
+                <b>#{String(selectedReport.id)} • {String(selectedReport.status || 'pending')}</b>
+>>>>>>> e1e0f981eaeaaf7229c1f05934c42d2d9ef91993
                 <p><span>Loại:</span> {String(selectedReport.targetType || 'unknown')}</p>
-                <p><span>Đối tượng:</span> #{String(selectedReport.targetId || '-')}</p>
+                <p><span>ĐĂ¡»‘i tưĂ¡»£ng:</span> #{String(selectedReport.targetId || '-')}</p>
                 <p><span>Lý do:</span> {String(selectedReport.reason || 'Không có')}</p>
-                <p><span>Chi tiết:</span> {String(selectedReport.details || 'Không có')}</p>
+                <p><span>Chi tiĂ¡º¿t:</span> {String(selectedReport.details || 'Không có')}</p>
               </div>
 
               <div className={styles.sideBlock}>
-                <h3>Chi tiết post liên quan</h3>
+                <h3>Chi tiĂ¡º¿t post liên quan</h3>
                 {relatedPost ? (
                   <>
-                    <p><span>Tác giả:</span> {relatedPost.authorName}</p>
+                    <p><span>Tác giĂ¡º£:</span> {relatedPost.authorName}</p>
                     <p><span>Trạng thái:</span> {relatedPost.status}</p>
-                    <p className={styles.postContent}>{relatedPost.content || '(Không có nội dung)'}</p>
+                    <p className={styles.postContent}>{relatedPost.content || '(Không có nĂ¡»™i dung)'}</p>
                     <div className={styles.sideActions}>
                       <button type="button" onClick={hideRelatedPost}>
-                        Ẩn bài
+                        Ă¡º¨n bài
                       </button>
                       <button type="button" onClick={publishRelatedPost}>
-                        Khôi phục
+                        Khôi phĂ¡»¥c
                       </button>
                     </div>
                   </>
                 ) : (
-                  <p className={styles.muted}>Report này không trỏ tới post hoặc post không còn trong feed hiện tại.</p>
+                  <p className={styles.muted}>Report này không trĂ¡» tĂ¡»›i post hoặc post không còn trong feed hiĂ¡»‡n tại.</p>
                 )}
               </div>
 
               <div className={styles.sideBlock}>
-                <h3>Người duyệt hiện tại</h3>
+                <h3>NgưĂ¡»i duyĂ¡»‡t hiĂ¡»‡n tại</h3>
                 <p>{user?.fullName || 'Moderator'}</p>
               </div>
             </>
           ) : (
-            <div className={styles.empty}>Chọn một report để xem chi tiết ở side panel.</div>
+            <div className={styles.empty}>ChĂ¡»n mĂ¡»™t report để xem chi tiĂ¡º¿t Ă¡»Ÿ side panel.</div>
           )}
         </aside>
       </section>
     </div>
   )
 }
+

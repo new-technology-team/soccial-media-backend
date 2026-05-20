@@ -1,4 +1,4 @@
-"use client";
+﻿'use client'
 
 import {
   ChangeEvent,
@@ -26,11 +26,11 @@ import {
   UserPlus,
   X,
   MapPin,
-} from "lucide-react";
-import { api, isAuthExpiredError } from "@/lib/api";
-import type { FeedComment, FeedPost } from "@/lib/types";
-import { useAuthStore } from "@/lib/store/auth-store";
-import styles from "./page.module.css";
+} from 'lucide-react'
+import { api, isAuthExpiredError } from '@/api/client'
+import type { FeedComment, FeedPost } from '@/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import styles from './page.module.css'
 
 const VN_TIMEZONE = "Asia/Ho_Chi_Minh";
 const FEED_BATCH_SIZE = 4;
@@ -76,24 +76,36 @@ const parseFeedDate = (value: string) => {
 };
 
 const VN_LOCATIONS = [
-  "Hà Nội",
-  "Hà Nam",
-  "Hà Giang",
-  "Hà Tĩnh",
-  "Hải Phòng",
-  "Hải Dương",
-  "Đà Nẵng",
-  "Huế",
-  "Nghệ An",
-  "Thanh Hóa",
-  "Quảng Ninh",
-  "Nha Trang",
-  "Đà Lạt",
-  "TP. Hồ Chí Minh",
-  "Cần Thơ",
-  "An Giang",
-  "Kiên Giang",
-];
+  'Hà NĂ¡»™i',
+  'Hà Nam',
+  'Hà Giang',
+  'Hà Tĩnh',
+  'HĂ¡º£i Phòng',
+  'HĂ¡º£i Dương',
+  'ĐĂ  Nẵng',
+  'HuĂ¡º¿',
+  'NghĂ¡»‡ An',
+  'Thanh Hóa',
+  'QuĂ¡º£ng Ninh',
+  'Nha Trang',
+  'ĐĂ  Lạt',
+  'TP. HĂ¡»“ Chí Minh',
+  'Cần Thơ',
+  'An Giang',
+  'Kiên Giang',
+]
+
+const POST_REACTIONS = [
+  { type: 'like', emoji: '👍', label: 'Thích' },
+  { type: 'love', emoji: '❤️', label: 'Yêu thích' },
+  { type: 'haha', emoji: '😆', label: 'Haha' },
+  { type: 'wow', emoji: '😮', label: 'Wow' },
+  { type: 'sad', emoji: '😢', label: 'Buồn' },
+  { type: 'angry', emoji: '😡', label: 'Phẫn nộ' },
+] as const
+
+const getPostReactionMeta = (type: string | null | undefined) =>
+  POST_REACTIONS.find((item) => item.type === type) || POST_REACTIONS[0]
 
 const dedupePostsById = (items: FeedPost[]) => {
   const seen = new Set<string | number>();
@@ -106,7 +118,10 @@ const dedupePostsById = (items: FeedPost[]) => {
   return result;
 };
 
-type ComposerExtraPanel = "tag" | "location" | "emoji" | null;
+const isVideoMediaUrl = (url: string) =>
+  /\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?.*)?$/i.test(url) || url.includes('/video/')
+
+type ComposerExtraPanel = 'tag' | 'location' | 'emoji' | null
 
 type CommentPaging = {
   offset: number;
@@ -176,19 +191,19 @@ export default function FeedPage() {
   const [isSavingPostEdit, setIsSavingPostEdit] = useState(false);
   const [composerMoreMenuOpen, setComposerMoreMenuOpen] = useState(false);
   const [postEditDraft, setPostEditDraft] = useState<{
-    content: string;
-    mediaUrl: string;
-    visibility: "public" | "private";
-  } | null>(null);
-  const [showEmojiTray, setShowEmojiTray] = useState(false);
-  const [activeComposerPanel, setActiveComposerPanel] =
-    useState<ComposerExtraPanel>(null);
-  const [timeTick, setTimeTick] = useState(0);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [visiblePostsCount, setVisiblePostsCount] = useState(FEED_BATCH_SIZE);
-  const mediaInputRef = useRef<HTMLInputElement | null>(null);
-  const feedBottomSentinelRef = useRef<HTMLDivElement | null>(null);
-  const isGuestView = !token;
+    content: string
+    mediaUrl: string
+    visibility: 'public' | 'private'
+  } | null>(null)
+  const [showEmojiTray, setShowEmojiTray] = useState(false)
+  const [activeComposerPanel, setActiveComposerPanel] = useState<ComposerExtraPanel>(null)
+  const [timeTick, setTimeTick] = useState(0)
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [openReactionPostId, setOpenReactionPostId] = useState<number | null>(null)
+  const [visiblePostsCount, setVisiblePostsCount] = useState(FEED_BATCH_SIZE)
+  const mediaInputRef = useRef<HTMLInputElement | null>(null)
+  const feedBottomSentinelRef = useRef<HTMLDivElement | null>(null)
+  const isGuestView = !token
 
   const resetComposerPanels = () => {
     setShowEmojiTray(false);
@@ -204,23 +219,13 @@ export default function FeedPage() {
     setIsModalOpen(false);
   };
 
-  const handleAuthExpired = useCallback(
-    (
-      error: unknown,
-      fallbackMessage = "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
-    ) => {
-      if (!isAuthExpiredError(error)) return false;
-      setErrorText(fallbackMessage);
-      clearAuth();
-      navigate("/auth/login?reason=session-expired");
-      return true;
-    },
-    [clearAuth, navigate],
-  );
-
-  useEffect(() => {
-    console.log("[FeedPage] mounted");
-  }, []);
+  const handleAuthExpired = useCallback((error: unknown, fallbackMessage = 'Phiên đăng nhĂ¡º­p đã hết hạn, vui lòng đăng nhĂ¡º­p lại.') => {
+    if (!isAuthExpiredError(error)) return false
+    setErrorText(fallbackMessage)
+    clearAuth()
+    navigate('/auth/login?reason=session-expired')
+    return true
+  }, [clearAuth, navigate])
 
   useEffect(() => {
     const loadFeed = async () => {
@@ -283,7 +288,7 @@ export default function FeedPage() {
           (result.users || [])
             .map((item) => ({
               id: Number(item.id || 0),
-              name: String(item.full_name || "Người dùng"),
+              name: String(item.full_name || item.fullName || 'NgưĂ¡»i dùng'),
             }))
             .filter((item) => item.id > 0)
             .slice(0, 8),
@@ -448,7 +453,7 @@ export default function FeedPage() {
       .slice(0, 6)
       .map(([tag, count]) => ({
         tag,
-        text: `Có ${count} bài viết gần đây nhắc đến chủ đề này`,
+        text: `Có ${count} bài viết gần đây nhĂ¡º¯c đến chĂ¡»§ đĂ¡» này`,
         count: `${count} bài viết`,
       }));
   }, [posts]);
@@ -461,10 +466,10 @@ export default function FeedPage() {
     const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
     const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
 
-    if (diffMinutes < 1) return "vừa xong";
-    if (diffMinutes < 60) return `${diffMinutes} phút`;
-    if (diffHours < 24) return `${diffHours} giờ`;
-    if (diffDays < 7) return `${diffDays} ngày`;
+    if (diffMinutes < 1) return 'vĂ¡»«a xong'
+    if (diffMinutes < 60) return `${diffMinutes} phút`
+    if (diffHours < 24) return `${diffHours} giĂ¡»`
+    if (diffDays < 7) return `${diffDays} ngày`
 
     return new Intl.DateTimeFormat("vi-VN", {
       timeZone: VN_TIMEZONE,
@@ -497,19 +502,17 @@ export default function FeedPage() {
   }) => {
     const textWithMeta = [
       payload.text.trim(),
-      payload.taggedFriend
-        ? `\n\n👥 Cùng với: ${payload.taggedFriend.trim()}`
-        : "",
-      payload.location ? `\n📍 Địa điểm: ${payload.location.trim()}` : "",
+      payload.taggedFriend ? `\n\nÄ‘Ÿ‘¥ Cùng vĂ¡»›i: ${payload.taggedFriend.trim()}` : '',
+      payload.location ? `\nÄ‘Ÿ“ ĐĂ¡»‹a điĂ¡»ƒm: ${payload.location.trim()}` : '',
     ]
       .filter(Boolean)
       .join("");
 
     if (!textWithMeta && !payload.mediaUrl?.trim()) return;
     if (!token) {
-      setErrorText("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.");
-      navigate("/auth/login");
-      return;
+      setErrorText('Phiên đăng nhĂ¡º­p đã hết hạn, vui lòng đăng nhĂ¡º­p lại.')
+      navigate('/auth/login')
+      return
     }
     setIsPosting(true);
     setErrorText("");
@@ -546,39 +549,17 @@ export default function FeedPage() {
     }
   };
 
-  const handleToggleLike = async (post: FeedPost) => {
+  const handlePostReaction = async (post: FeedPost, reactionType: string) => {
     if (!token) {
       navigate("/auth/login");
       return;
     }
     try {
-      if (post.viewerReaction) {
-        await api.unreactPost(String(post.id));
-        setPosts((prev) =>
-          prev.map((item) =>
-            item.id === post.id
-              ? {
-                  ...item,
-                  viewerReaction: null,
-                  reactionCount: Math.max(0, item.reactionCount - 1),
-                }
-              : item,
-          ),
-        );
-      } else {
-        await api.reactPost(String(post.id), "like");
-        setPosts((prev) =>
-          prev.map((item) =>
-            item.id === post.id
-              ? {
-                  ...item,
-                  viewerReaction: "like",
-                  reactionCount: item.reactionCount + 1,
-                }
-              : item,
-          ),
-        );
-      }
+      const response = post.viewerReaction === reactionType
+        ? await api.unreactPost(token, post.id)
+        : await api.reactPost(token, post.id, reactionType)
+      setPosts((prev) => prev.map((item) => (item.id === post.id ? response.post : item)))
+      setOpenReactionPostId(null)
     } catch (error) {
       if (handleAuthExpired(error)) return;
       console.error("Failed to react post", error);
@@ -645,18 +626,14 @@ export default function FeedPage() {
 
     const link = `${window.location.origin}/posts/${post.id}`;
     try {
-      await api.createPost({
-        content: `🔁 Chia sẻ từ ${post.authorName}\n\n${post.content.slice(0, 360)}\n\nXem bài gốc: ${link}`,
-        visibility: "public",
-      });
-      const refreshed = await api.listFeed();
-      setPosts(
-        dedupePostsById(
-          (refreshed.posts as Record<string, unknown>[]).map(toFeedPost),
-        ),
-      );
-      setErrorText("Đã chia sẻ lên trang cá nhân.");
-      setShareTargetPostId(null);
+      await api.createPost(token, {
+        content: `Ä‘Ÿ” Chia sẻ tĂ¡»« ${post.authorName}\n\n${post.content.slice(0, 360)}\n\nXem bài gĂ¡»‘c: ${link}`,
+        visibility: 'public',
+      })
+      const refreshed = await api.listFeed(token)
+      setPosts(dedupePostsById(refreshed.posts))
+      setErrorText('ĐĂ£ chia sẻ lên trang cá nhân.')
+      setShareTargetPostId(null)
     } catch (error) {
       if (handleAuthExpired(error)) return;
       console.error("Failed to share to profile", error);
@@ -674,12 +651,9 @@ export default function FeedPage() {
 
     const link = `${window.location.origin}/posts/${post.id}`;
     try {
-      await api.sendMessage(conversationId, {
-        type: "text",
-        text: `📨 ${me?.fullName || "Bạn của bạn"} đã chia sẻ một bài viết:\n${post.content.slice(0, 240)}\n${link}`,
-      });
-      setErrorText("Đã chia sẻ bài viết vào tin nhắn.");
-      setShareTargetPostId(null);
+      await api.sendMessage(token, conversationId, `Ä‘Ÿ“¨ ${me?.fullName || 'Bạn của bạn'} đã chia sẻ mĂ¡»™t bài viết:\n${post.content.slice(0, 240)}\n${link}`)
+      setErrorText('ĐĂ£ chia sẻ bài viết vào tin nhĂ¡º¯n.')
+      setShareTargetPostId(null)
     } catch (error) {
       if (handleAuthExpired(error)) return;
       console.error("Failed to share to conversation", error);
@@ -689,9 +663,9 @@ export default function FeedPage() {
   const handleCopyLink = async (postId: string | number) => {
     const url = `${window.location.origin}/posts/${postId}`;
     try {
-      await navigator.clipboard.writeText(url);
-      setErrorText("Đã sao chép liên kết bài viết.");
-      setShareTargetPostId(null);
+      await navigator.clipboard.writeText(url)
+      setErrorText('ĐĂ£ sao chép liên kĂ¡º¿t bài viết.')
+      setShareTargetPostId(null)
     } catch (error) {
       console.error("Failed to copy link", error);
     }
@@ -699,9 +673,9 @@ export default function FeedPage() {
 
   const handleCopyPostId = async (postId: string | number) => {
     try {
-      await navigator.clipboard.writeText(String(postId));
-      setErrorText(`Đã sao chép ID bài viết: #${postId}`);
-      setActivePostMenuId(null);
+      await navigator.clipboard.writeText(String(postId))
+      setErrorText(`ĐĂ£ sao chép ID bài viết: #${postId}`)
+      setActivePostMenuId(null)
     } catch (error) {
       console.error("Failed to copy post id", error);
     }
@@ -737,8 +711,8 @@ export default function FeedPage() {
     const contentText = postEditDraft.content.trim();
     const mediaText = postEditDraft.mediaUrl.trim();
     if (!contentText && !mediaText) {
-      setErrorText("Bài viết cần có nội dung hoặc media.");
-      return;
+      setErrorText('Bài viĂ¡º¿t cần có nĂ¡»™i dung hoặc media.')
+      return
     }
 
     try {
@@ -747,18 +721,14 @@ export default function FeedPage() {
         content: contentText,
         mediaUrl: mediaText || undefined,
         visibility: postEditDraft.visibility,
-      });
-      setPosts((prev) =>
-        prev.map((item) =>
-          item.id === post.id ? { ...item, ...(updated as any).post } : item,
-        ),
-      );
-      setErrorText("Đã cập nhật bài viết.");
-      handleCancelEditPost();
+      })
+      setPosts((prev) => prev.map((item) => (item.id === post.id ? updated.post : item)))
+      setErrorText('ĐĂ£ cĂ¡º­p nhĂ¡º­t bài viết.')
+      handleCancelEditPost()
     } catch (error) {
-      if (handleAuthExpired(error)) return;
-      console.error("Failed to update post", error);
-      setErrorText("Không thể cập nhật bài viết. Vui lòng thử lại.");
+      if (handleAuthExpired(error)) return
+      console.error('Failed to update post', error)
+      setErrorText('Không thể cĂ¡º­p nhĂ¡º­t bài viết. Vui lòng thĂ¡»  lại.')
     } finally {
       setIsSavingPostEdit(false);
     }
@@ -770,8 +740,8 @@ export default function FeedPage() {
       return;
     }
 
-    const approved = window.confirm("Bạn có chắc muốn xóa bài viết này?");
-    if (!approved) return;
+    const approved = window.confirm('Bạn có chĂ¡º¯c muĂ¡»‘n xóa bài viết này?')
+    if (!approved) return
 
     try {
       await api.deletePost(String(post.id));
@@ -781,19 +751,19 @@ export default function FeedPage() {
       if (editingPostId === post.id) {
         handleCancelEditPost();
       }
-      setErrorText("Đã xóa bài viết.");
+      setErrorText('ĐĂ£ xóa bài viết.')
     } catch (error) {
-      if (handleAuthExpired(error)) return;
-      console.error("Failed to delete post", error);
-      setErrorText("Không thể xóa bài viết. Vui lòng thử lại.");
+      if (handleAuthExpired(error)) return
+      console.error('Failed to delete post', error)
+      setErrorText('Không thể xóa bài viết. Vui lòng thĂ¡»  lại.')
     }
   };
 
-  const handleHidePost = (postId: string | number) => {
-    setHiddenPostIds((prev) => ({ ...prev, [postId]: true }));
-    setActivePostMenuId(null);
-    setErrorText("Đã ẩn bài viết khỏi bảng tin của bạn.");
-  };
+  const handleHidePost = (postId: number) => {
+    setHiddenPostIds((prev) => ({ ...prev, [postId]: true }))
+    setActivePostMenuId(null)
+    setErrorText('ĐĂ£ ẩn bài viết khĂ¡»i bĂ¡º£ng tin của bạn.')
+  }
 
   const handleReportPost = async (post: FeedPost) => {
     if (!token) {
@@ -805,15 +775,15 @@ export default function FeedPage() {
       await api.submitReport({
         targetType: "post",
         targetId: post.id,
-        reason: "Nội dung không phù hợp trên bảng tin",
-        details: `Bài viết từ ${post.authorName}`,
-      });
-      setActivePostMenuId(null);
-      setErrorText("Đã gửi báo cáo bài viết. Cảm ơn bạn đã phản hồi.");
+        reason: 'NĂ¡»™i dung không phù hĂ¡»£p trên bĂ¡º£ng tin',
+        details: `Bài viĂ¡º¿t tĂ¡»« ${post.authorName}`,
+      })
+      setActivePostMenuId(null)
+      setErrorText('ĐĂ£ gĂ¡» i báo cáo bài viết. CĂ¡º£m ơn bạn đã phĂ¡º£n hĂ¡»“i.')
     } catch (error) {
-      if (handleAuthExpired(error)) return;
-      console.error("Failed to report post", error);
-      setErrorText("Không thể gửi báo cáo bài viết. Vui lòng thử lại.");
+      if (handleAuthExpired(error)) return
+      console.error('Failed to report post', error)
+      setErrorText('Không thể gĂ¡» i báo cáo bài viết. Vui lòng thĂ¡»  lại.')
     }
   };
 
@@ -821,12 +791,12 @@ export default function FeedPage() {
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        const result = typeof reader.result === "string" ? reader.result : "";
-        resolve(result.includes(",") ? result.split(",")[1] : result);
-      };
-      reader.onerror = () => reject(new Error("Không thể đọc file"));
-      reader.readAsDataURL(file);
-    });
+        const result = typeof reader.result === 'string' ? reader.result : ''
+        resolve(result.includes(',') ? result.split(',')[1] : result)
+      }
+      reader.onerror = () => reject(new Error('Không thể đĂ¡»c file'))
+      reader.readAsDataURL(file)
+    })
 
   const handleChooseMediaFile = () => {
     mediaInputRef.current?.click();
@@ -836,18 +806,30 @@ export default function FeedPage() {
     const file = event.target.files?.[0];
     if (!file || !token) return;
 
-    setUploadingMedia(true);
+    const maxBytes = 15 * 1024 * 1024
+    if (file.size > maxBytes) {
+      setErrorText('Media quá lớn. Vui lòng chọn tệp nhỏ hơn 15MB.')
+      event.target.value = ''
+      return
+    }
+
+    setUploadingMedia(true)
+    setErrorText('')
     try {
       const base64Data = await fileToBase64(file);
       const uploaded = await api.uploadPostMediaBase64({
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
         base64Data,
-      });
-      setModalMediaUrl(uploaded.mediaUrl);
+      })
+      if (!uploaded.mediaUrl) {
+        throw new Error('Upload media thất bại, không nhận được URL.')
+      }
+      setModalMediaUrl(uploaded.mediaUrl)
     } catch (error) {
-      if (handleAuthExpired(error)) return;
-      console.error("Failed to upload post media", error);
+      if (handleAuthExpired(error)) return
+      console.error('Failed to upload post media', error)
+      setErrorText(error instanceof Error ? error.message : 'Không thể tải ảnh/video lên bài viết.')
     } finally {
       setUploadingMedia(false);
       event.target.value = "";
@@ -943,25 +925,19 @@ export default function FeedPage() {
             <div className={styles.brandIcon}>M</div>
             <div>
               <p className={styles.brandTitle}>ZChat</p>
-              <p className={styles.brandSub}>Mạng xã hội chuyên nghiệp</p>
+              <p className={styles.brandSub}>Mạng xã hĂ¡»™i chuyên nghiĂ¡»‡p</p>
             </div>
           </div>
 
           <nav className={styles.railNav}>
-            <Link
-              to="/feed"
-              className={`${styles.railItem} ${styles.railItemActive}`}
-            >
-              Bảng tin
+            <Link to="/feed" className={`${styles.railItem} ${styles.railItemActive}`}>
+              BĂ¡º£ng tin
             </Link>
             <Link to={`/profile/${me?.id || 1}`} className={styles.railItem}>
-              Hồ sơ
-            </Link>
-            <Link to="/groups" className={styles.railItem}>
-              Nhóm
+              HĂ¡»“ sơ
             </Link>
             <Link to="/messages" className={styles.railItem}>
-              Trò chuyện
+              Trò chuyĂ¡»‡n
             </Link>
           </nav>
 
@@ -986,14 +962,14 @@ export default function FeedPage() {
             </Link>
             <button type="button" className={styles.bottomBtn}>
               <CircleHelp size={15} />
-              <span>Hỗ trợ</span>
+              <span>HĂ¡»— trĂ¡»£</span>
             </button>
           </div>
         </aside>
 
         <section className={styles.mainCol}>
           <header className={styles.topBar}>
-            <input className={styles.searchInput} placeholder="Tìm kiếm..." />
+            <input className={styles.searchInput} placeholder="Tìm kiĂ¡º¿m..." />
             <div className={styles.topActions}>
               <button type="button" className={styles.iconBtn}>
                 <Bell size={16} />
@@ -1009,21 +985,14 @@ export default function FeedPage() {
 
           {isGuestView ? (
             <section className={styles.guestBanner}>
-              <h3>Chế độ khách vãng lai</h3>
-              <p>
-                Bạn đang xem bảng tin ở chế độ chỉ đọc. Đăng nhập để đăng bài,
-                bình luận, chia sẻ và nhắn tin.
-              </p>
+              <h3>ChĂ¡º¿ đĂ¡»™ khách vãng lai</h3>
+              <p>Bạn đang xem bĂ¡º£ng tin Ă¡»Ÿ chĂ¡º¿ đĂ¡»™ chĂ¡»‰ đĂ¡»c. Ä ăng nhĂ¡º­p để đăng bài, bình luĂ¡º­n, chia sẻ và nhĂ¡º¯n tin.</p>
               <div className={styles.guestBannerActions}>
-                <button
-                  type="button"
-                  className={styles.submitBtn}
-                  onClick={() => navigate("/auth/login?next=/feed")}
-                >
-                  Đăng nhập để tương tác
+                <button type="button" className={styles.submitBtn} onClick={() => navigate('/auth/login?next=/feed')}>
+                  Ä ăng nhĂ¡º­p để tương tác
                 </button>
                 <Link to="/ai-chat" className={styles.softBtn}>
-                  <Smile size={15} /> Chat hỗ trợ với AI
+                  <Smile size={15} /> Chat hĂ¡»— trĂ¡»£ vĂ¡»›i AI
                 </Link>
               </div>
             </section>
@@ -1042,27 +1011,15 @@ export default function FeedPage() {
               </div>
               <div className={styles.composerFoot}>
                 <div className={styles.composerActions}>
-                  <button
-                    type="button"
-                    className={styles.softBtn}
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    <ImageIcon size={15} /> Ảnh/Video
+                  <button type="button" className={styles.softBtn} onClick={() => setIsModalOpen(true)}>
+                    <ImageIcon size={15} /> Ă¡º¢nh/Video
                   </button>
-                  <button
-                    type="button"
-                    className={styles.softBtn}
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    <Smile size={15} /> Cảm xúc
+                  <button type="button" className={styles.softBtn} onClick={() => setIsModalOpen(true)}>
+                    <Smile size={15} /> CĂ¡º£m xúc
                   </button>
                 </div>
-                <button
-                  type="submit"
-                  className={styles.submitBtn}
-                  disabled={!content.trim() || isPosting}
-                >
-                  {isPosting ? "Đang đăng..." : "Đăng"}
+                <button type="submit" className={styles.submitBtn} disabled={!content.trim() || isPosting}>
+                  {isPosting ? 'Ä ang đăng...' : 'Ä ăng'}
                 </button>
               </div>
             </form>
@@ -1200,11 +1157,104 @@ export default function FeedPage() {
                       ) : null}
                     </div>
                   </div>
+                  <div className={styles.postHeadActions} data-post-menu-root="true">
+                    <button
+                      type="button"
+                      className={styles.iconBtn}
+                      aria-label="Tùy chĂ¡»n bài viết"
+                      aria-expanded={activePostMenuId === post.id}
+                      onClick={() => setActivePostMenuId((prev) => (prev === post.id ? null : post.id))}
+                    >
+                      <Ellipsis size={16} />
+                    </button>
+                    {activePostMenuId === post.id ? (
+                      <div className={styles.postMenu} role="menu">
+                        <button type="button" onClick={() => void handleCopyPostId(post.id)}>
+                          Sao chép ID bài viết (#{post.id})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleCopyLink(post.id)
+                            setActivePostMenuId(null)
+                          }}
+                        >
+                          Sao chép liên kĂ¡º¿t
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleShare(post)
+                            setActivePostMenuId(null)
+                          }}
+                        >
+                          Chia sẻ ngay
+                        </button>
+                        {postIsManageable ? (
+                          <>
+                            <button type="button" onClick={() => handleStartEditPost(post)}>
+                              ChĂ¡»‰nh sĂ¡»­a bài viết
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.postMenuDanger}
+                              onClick={() => void handleDeletePost(post)}
+                            >
+                              Xóa bài viết
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => handleHidePost(post.id)}>
+                              Ă¡º¨n bài viết
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.postMenuDanger}
+                              onClick={() => void handleReportPost(post)}
+                            >
+                              Báo cáo bài viết
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
 
-                  {editingPostId === post.id && postEditDraft ? (
-                    <div className={styles.postEditPanel}>
-                      <textarea
-                        value={postEditDraft.content}
+                {editingPostId === post.id && postEditDraft ? (
+                  <div className={styles.postEditPanel}>
+                    <textarea
+                      value={postEditDraft.content}
+                      onChange={(event) =>
+                        setPostEditDraft((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                content: event.target.value,
+                              }
+                            : prev
+                        )
+                      }
+                      placeholder="NhĂ¡º­p nĂ¡»™i dung bài viết..."
+                    />
+                    <input
+                      value={postEditDraft.mediaUrl}
+                      onChange={(event) =>
+                        setPostEditDraft((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                mediaUrl: event.target.value,
+                              }
+                            : prev
+                        )
+                      }
+                      placeholder="Link media (tuĂ¡»³ chĂ¡»n)"
+                    />
+                    <div className={styles.postEditRow}>
+                      <select
+                        value={postEditDraft.visibility}
                         onChange={(event) =>
                           setPostEditDraft((prev) =>
                             prev
@@ -1215,248 +1265,196 @@ export default function FeedPage() {
                               : prev,
                           )
                         }
-                        placeholder="Nhập nội dung bài viết..."
-                      />
-                      <input
-                        value={postEditDraft.mediaUrl}
-                        onChange={(event) =>
-                          setPostEditDraft((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  mediaUrl: event.target.value,
-                                }
-                              : prev,
-                          )
-                        }
-                        placeholder="Link media (tuỳ chọn)"
-                      />
-                      <div className={styles.postEditRow}>
-                        <select
-                          value={postEditDraft.visibility}
-                          onChange={(event) =>
-                            setPostEditDraft((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    visibility: event.target.value as
-                                      | "public"
-                                      | "private",
-                                  }
-                                : prev,
-                            )
-                          }
-                        >
-                          <option value="public">Công khai</option>
-                          <option value="private">Riêng tư</option>
-                        </select>
-                        <button
-                          type="button"
-                          onClick={handleCancelEditPost}
-                          disabled={isSavingPostEdit}
-                        >
-                          Hủy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveEditPost(post)}
-                          disabled={isSavingPostEdit}
-                        >
-                          {isSavingPostEdit ? "Đang lưu..." : "Lưu"}
-                        </button>
-                      </div>
+                      >
+                        <option value="public">Công khai</option>
+                        <option value="private">Riêng tư</option>
+                      </select>
+                      <button type="button" onClick={handleCancelEditPost} disabled={isSavingPostEdit}>
+                        Hủy
+                      </button>
+                      <button type="button" onClick={() => void handleSaveEditPost(post)} disabled={isSavingPostEdit}>
+                        {isSavingPostEdit ? 'Ä ang lưu...' : 'Lưu'}
+                      </button>
                     </div>
                   ) : null}
 
                   <p className={styles.postContent}>{post.content}</p>
 
-                  {post.mediaUrl ? (
-                    <img
-                      src={post.mediaUrl}
-                      alt="Post media"
-                      className={styles.postMedia}
-                      loading="lazy"
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
+                {post.mediaUrl ? (
+                  <img
+                    src={post.mediaUrl}
+                    alt="Post media"
+                    className={styles.postMedia}
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : null}
+
+                <div className={styles.postStats}>
+<<<<<<< HEAD
+                  <span>{post.reactionCount} lưĂ¡»£t thích</span>
+                  <span>{post.commentCount} bình luĂ¡º­n</span>
+=======
+                  <span>{post.reactionCount} lượt cảm xúc</span>
+                  <span>{post.commentCount} bình luận</span>
+>>>>>>> e1e0f981eaeaaf7229c1f05934c42d2d9ef91993
+                </div>
+
+                <div className={styles.postActions}>
+                  <div className={styles.reactionActionWrap}>
+                    <button
+                      type="button"
+                      className={`${styles.actionBtn} ${post.viewerReaction ? styles.actionBtnActive : ''}`}
+                      onClick={() => setOpenReactionPostId((current) => (current === post.id ? null : post.id))}
+                      disabled={isGuestView}
+                    >
+                      {post.viewerReaction ? (
+                        <>
+                          <span className={styles.reactionActionEmoji}>{getPostReactionMeta(post.viewerReaction).emoji}</span>
+                          {getPostReactionMeta(post.viewerReaction).label}
+                        </>
+                      ) : (
+                        <>
+                          <Heart size={16} /> Thả cảm xúc
+                        </>
+                      )}
+                    </button>
+                    {openReactionPostId === post.id ? (
+                      <div className={styles.postReactionPicker}>
+                        {POST_REACTIONS.map((reaction) => (
+                          <button
+                            key={reaction.type}
+                            type="button"
+                            className={post.viewerReaction === reaction.type ? styles.postReactionActive : ''}
+                            title={reaction.label}
+                            aria-label={reaction.label}
+                            onClick={() => void handlePostReaction(post, reaction.type)}
+                          >
+                            {reaction.emoji}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={() => handleToggleComments(post.id)}
+                    disabled={isGuestView}
+                  >
+                    <MessageCircle size={16} /> {expandedComments[post.id] ? 'Ă¡º¨n bình luĂ¡º­n' : 'Bình luĂ¡º­n'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={() => handleShare(post)}
+                    disabled={isGuestView}
+                  >
+                    <Share2 size={16} /> Chia sẻ
+                  </button>
+                </div>
+
+                {!isGuestView && shareTargetPostId === post.id ? (
+                  <div className={styles.sharePanel}>
+                    <button type="button" onClick={() => handleShareToProfile(post)}>
+                      Chia sẻ lên trang cá nhân
+                    </button>
+                    <button type="button" onClick={() => handleCopyLink(post.id)}>
+                      Sao chép liên kĂ¡º¿t
+                    </button>
+                    {shareConversations.length > 0 ? (
+                      <div className={styles.shareToMessageList}>
+                        <p>Chia sẻ qua tin nhĂ¡º¯n:</p>
+                        {shareConversations.slice(0, 6).map((conv) => (
+                          <button
+                            key={conv.id}
+                            type="button"
+                            onClick={() => handleShareToConversation(post, conv.id)}
+                          >
+                            {conv.name || `CuĂ¡»™c trò chuyĂ¡»‡n ${conv.id}`}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {!isGuestView ? (
+                  <div className={styles.commentBar}>
+                    <input
+                      value={commentInputs[post.id] || ''}
+                      onChange={(event) =>
+                        setCommentInputs((prev) => ({ ...prev, [post.id]: event.target.value }))
+                      }
+                      placeholder="ViĂ¡º¿t bình luĂ¡º­n nhanh..."
                     />
-                  ) : null}
-
-                  <div className={styles.postStats}>
-                    <span>{post.reactionCount} lượt thích</span>
-                    <span>{post.commentCount} bình luận</span>
-                  </div>
-
-                  <div className={styles.postActions}>
-                    <button
-                      type="button"
-                      className={`${styles.actionBtn} ${post.viewerReaction ? styles.actionBtnActive : ""}`}
-                      onClick={() => handleToggleLike(post)}
-                      disabled={isGuestView}
-                    >
-                      <Heart size={16} /> Thích
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.actionBtn}
-                      onClick={() => handleToggleComments(post.id)}
-                      disabled={isGuestView}
-                    >
-                      <MessageCircle size={16} />{" "}
-                      {expandedComments[post.id] ? "Ẩn bình luận" : "Bình luận"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.actionBtn}
-                      onClick={() => handleShare(post)}
-                      disabled={isGuestView}
-                    >
-                      <Share2 size={16} /> Chia sẻ
+                    <button type="button" onClick={() => handleAddComment(post.id)} disabled={isCommenting[post.id]}>
+                      {isCommenting[post.id] ? 'Ä ang gĂ¡» i...' : 'GĂ¡»­i'}
                     </button>
                   </div>
+                ) : (
+                  <div className={styles.guestPostHint}>
+                    Ä ăng nhĂ¡º­p để bình luĂ¡º­n và chia sẻ bài viết này.
+                  </div>
+                )}
 
-                  {!isGuestView && shareTargetPostId === post.id ? (
-                    <div className={styles.sharePanel}>
+                {expandedComments[post.id] ? (
+                  <div className={`${styles.commentsList} ${styles.commentsListOpen}`}>
+                    {loadingComments[post.id] ? <p className={styles.commentState}>Ä ang tĂ¡º£i bình luĂ¡º­n...</p> : null}
+                    {postComments.map((comment) => (
+                      <div key={comment.id} className={styles.commentItem}>
+                        <div className={styles.commentAvatar}>{(comment.authorName[0] || 'U').toUpperCase()}</div>
+                        <div className={styles.commentBody}>
+                          <Link to={`/profile/${comment.userId}`}>
+                            <b>{comment.authorName}</b>
+                          </Link>
+                          <p>{comment.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {!loadingComments[post.id] && postComments.length === 0 ? (
+                      <p className={styles.commentState}>Chưa có bình luĂ¡º­n nào.</p>
+                    ) : null}
+                    {!loadingComments[post.id] && hasMoreComments ? (
                       <button
                         type="button"
                         onClick={() => handleShareToProfile(post)}
                       >
-                        Chia sẻ lên trang cá nhân
+                        {loadingMoreComments[post.id]
+                          ? 'Ä ang tĂ¡º£i thêm...'
+                          : hiddenCount > 0
+                            ? `Xem thêm ${hiddenCount} cmt`
+                            : 'Xem thêm cmt'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyLink(post.id)}
-                      >
-                        Sao chép liên kết
-                      </button>
-                      {shareConversations.length > 0 ? (
-                        <div className={styles.shareToMessageList}>
-                          <p>Chia sẻ qua tin nhắn:</p>
-                          {shareConversations.slice(0, 6).map((conv) => (
-                            <button
-                              key={conv.id}
-                              type="button"
-                              onClick={() =>
-                                handleShareToConversation(post, conv.id)
-                              }
-                            >
-                              {conv.name || `Cuộc trò chuyện ${conv.id}`}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {!isGuestView ? (
-                    <div className={styles.commentBar}>
-                      <input
-                        value={commentInputs[post.id] || ""}
-                        onChange={(event) =>
-                          setCommentInputs((prev) => ({
-                            ...prev,
-                            [post.id]: event.target.value,
-                          }))
-                        }
-                        placeholder="Viết bình luận nhanh..."
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleAddComment(post.id)}
-                        disabled={isCommenting[post.id]}
-                      >
-                        {isCommenting[post.id] ? "Đang gửi..." : "Gửi"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={styles.guestPostHint}>
-                      Đăng nhập để bình luận và chia sẻ bài viết này.
-                    </div>
-                  )}
-
-                  {expandedComments[post.id] ? (
-                    <div
-                      className={`${styles.commentsList} ${styles.commentsListOpen}`}
-                    >
-                      {loadingComments[post.id] ? (
-                        <p className={styles.commentState}>
-                          Đang tải bình luận...
-                        </p>
-                      ) : null}
-                      {postComments.map((comment) => (
-                        <div key={comment.id} className={styles.commentItem}>
-                          <div className={styles.commentAvatar}>
-                            {(comment.authorName[0] || "U").toUpperCase()}
-                          </div>
-                          <div className={styles.commentBody}>
-                            <Link to={`/profile/${comment.userId}`}>
-                              <b>{comment.authorName}</b>
-                            </Link>
-                            <p>{comment.content}</p>
-                          </div>
-                        </div>
-                      ))}
-                      {!loadingComments[post.id] &&
-                      postComments.length === 0 ? (
-                        <p className={styles.commentState}>
-                          Chưa có bình luận nào.
-                        </p>
-                      ) : null}
-                      {!loadingComments[post.id] && hasMoreComments ? (
-                        <button
-                          type="button"
-                          className={styles.showMoreCommentsBtn}
-                          onClick={() => handleLoadMoreComments(post.id)}
-                          disabled={loadingMoreComments[post.id]}
-                        >
-                          {loadingMoreComments[post.id]
-                            ? "Đang tải thêm..."
-                            : hiddenCount > 0
-                              ? `Xem thêm ${hiddenCount} cmt`
-                              : "Xem thêm cmt"}
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className={styles.viewDetailBtn}
-                        onClick={() => navigate(`/posts/${post.id}`)}
-                      >
-                        Xem chi tiết bình luận
-                      </button>
-                    </div>
-                  ) : null}
+                    ) : null}
+                    <button type="button" className={styles.viewDetailBtn} onClick={() => navigate(`/posts/${post.id}`)}>
+                      Xem chi tiết bình luĂ¡º­n
+                    </button>
+                  </div>
+                ) : null}
                 </article>
               );
             })}
 
-            {filteredPosts.length === 0 && (
-              <div className={styles.empty}>
-                Chưa có bài viết nào trong bảng tin.
-              </div>
-            )}
+            {filteredPosts.length === 0 && <div className={styles.empty}>Chưa có bài viết nào trong bĂ¡º£ng tin.</div>}
             {filteredPosts.length > 0 && hasMorePosts ? (
-              <div
-                ref={feedBottomSentinelRef}
-                className={styles.feedLoadingMore}
-              >
-                Đang tải thêm bài viết...
+              <div ref={feedBottomSentinelRef} className={styles.feedLoadingMore}>
+                Ä ang tĂ¡º£i thêm bài viết...
               </div>
             ) : null}
             {filteredPosts.length > 0 && !hasMorePosts ? (
-              <div className={styles.feedEndMarker}>
-                Bạn đã xem hết bài viết hiện có.
-              </div>
+              <div className={styles.feedEndMarker}>Bạn đã xem hĂ¡º¿t bài viết hiĂ¡»‡n có.</div>
             ) : null}
           </div>
         </section>
 
         <aside className={styles.rightCol}>
           <section className={styles.widget}>
-            <h3>Gợi ý cho bạn</h3>
+            <h3>GĂ¡»£i ý cho bạn</h3>
             {suggestedPeople.length === 0 ? (
-              <p className={styles.suggestionMeta}>
-                Chưa đủ dữ liệu để gợi ý người dùng.
-              </p>
+              <p className={styles.suggestionMeta}>Chưa đĂ¡»§ dĂ¡»¯ liĂ¡»‡u để gĂ¡»£i ý ngưĂ¡»i dùng.</p>
             ) : (
               suggestedPeople.map((person) => (
                 <div key={person.id} className={styles.suggestionItem}>
@@ -1469,11 +1467,8 @@ export default function FeedPage() {
                       {person.postCount} bài viết gần đây
                     </p>
                   </div>
-                  <Link
-                    to={`/profile/${person.id}`}
-                    className={styles.followBtn}
-                  >
-                    Xem hồ sơ
+                  <Link to={`/profile/${person.id}`} className={styles.followBtn}>
+                    Xem hĂ¡»“ sơ
                   </Link>
                 </div>
               ))
@@ -1481,11 +1476,9 @@ export default function FeedPage() {
           </section>
 
           <section className={styles.widget}>
-            <h3>Xu hướng hot</h3>
+            <h3>Xu hưĂ¡»›ng hot</h3>
             {hotTopics.length === 0 ? (
-              <p className={styles.topicCount}>
-                Chưa có hashtag nào trong dữ liệu hiện tại.
-              </p>
+              <p className={styles.topicCount}>Chưa có hashtag nào trong dĂ¡»¯ liĂ¡»‡u hiĂ¡»‡n tại.</p>
             ) : (
               hotTopics.map((topic) => (
                 <div key={topic.tag} className={styles.topicItem}>
@@ -1521,15 +1514,13 @@ export default function FeedPage() {
                 {(me?.fullName?.[0] || "U").toUpperCase()}
               </div>
               <div>
-                <b>{me?.fullName || "Người dùng"}</b>
-                <small>
-                  {modalVisibility === "public" ? "Công khai" : "Riêng tư"}
-                </small>
+                <b>{me?.fullName || 'NgưĂ¡»i dùng'}</b>
+                <small>{modalVisibility === 'public' ? 'Công khai' : 'Riêng tư'}</small>
               </div>
             </div>
 
             <label className={styles.visibilityRow}>
-              <span>Quyền riêng tư</span>
+              <span>QuyĂ¡»n riêng tư</span>
               <select
                 value={modalVisibility}
                 onChange={(event) =>
@@ -1558,41 +1549,47 @@ export default function FeedPage() {
 
             {activeComposerPanel === "emoji" && showEmojiTray ? (
               <div className={styles.emojiTray}>
-                {["😀", "😍", "🔥", "🎉", "💙", "👍", "🥳", "🤝"].map(
-                  (emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => appendEmoji(emoji)}
-                    >
-                      {emoji}
-                    </button>
-                  ),
-                )}
+                {['Ä‘Ÿ˜€', 'Ä‘Ÿ˜', 'Ä‘Ÿ”¥', 'Ä‘Ÿ‰', 'Ä‘Ÿ’™', 'Ä‘Ÿ‘', 'Ä‘Ÿ¥³', 'Ä‘Ÿ¤'].map((emoji) => (
+                  <button key={emoji} type="button" onClick={() => appendEmoji(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
               </div>
             ) : null}
 
             {modalMediaUrl ? (
-              <p className={styles.metaPreview}>
-                Đã chọn media: {modalMediaUrl}
-              </p>
+<<<<<<< HEAD
+              <p className={styles.metaPreview}>ĐĂ£ chĂ¡»n media: {modalMediaUrl}</p>
+=======
+              <div className={styles.modalMediaPreview}>
+                {isVideoMediaUrl(modalMediaUrl) ? (
+                  <video src={modalMediaUrl} controls className={styles.modalMediaPreviewAsset} />
+                ) : (
+                  <img
+                    src={modalMediaUrl}
+                    alt="Media preview"
+                    className={styles.modalMediaPreviewAsset}
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                      setErrorText('Không thể hiển thị media đã tải lên. Vui lòng thử lại.')
+                    }}
+                  />
+                )}
+              </div>
+>>>>>>> e1e0f981eaeaaf7229c1f05934c42d2d9ef91993
             ) : null}
             {modalTaggedFriend ? (
-              <p className={styles.metaPreview}>
-                Đã gắn thẻ: {modalTaggedFriend}
-              </p>
+              <p className={styles.metaPreview}>ĐĂ£ gĂ¡º¯n thẻ: {modalTaggedFriend}</p>
             ) : null}
-            {modalLocation ? (
-              <p className={styles.metaPreview}>Địa điểm: {modalLocation}</p>
-            ) : null}
+            {modalLocation ? <p className={styles.metaPreview}>ĐĂ¡»‹a điĂ¡»ƒm: {modalLocation}</p> : null}
 
             {activeComposerPanel === "tag" ? (
               <div className={styles.modalSection}>
-                <p>Gắn thẻ bạn bè</p>
+                <p>GĂ¡º¯n thẻ bạn bè</p>
                 <input
                   value={tagKeyword}
                   onChange={(event) => setTagKeyword(event.target.value)}
-                  placeholder="Nhập tên, ví dụ: Tuấn"
+                  placeholder="NhĂ¡º­p tên, ví dĂ¡»¥: TuĂ¡º¥n"
                 />
                 {tagSuggestions.length > 0 ? (
                   <div className={styles.dropdownList}>
@@ -1616,11 +1613,11 @@ export default function FeedPage() {
 
             {activeComposerPanel === "location" ? (
               <div className={styles.modalSection}>
-                <p>Địa điểm (Việt Nam)</p>
+                <p>ĐĂ¡»‹a điĂ¡»ƒm (ViĂ¡»‡t Nam)</p>
                 <input
                   value={locationKeyword}
                   onChange={(event) => setLocationKeyword(event.target.value)}
-                  placeholder="Nhập Hà để gợi ý Hà Nội, Hà Nam..."
+                  placeholder="NhĂ¡º­p Hà để gĂ¡»£i ý Hà NĂ¡»™i, Hà Nam..."
                 />
                 <div className={styles.dropdownList}>
                   {locationSuggestions.map((item) => (
@@ -1642,12 +1639,7 @@ export default function FeedPage() {
             <div className={styles.modalTools}>
               <span>Thêm vào bài viết của bạn</span>
               <div>
-                <button
-                  type="button"
-                  onClick={handleChooseMediaFile}
-                  title="Thêm ảnh/video"
-                  disabled={uploadingMedia}
-                >
+                <button type="button" onClick={handleChooseMediaFile} title="Thêm Ă¡º£nh/video" disabled={uploadingMedia}>
                   <ImageIcon size={16} />
                 </button>
                 <button
@@ -1664,7 +1656,7 @@ export default function FeedPage() {
                       return next;
                     })
                   }
-                  title="Gắn thẻ bạn bè"
+                  title="GĂ¡º¯n thẻ bạn bè"
                 >
                   <UserPlus size={16} />
                 </button>
@@ -1681,7 +1673,7 @@ export default function FeedPage() {
                     );
                     setShowEmojiTray((prev) => !prev);
                   }}
-                  title="Thêm cảm xúc"
+                  title="Thêm cĂ¡º£m xúc"
                 >
                   <Smile size={16} />
                 </button>
@@ -1699,7 +1691,7 @@ export default function FeedPage() {
                       return next;
                     })
                   }
-                  title="Thêm vị trí"
+                  title="Thêm vĂ¡»‹ trí"
                 >
                   <MapPin size={16} />
                 </button>
@@ -1713,7 +1705,7 @@ export default function FeedPage() {
                       composerMoreMenuOpen ? styles.modalToolBtnActive : ""
                     }
                     onClick={() => setComposerMoreMenuOpen((prev) => !prev)}
-                    title="Tùy chọn khác"
+                    title="Tùy chĂ¡»n khác"
                   >
                     <MoreHorizontal size={16} />
                   </button>
@@ -1731,7 +1723,7 @@ export default function FeedPage() {
                           setComposerMoreMenuOpen(false);
                         }}
                       >
-                        Quyền riêng tư: Công khai
+                        QuyĂ¡»n riêng tư: Công khai
                       </button>
                       <button
                         type="button"
@@ -1745,7 +1737,7 @@ export default function FeedPage() {
                           setComposerMoreMenuOpen(false);
                         }}
                       >
-                        Quyền riêng tư: Riêng tư
+                        QuyĂ¡»n riêng tư: Riêng tư
                       </button>
                       <button
                         type="button"
@@ -1755,7 +1747,7 @@ export default function FeedPage() {
                         }}
                         disabled={!modalMediaUrl}
                       >
-                        Gỡ ảnh/video đã chọn
+                        Gỡ Ă¡º£nh/video đã chĂ¡»n
                       </button>
                       <button
                         type="button"
@@ -1767,7 +1759,7 @@ export default function FeedPage() {
                         }}
                         disabled={!modalTaggedFriend}
                       >
-                        Gỡ gắn thẻ bạn bè
+                        Gỡ gĂ¡º¯n thẻ bạn bè
                       </button>
                       <button
                         type="button"
@@ -1778,7 +1770,7 @@ export default function FeedPage() {
                         }}
                         disabled={!modalLocation}
                       >
-                        Gỡ vị trí
+                        Gỡ vĂ¡»‹ trí
                       </button>
                     </div>
                   ) : null}
@@ -1793,7 +1785,7 @@ export default function FeedPage() {
                 (!modalContent.trim() && !modalMediaUrl.trim()) || isPosting
               }
             >
-              {isPosting ? "Đang đăng..." : "Đăng"}
+              {isPosting ? 'Ä ang đăng...' : 'Ä ăng'}
             </button>
           </form>
         </div>
@@ -1801,3 +1793,4 @@ export default function FeedPage() {
     </div>
   );
 }
+

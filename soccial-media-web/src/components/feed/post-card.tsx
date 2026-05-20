@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -12,9 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { FeedPost } from '@/lib/types'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
+import type { FeedPost } from '@/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
 
 interface PostCardProps {
   post: FeedPost
@@ -50,10 +50,10 @@ export default function PostCard({ post }: PostCardProps) {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'vừa xong'
-    if (diffMins < 60) return `${diffMins} phút trước`
-    if (diffHours < 24) return `${diffHours} giờ trước`
-    if (diffDays < 7) return `${diffDays} ngày trước`
+    if (diffMins < 1) return 'vĂ¡»«a xong'
+    if (diffMins < 60) return `${diffMins} phút trưĂ¡»›c`
+    if (diffHours < 24) return `${diffHours} giĂ¡» trưĂ¡»›c`
+    if (diffDays < 7) return `${diffDays} ngày trưĂ¡»›c`
     return dateObj.toLocaleDateString('vi-VN')
   }
 
@@ -85,7 +85,7 @@ export default function PostCard({ post }: PostCardProps) {
           <DropdownMenuContent align="end">
             <DropdownMenuItem>Báo cáo bài viết</DropdownMenuItem>
             <DropdownMenuItem>Lưu bài viết</DropdownMenuItem>
-            <DropdownMenuItem>Sao chép liên kết</DropdownMenuItem>
+            <DropdownMenuItem>Sao chép liên kĂ¡º¿t</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -111,7 +111,7 @@ export default function PostCard({ post }: PostCardProps) {
             {likeCount} Thích
           </button>
           <button className="hover:text-foreground transition-colors">
-            {post.commentCount} Bình luận
+            {post.commentCount} Bình luĂ¡º­n
           </button>
           <button className="hover:text-foreground transition-colors">
             0 Chia sẻ
@@ -130,11 +130,11 @@ export default function PostCard({ post }: PostCardProps) {
                 liked ? 'fill-destructive text-destructive' : ''
               }`}
             />
-            {liked ? 'Đã thích' : 'Thích'}
+            {liked ? 'ĐĂ£ thích' : 'Thích'}
           </Button>
           <Button variant="ghost" size="sm" className="flex-1">
             <MessageCircle className="w-4 h-4 mr-2" />
-            Bình luận
+            Bình luĂ¡º­n
           </Button>
           <Button variant="ghost" size="sm" className="flex-1">
             <Share2 className="w-4 h-4 mr-2" />
@@ -145,3 +145,4 @@ export default function PostCard({ post }: PostCardProps) {
     </Card>
   )
 }
+

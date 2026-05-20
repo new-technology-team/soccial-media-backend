@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, EyeOff } from 'lucide-react'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
-import type { FeedPost } from '@/lib/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
+import type { FeedPost } from '@/types'
 import styles from './page.module.css'
 
 export default function ModeratorPostsPage() {
@@ -34,7 +34,7 @@ export default function ModeratorPostsPage() {
     <div className={styles.page}>
       <header className={styles.hero}>
         <p>Stitch4 / Post moderation</p>
-        <h1>Kiểm duyệt bài viết</h1>
+        <h1>KiĂ¡»ƒm duyĂ¡»‡t bài viết</h1>
       </header>
 
       <section className={styles.list}>
@@ -42,28 +42,36 @@ export default function ModeratorPostsPage() {
           <article key={post.id} className={styles.card}>
             <div className={styles.head}>
               <div>
-                <b>Bài #{post.id} · {post.authorName}</b>
-                <small>{new Date(post.createdAt).toLocaleString('vi-VN')} · trạng thái {post.status}</small>
+<<<<<<< HEAD
+                <b>Bài #{post.id} 킷 {post.authorName}</b>
+                <small>{new Date(post.createdAt).toLocaleString('vi-VN')} 킷 trạng thái {post.status}</small>
               </div>
-              <span>{post.reactionCount} ❤️ · {post.commentCount} 💬</span>
+              <span>{post.reactionCount} ❤️ 킷 {post.commentCount} Ä‘Ÿ’¬</span>
+=======
+                <b>Bài #{post.id} • {post.authorName}</b>
+                <small>{new Date(post.createdAt).toLocaleString('vi-VN')} • trạng thái {post.status}</small>
+              </div>
+              <span>{post.reactionCount} ❤️ • {post.commentCount} 💬</span>
+>>>>>>> e1e0f981eaeaaf7229c1f05934c42d2d9ef91993
             </div>
 
-            <p className={styles.content}>{post.content || '(Không có nội dung)'}</p>
+            <p className={styles.content}>{post.content || '(Không có nĂ¡»™i dung)'}</p>
 
             <div className={styles.actions}>
               <button type="button" onClick={() => moderate(post.id, 'hidden')}>
-                <EyeOff size={15} /> Ẩn bài
+                <EyeOff size={15} /> Ă¡º¨n bài
               </button>
               <button type="button" onClick={() => moderate(post.id, 'published')}>
-                <CheckCircle2 size={15} /> Duyệt bài
+                <CheckCircle2 size={15} /> DuyĂ¡»‡t bài
               </button>
-              <Link to={`/posts/${post.id}`}>Chi tiết bình luận</Link>
+              <Link to={`/posts/${post.id}`}>Chi tiĂ¡º¿t bình luĂ¡º­n</Link>
             </div>
           </article>
         ))}
 
-        {flaggedPosts.length === 0 ? <p className={styles.empty}>Không có bài viết cần kiểm duyệt.</p> : null}
+        {flaggedPosts.length === 0 ? <p className={styles.empty}>Không có bài viết cần kiĂ¡»ƒm duyĂ¡»‡t.</p> : null}
       </section>
     </div>
   )
 }
+

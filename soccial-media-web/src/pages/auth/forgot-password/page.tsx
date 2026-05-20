@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertCircle, CheckCircle2, KeyRound, Lock, ShieldCheck, Smartphone } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { api } from '@/lib/api'
+import { api } from '@/api/client'
 import styles from '../auth.module.css'
 
 type Step = 'request' | 'reset'
@@ -37,10 +37,10 @@ export default function ForgotPasswordPage() {
     try {
       const response = await api.forgotPassword(formData.emailOrPhone)
       const debugCode = response.resetCode ? ` Mã dev: ${response.resetCode}` : ''
-      setSuccess(`${response.message || 'Đã gửi mã OTP.'}${debugCode}`)
+      setSuccess(`${response.message || 'ĐĂ£ gĂ¡» i mã OTP.'}${debugCode}`)
       setStep('reset')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể gửi mã OTP. Vui lòng thử lại.')
+      setError(err instanceof Error ? err.message : 'Không thể gĂ¡» i mã OTP. Vui lòng thĂ¡»  lại.')
     } finally {
       setIsLoading(false)
     }
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
     setSuccess('')
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp')
+      setError('MĂ¡º­t khẩu xác nhĂ¡º­n không khĂ¡»›p')
       return
     }
 
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
         code: formData.code,
         newPassword: formData.newPassword,
       })
-      setSuccess(response.message || 'Đặt lại mật khẩu thành công')
+      setSuccess(response.message || 'Ä ặt lại mĂ¡º­t khẩu thành công')
       setStep('request')
       setFormData((prev) => ({
         ...prev,
@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
         confirmPassword: '',
       }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.')
+      setError(err instanceof Error ? err.message : 'Ä ặt lại mĂ¡º­t khẩu thĂ¡º¥t bại. Vui lòng thĂ¡»  lại.')
     } finally {
       setIsLoading(false)
     }
@@ -82,8 +82,8 @@ export default function ForgotPasswordPage() {
   return (
     <div className={styles.panel}>
       <header>
-        <h2 className={styles.heading}>Quên mật khẩu</h2>
-        <p className={styles.subheading}>Khôi phục tài khoản trong 2 bước an toàn</p>
+        <h2 className={styles.heading}>Quên mĂ¡º­t khẩu</h2>
+        <p className={styles.subheading}>Khôi phĂ¡»¥c tài khoĂ¡º£n trong 2 bưĂ¡»›c an toàn</p>
       </header>
 
       <div className={styles.alertSpace}>
@@ -104,14 +104,14 @@ export default function ForgotPasswordPage() {
       {step === 'request' ? (
         <form onSubmit={handleRequestCode} className={styles.form}>
           <div className={styles.field}>
-            <label htmlFor="emailOrPhone">Số điện thoại hoặc Email</label>
+            <label htmlFor="emailOrPhone">SĂ¡»‘ điĂ¡»‡n thoại hoặc Email</label>
             <div className={styles.inputWrap}>
               <Smartphone size={18} className={styles.inputIcon} />
               <input
                 id="emailOrPhone"
                 name="emailOrPhone"
                 type="text"
-                placeholder="Nhập số điện thoại hoặc email"
+                placeholder="NhĂ¡º­p số điĂ¡»‡n thoại hoặc email"
                 value={formData.emailOrPhone}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -122,11 +122,11 @@ export default function ForgotPasswordPage() {
           </div>
 
           <button type="submit" className={styles.submit} disabled={isLoading}>
-            {isLoading ? 'Đang gửi mã...' : 'Gửi mã xác thực'}
+            {isLoading ? 'Ä ang gĂ¡» i mã...' : 'GĂ¡»­i mã xác thĂ¡»±c'}
           </button>
 
           <p className={styles.switchText}>
-            Đã nhớ mật khẩu? <Link to="/auth/login">Đăng nhập</Link>
+            ĐĂ£ nhĂ¡»› mĂ¡º­t khẩu? <Link to="/auth/login">Ä ăng nhĂ¡º­p</Link>
           </p>
         </form>
       ) : (
@@ -139,7 +139,7 @@ export default function ForgotPasswordPage() {
                 id="code"
                 name="code"
                 type="text"
-                placeholder="Nhập mã 6 số"
+                placeholder="NhĂ¡º­p mã 6 sĂ¡»‘"
                 value={formData.code}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -150,14 +150,14 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className={styles.fieldUpper}>
-            <label htmlFor="newPassword">Mật khẩu mới</label>
+            <label htmlFor="newPassword">MĂ¡º­t khẩu mĂ¡»›i</label>
             <div className={styles.inputWrap}>
               <Lock size={18} className={styles.inputIcon} />
               <input
                 id="newPassword"
                 name="newPassword"
                 type="password"
-                placeholder="Nhập mật khẩu mới"
+                placeholder="NhĂ¡º­p mĂ¡º­t khẩu mĂ¡»›i"
                 value={formData.newPassword}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -168,14 +168,14 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className={styles.fieldUpper}>
-            <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+            <label htmlFor="confirmPassword">Xác nhĂ¡º­n mĂ¡º­t khẩu</label>
             <div className={styles.inputWrap}>
               <KeyRound size={18} className={styles.inputIcon} />
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                placeholder="Nhập lại mật khẩu"
+                placeholder="NhĂ¡º­p lại mĂ¡º­t khẩu"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -186,7 +186,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           <button type="submit" className={styles.submit} disabled={isLoading}>
-            {isLoading ? 'Đang cập nhật...' : 'Đặt lại mật khẩu'}
+            {isLoading ? 'Ä ang cĂ¡º­p nhĂ¡º­t...' : 'Ä ặt lại mĂ¡º­t khẩu'}
           </button>
 
           <div className={styles.socialGrid}>
@@ -196,10 +196,10 @@ export default function ForgotPasswordPage() {
               onClick={() => setStep('request')}
               disabled={isLoading}
             >
-              Gửi lại mã
+              GĂ¡»­i lại mã
             </button>
             <Link to="/auth/login" className={styles.socialBtn}>
-              Quay lại đăng nhập
+              Quay lại đăng nhĂ¡º­p
             </Link>
           </div>
         </form>
@@ -207,3 +207,4 @@ export default function ForgotPasswordPage() {
     </div>
   )
 }
+

@@ -486,6 +486,40 @@ export const api = {
       })),
     })),
 
+  sendFriendRequest: (userId: number) =>
+    request<{ message: string; friendshipId?: number }>("/api/social/friends/request", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    }),
+
+  acceptFriendRequest: (userId: number) =>
+    request<{ message: string }>(`/api/social/friends/${userId}/accept`, {
+      method: "POST",
+    }),
+
+  rejectFriendRequest: (userId: number) =>
+    request<{ message: string }>(`/api/social/friends/${userId}/reject`, {
+      method: "POST",
+    }),
+
+  removeFriend: (userId: number) =>
+    request<{ message: string }>(`/api/social/friends/${userId}`, {
+      method: "DELETE",
+    }),
+
+  listPendingFriendRequests: () =>
+    request<Array<{ id: number; fullName: string; avatarUrl: string | null }>>("/api/social/friends/pending"),
+
+  // AI Chat
+  aiChat: (message: string, history?: Array<{ role: 'user' | 'model'; text: string }>) =>
+    request<{ reply: string; sessionId?: string }>("/api/social/ai/support", {
+      method: "POST",
+      body: JSON.stringify({ message, history }),
+    }),
+
+  aiHistory: () =>
+    request<{ messages?: any[]; history?: any[] }>("/api/social/ai/history"),
+
   // Upload
   uploadAvatarBase64: (payload: {
     fileName: string;

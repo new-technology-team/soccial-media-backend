@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { api } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
 import styles from '../auth.module.css'
 
 export default function VerifyOtpPage() {
@@ -29,7 +29,7 @@ export default function VerifyOtpPage() {
     setSuccess('')
 
     if (!emailOrPhone.trim() || !code.trim()) {
-      setError('Vui lòng nhập đầy đủ email/số điện thoại và mã OTP.')
+      setError('Vui lòng nhĂ¡º­p đầy đĂ¡»§ email/số điĂ¡»‡n thoại và mã OTP.')
       return
     }
 
@@ -46,7 +46,7 @@ export default function VerifyOtpPage() {
       })
       navigate('/feed')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xác thực OTP thất bại. Vui lòng thử lại.')
+      setError(err instanceof Error ? err.message : 'Xác thĂ¡»±c OTP thĂ¡º¥t bại. Vui lòng thĂ¡»  lại.')
     } finally {
       setIsSubmitting(false)
     }
@@ -56,7 +56,7 @@ export default function VerifyOtpPage() {
     setError('')
     setSuccess('')
     if (!emailOrPhone.trim()) {
-      setError('Vui lòng nhập email/số điện thoại để gửi lại mã OTP.')
+      setError('Vui lòng nhĂ¡º­p email/số điĂ¡»‡n thoại để gĂ¡» i lại mã OTP.')
       return
     }
 
@@ -64,9 +64,9 @@ export default function VerifyOtpPage() {
     try {
       const response = await api.resendVerification(emailOrPhone.trim())
       const devCode = response.verificationCode ? ` (Mã dev: ${response.verificationCode})` : ''
-      setSuccess(`${response.message || 'Đã gửi lại mã OTP.'}${devCode}`)
+      setSuccess(`${response.message || 'ĐĂ£ gĂ¡» i lại mã OTP.'}${devCode}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể gửi lại mã OTP.')
+      setError(err instanceof Error ? err.message : 'Không thể gĂ¡» i lại mã OTP.')
     } finally {
       setIsResending(false)
     }
@@ -75,8 +75,8 @@ export default function VerifyOtpPage() {
   return (
     <div className={styles.panel}>
       <header>
-        <h2 className={styles.heading}>Xác thực OTP</h2>
-        <p className={styles.subheading}>Nhập mã OTP đã gửi đến email/số điện thoại của bạn</p>
+        <h2 className={styles.heading}>Xác thĂ¡»±c OTP</h2>
+        <p className={styles.subheading}>NhĂ¡º­p mã OTP đã gĂ¡» i đến email/số điĂ¡»‡n thoại của bạn</p>
       </header>
 
       <div className={styles.alertSpace}>
@@ -96,7 +96,7 @@ export default function VerifyOtpPage() {
 
       <form onSubmit={handleVerify} className={styles.form}>
         <div className={styles.field}>
-          <label htmlFor="identifier">Email hoặc Số điện thoại</label>
+          <label htmlFor="identifier">Email hoặc SĂ¡»‘ điĂ¡»‡n thoại</label>
           <input
             id="identifier"
             name="identifier"
@@ -124,17 +124,18 @@ export default function VerifyOtpPage() {
         </div>
 
         <button type="submit" className={styles.submit} disabled={isSubmitting}>
-          {isSubmitting ? 'Đang xác thực...' : 'Xác thực và đăng nhập'}
+          {isSubmitting ? 'Ä ang xác thĂ¡»±c...' : 'Xác thĂ¡»±c và đăng nhĂ¡º­p'}
         </button>
 
         <button type="button" className={styles.submitGhost} disabled={isResending} onClick={handleResend}>
-          {isResending ? 'Đang gửi lại mã...' : 'Gửi lại mã OTP'}
+          {isResending ? 'Ä ang gĂ¡» i lại mã...' : 'GĂ¡»­i lại mã OTP'}
         </button>
 
         <p className={styles.switchText}>
-          Quay lại <Link to="/auth/login">Đăng nhập</Link>
+          Quay lại <Link to="/auth/login">Ä ăng nhĂ¡º­p</Link>
         </p>
       </form>
     </div>
   )
 }
+

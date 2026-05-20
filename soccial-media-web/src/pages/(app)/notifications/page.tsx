@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, MessageCircle, UserPlus, Heart, Share2, CheckCheck } from 'lucide-react'
-import { api } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
-import type { NotificationItem } from '@/lib/types'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
+import type { NotificationItem } from '@/types'
 import styles from './page.module.css'
 
 type NotifFilter = 'all' | 'social' | 'messages'
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
       .notifications(token)
       .then((r) => setNotifications(r.notifications))
       .catch((error) => {
-        console.error('Không thể tải thông báo', error)
+        console.error('Không thể tĂ¡º£i thông báo', error)
       })
   }, [token])
 
@@ -119,7 +119,7 @@ export default function NotificationsPage() {
       await api.readAllNotifications(token)
       setNotifications((prev) => prev.map((item) => ({ ...item, is_read: 1 })))
     } catch (error) {
-      console.error('Không thể đánh dấu tất cả đã đọc', error)
+      console.error('Không thể đánh dĂ¡º¥u tĂ¡º¥t cĂ¡º£ đã đĂ¡»c', error)
     }
   }
 
@@ -132,7 +132,7 @@ export default function NotificationsPage() {
       await api.readNotification(token, id)
       setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item)))
     } catch (error) {
-      console.error('Không thể đánh dấu đã đọc', error)
+      console.error('Không thể đánh dĂ¡º¥u đã đĂ¡»c', error)
     }
   }
 
@@ -154,14 +154,14 @@ export default function NotificationsPage() {
             ? {
                 ...notif,
                 is_read: 1,
-                title: 'Đã chấp nhận lời mời kết bạn',
-                body: 'Bạn và người này đã trở thành bạn bè.',
+                title: 'ĐĂ£ chĂ¡º¥p nhĂ¡º­n lĂ¡»i mĂ¡»i kĂ¡º¿t bạn',
+                body: 'Bạn và ngưĂ¡»i này đã trĂ¡» thành bạn bè.',
               }
             : notif
         )
       )
     } catch (error) {
-      console.error('Không thể chấp nhận lời mời từ thông báo', error)
+      console.error('Không thể chĂ¡º¥p nhĂ¡º­n lĂ¡»i mĂ¡»i tĂ¡»« thông báo', error)
     } finally {
       setBusyActionId(null)
     }
@@ -179,7 +179,7 @@ export default function NotificationsPage() {
       await api.readNotification(token, item.id)
       setNotifications((prev) => prev.filter((notif) => notif.id !== item.id))
     } catch (error) {
-      console.error('Không thể xóa lời mời từ thông báo', error)
+      console.error('Không thể xóa lĂ¡»i mĂ¡»i tĂ¡»« thông báo', error)
     } finally {
       setBusyActionId(null)
     }
@@ -195,13 +195,13 @@ export default function NotificationsPage() {
     <div className={styles.page}>
       <div className={styles.hero}>
         <div>
-          <p className={styles.eyebrow}>Trung tâm cập nhật</p>
+          <p className={styles.eyebrow}>Trung tâm cĂ¡º­p nhĂ¡º­t</p>
           <h1>Thông báo</h1>
-          <p className={styles.heroSub}>Theo dõi mọi tương tác mới nhất từ bạn bè và cộng đồng của bạn.</p>
+          <p className={styles.heroSub}>Theo dõi mĂ¡»i tương tác mĂ¡»›i nhĂ¡º¥t tĂ¡»« bạn bè và cĂ¡»™ng đĂ¡»“ng của bạn.</p>
         </div>
         <button type="button" className={styles.markAllBtn} onClick={handleMarkAllAsRead}>
           <CheckCheck size={16} />
-          Đánh dấu tất cả đã đọc
+          ĐĂ¡nh dĂ¡º¥u tĂ¡º¥t cĂ¡º£ đã đĂ¡»c
         </button>
       </div>
 
@@ -211,21 +211,21 @@ export default function NotificationsPage() {
           className={`${styles.filterBtn} ${activeFilter === 'all' ? styles.filterBtnActive : ''}`}
           onClick={() => setActiveFilter('all')}
         >
-          Tất cả
+          TĂ¡º¥t cĂ¡º£
         </button>
         <button
           type="button"
           className={`${styles.filterBtn} ${activeFilter === 'social' ? styles.filterBtnActive : ''}`}
           onClick={() => setActiveFilter('social')}
         >
-          Mạng xã hội
+          Mạng xã hĂ¡»™i
         </button>
         <button
           type="button"
           className={`${styles.filterBtn} ${activeFilter === 'messages' ? styles.filterBtnActive : ''}`}
           onClick={() => setActiveFilter('messages')}
         >
-          Tin nhắn
+          Tin nhĂ¡º¯n
         </button>
       </div>
 
@@ -233,7 +233,7 @@ export default function NotificationsPage() {
         <section className={styles.mainPanel}>
           <div className={styles.panelHead}>
             <h2>Danh sách thông báo</h2>
-            <span>{filteredNotifications.length} mục</span>
+            <span>{filteredNotifications.length} mĂ¡»¥c</span>
           </div>
 
           <div className={styles.list}>
@@ -261,7 +261,7 @@ export default function NotificationsPage() {
                         }}
                         disabled={busyActionId === item.id}
                       >
-                        Chấp nhận
+                        ChĂ¡º¥p nhĂ¡º­n
                       </button>
                       {getConversationIdFromMeta(item) ? (
                         <button
@@ -272,7 +272,7 @@ export default function NotificationsPage() {
                             handleOpenConversation(item)
                           }}
                         >
-                          Mở chat
+                          MĂ¡» chat
                         </button>
                       ) : null}
                       <button
@@ -295,23 +295,23 @@ export default function NotificationsPage() {
           </div>
 
           {filteredNotifications.length === 0 ? (
-            <p className={styles.empty}>Không có thông báo nào trong mục này.</p>
+            <p className={styles.empty}>Không có thông báo nào trong mĂ¡»¥c này.</p>
           ) : null}
         </section>
 
         <aside className={styles.sidePanel}>
           <div className={styles.statCard}>
-            <h3>Chưa đọc</h3>
+            <h3>Chưa đĂ¡»c</h3>
             <p className={styles.statValue}>{unreadCount}</p>
             <span>Thông báo cần bạn xem ngay</span>
           </div>
 
           <div className={styles.statCard}>
-            <h3>Gợi ý</h3>
+            <h3>GĂ¡»£i ý</h3>
             <ul>
-              <li>Trả lời bình luận mới trên bài viết gần đây.</li>
-              <li>Kiểm tra lời mời tham gia nhóm chat.</li>
-              <li>Mở mục Bạn bè để xem lời mời kết bạn.</li>
+              <li>TrĂ¡º£ lĂ¡»i bình luĂ¡º­n mĂ¡»›i trên bài viết gần đây.</li>
+              <li>Kiểm tra lĂ¡»i mĂ¡»i tham gia nhóm chat.</li>
+              <li>MĂ¡» mĂ¡»¥c Bạn bè để xem lĂ¡»i mĂ¡»i kĂ¡º¿t bạn.</li>
             </ul>
           </div>
         </aside>
@@ -319,3 +319,4 @@ export default function NotificationsPage() {
     </div>
   )
 }
+

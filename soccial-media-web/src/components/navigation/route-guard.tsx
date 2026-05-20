@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/lib/store/auth-store'
+import { useAuthStore } from '@/contexts/auth-store'
 
 const isRestrictedPath = (pathname: string) => pathname.startsWith('/admin') || pathname.startsWith('/moderator')
 
@@ -63,3 +63,4 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
 
   return <>{children}</>
 }
+

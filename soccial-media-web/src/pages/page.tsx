@@ -5,23 +5,23 @@ import styles from './page.module.css'
 const features = [
   {
     icon: MessageSquareText,
-    title: 'Tin nhắn tức thì',
-    description: 'Trò chuyện 1-1 và nhóm, đồng bộ realtime giữa web và mobile.',
+    title: 'Tin nhĂ¡º¯n tĂ¡»©c thì',
+    description: 'Trò chuyĂ¡»‡n 1-1 và nhóm, đĂ¡»“ng bĂ¡»™ realtime giữa web và mobile.',
   },
   {
     icon: Users,
-    title: 'Nhóm cộng đồng',
-    description: 'Xây dựng nhóm riêng theo sở thích với quyền quản trị linh hoạt.',
+    title: 'Nhóm cĂ¡»™ng đĂ¡»“ng',
+    description: 'Xây dĂ¡»±ng nhóm riêng theo sĂ¡» thĂch vĂ¡»›i quyền quĂ¡º£n trĂ¡»‹ linh hoạt.',
   },
   {
     icon: Compass,
     title: 'Khám phá thông minh',
-    description: 'Theo dõi xu hướng theo thời gian thực và khám phá nội dung phù hợp.',
+    description: 'Theo dõi xu hưĂ¡»›ng theo thời gian thĂ¡»±c và khám phá nĂ¡»™i dung phù hĂ¡»£p.',
   },
   {
     icon: Shield,
     title: 'An toàn',
-    description: 'Xác thực và kiểm duyệt đa lớp giúp không gian luôn lành mạnh.',
+    description: 'Xác thĂ¡»±c và kiểm duyĂ¡»‡t đa lĂ¡»›p giúp không gian luôn lành mạnh.',
   },
 ]
 
@@ -34,7 +34,7 @@ export default function Home() {
             <div className={styles.heroLeft}>
               <span className={styles.badge}>
                 <Sparkles size={16} />
-                ZChat - mạng xã hội thế hệ mới cho cộng đồng Việt
+                ZChat - mạng xã hĂ¡»™i thế hĂ¡»‡ mĂ¡»›i cho cĂ¡»™ng đĂ¡»“ng ViĂ¡»‡t
               </span>
 
               <h1 className={styles.heroTitle}>
@@ -42,35 +42,35 @@ export default function Home() {
                 <br />
                 <span className={styles.gradientText}>không gian kết nối</span>
                 <br />
-                chất lượng.
+                chĂ¡º¥t lưĂ¡»£ng.
               </h1>
 
               <p className={styles.heroDescription}>
-                Từ trò chuyện nhanh, xây nhóm riêng đến khám phá xu hướng, mọi thứ được thiết kế đồng nhất, trực quan và an toàn cho người dùng.
+                TĂ¡»Ă¡»ừ trò chuyĂ¡»‡n nhanh, xây nhóm riêng đến khám phá xu hưĂ¡»›ng, mọi thĂ¡»© đưĂ¡»£c thiết kế đĂ¡»“ng nhĂ¡º¥t, trĂ¡»±c quan và an toàn cho ngÆ°á» i dùng.
               </p>
 
               <div className={styles.heroActions}>
                 <Link to="/auth/signup" className={styles.primaryBtn}>
-                  Tạo tài khoản miễn phí
+                  Tạo tài khoĂ¡º£n miễn phĂ
                   <ArrowRight size={16} />
                 </Link>
                 <Link to="/auth/login" className={styles.secondaryBtn}>
-                  Đăng nhập ngay
+                  Ä ăng nhĂ¡º­p ngay
                 </Link>
               </div>
 
               <div className={styles.metricsRow}>
                 <div>
                   <p>120K+</p>
-                  <span>Người dùng hoạt động</span>
+                  <span>Người dùng hoạt đĂ¡»™ng</span>
                 </div>
                 <div>
                   <p>1.2M</p>
-                  <span>Tin nhắn mỗi ngày</span>
+                  <span>Tin nhĂ¡º¯n mĂ¡»—i ngày</span>
                 </div>
                 <div>
                   <p>99.9%</p>
-                  <span>Thời gian ổn định</span>
+                  <span>Thời gian Ă¡»•n đĂ¡»‹nh</span>
                 </div>
               </div>
             </div>
@@ -79,10 +79,10 @@ export default function Home() {
               <div className={styles.glassCardMain}>
                 <div className={styles.glassHead}>
                   <Waves size={18} />
-                  <span>Bảng tin cộng đồng</span>
+                  <span>BĂ¡º£ng tin cĂ¡»™ng đĂ¡»“ng</span>
                 </div>
-                <h3>Tăng tương tác, giảm nhiễu.</h3>
-                <p>Thuật toán gợi ý nội dung theo mối quan tâm thực của bạn.</p>
+                <h3>Tăng tương tác, giĂ¡º£m nhiễu.</h3>
+                <p>ThuĂ¡º­t toán gĂ¡»£i ý nĂ¡»™i dung theo mối quan tâm thĂ¡»±c của bạn.</p>
               </div>
 
               <div className={styles.miniCards}>
@@ -96,7 +96,7 @@ export default function Home() {
                 </div>
                 <div className={styles.miniCardLight}>
                   <Lock size={20} />
-                  <p>Bảo mật cao</p>
+                  <p>BĂ¡º£o mĂ¡º­t cao</p>
                 </div>
               </div>
             </div>
@@ -107,9 +107,9 @@ export default function Home() {
       <section className={styles.featuresSection}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Những điểm mạnh nổi bật</h2>
+            <h2 className={styles.sectionTitle}>Những điểm mạnh nĂ¡»•i bĂ¡º­t</h2>
             <p className={styles.sectionSubtitle}>
-              Một nền tảng duy nhất cho giao tiếp, khám phá và phát triển cộng đồng.
+              MĂ¡»™t nền tĂ¡º£ng duy nhĂ¡º¥t cho giao tiếp, khám phá và phát triển cĂ¡»™ng đĂ¡»“ng.
             </p>
           </div>
 
@@ -128,10 +128,10 @@ export default function Home() {
       <section className={styles.ctaSection}>
         <div className={styles.container}>
           <div className={styles.ctaPanel}>
-            <h2>Sẵn sàng tham gia cộng đồng?</h2>
-            <p>Tạo tài khoản trong vài giây và bắt đầu kết nối với những người phù hợp nhất.</p>
+            <h2>Sẵn sàng tham gia cĂ¡»™ng đĂ¡»“ng?</h2>
+            <p>Tạo tài khoĂ¡º£n trong vài giây và bĂ¡º¯t đầu kết nối vĂ¡»›i những ngÆ°á» i phù hĂ¡»£p nhĂ¡º¥t.</p>
             <Link to="/auth/signup" className={styles.primaryBtn}>
-              Bắt đầu ngay
+              BĂ¡º¯t đầu ngay
               <ArrowRight size={16} />
             </Link>
           </div>

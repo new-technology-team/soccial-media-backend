@@ -1,6 +1,6 @@
-import { Navigate, Outlet, Route } from 'react-router-dom'
+﻿import { Navigate, Outlet, Route } from 'react-router-dom'
 
-import AdminLayout from '@/layouts/AdminLayout'
+import AdminLayout from '@/components/layouts/AdminLayout'
 import AdminDashboardPage from '@/pages/(app)/admin/dashboard/page'
 import AdminPostsPage from '@/pages/(app)/admin/posts/page'
 import AdminUsersPage from '@/pages/(app)/admin/users/page'
@@ -23,3 +23,4 @@ export function renderAdminRoutes() {
     </Route>
   )
 }
+

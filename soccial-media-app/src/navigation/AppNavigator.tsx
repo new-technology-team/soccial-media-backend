@@ -12,7 +12,8 @@ const TABS: Tab[] = [
   { key: "feed", label: "Bảng tin", icon: "🏠" },
   { key: "search", label: "Tìm kiếm", icon: "🔍" },
   { key: "messages", label: "Tin nhắn", icon: "💬" },
-  { key: "groups", label: "Nhóm", icon: "👥" },
+  { key: "friends", label: "Bạn bè", icon: "👥" },
+  { key: "ai-chat", label: "AI Chat", icon: "🤖" },
   { key: "notifications", label: "Thông báo", icon: "🔔" },
   { key: "profile", label: "Hồ sơ", icon: "👤" },
 ];

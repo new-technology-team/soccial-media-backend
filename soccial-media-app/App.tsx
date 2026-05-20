@@ -12,6 +12,8 @@ import { MessagesScreen } from "./src/screens/MessagesScreen";
 import { NotificationsScreen } from "./src/screens/NotificationsScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
+import { AIChatScreen } from "./src/screens/AIChatScreen";
+import { FriendsScreen } from "./src/screens/FriendsScreen";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { Loading } from "./src/components/common/Loading";
 import { api, authStore, getSocket, disconnectSocket } from "./src/lib";
@@ -101,8 +103,10 @@ export default function App() {
         return <SearchScreen onOpenPost={openPostInFeed} />;
       case "messages":
         return <MessagesScreen user={user} />;
-      case "groups":
-        return <MessagesScreen user={user} mode="groups" />;
+      case "friends":
+        return <FriendsScreen user={user} />;
+      case "ai-chat":
+        return <AIChatScreen />;
       case "notifications":
         return <NotificationsScreen onOpenPost={openPostInFeed} />;
       case "profile":

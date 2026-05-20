@@ -1,8 +1,0 @@
-.page {
-  min-height: calc(100vh - 64px);
-  padding: 0.8rem 0 1.6rem;
-}
-
-.main {
-  min-width: 0;
-}

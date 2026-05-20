@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { CirclePlus, Search, Send, Smile, Video } from 'lucide-react'
-import { api } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
-import type { ChatMessage, Conversation } from '@/lib/types'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
+import type { ChatMessage, Conversation } from '@/types'
 import styles from './page.module.css'
 
 const parseGroupMessageDate = (value: string) => {
@@ -58,7 +58,7 @@ export default function GroupsPage() {
       setMessages((prev) => [...prev, res.message])
       setDraft('')
     } catch (error) {
-      console.error('Không thể gửi tin nhắn nhóm', error)
+      console.error('Không thể gĂ¡» i tin nhĂ¡º¯n nhóm', error)
     }
   }
 
@@ -70,7 +70,7 @@ export default function GroupsPage() {
     if (msg.mediaUrl) {
       return (
         <a href={msg.mediaUrl} target="_blank" rel="noreferrer">
-          {msg.fileName || 'Mở tệp đính kèm'}
+          {msg.fileName || 'MĂ¡» tĂ¡»‡p đĂnh kèm'}
         </a>
       )
     }
@@ -84,7 +84,7 @@ export default function GroupsPage() {
         <h2>Nhóm chat</h2>
         <div className={styles.searchWrap}>
           <Search size={15} />
-          <input placeholder="Tìm kiếm nhóm..." value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input placeholder="Tìm kiĂ¡º¿m nhóm..." value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
 
         <div className={styles.groupList}>
@@ -102,19 +102,19 @@ export default function GroupsPage() {
               </div>
             </button>
           ))}
-          {filteredGroups.length === 0 ? <p className={styles.empty}>Không có nhóm phù hợp.</p> : null}
+          {filteredGroups.length === 0 ? <p className={styles.empty}>Không có nhóm phù hĂ¡»£p.</p> : null}
         </div>
       </aside>
 
       <section className={styles.chatCol}>
         <header className={styles.chatHeader}>
           <div>
-            <h3>{selectedGroup?.name || 'Chọn nhóm chat'}</h3>
+            <h3>{selectedGroup?.name || 'ChĂ¡»n nhóm chat'}</h3>
             <p>{selectedGroup ? `${selectedGroup.members.length} thành viên` : '---'}</p>
           </div>
           <div className={styles.chatActions}>
             <button type="button" title="Tìm trong nhóm"><Search size={16} /></button>
-            <button type="button" title="Gọi video nhóm"><Video size={16} /></button>
+            <button type="button" title="GĂ¡»i video nhóm"><Video size={16} /></button>
           </div>
         </header>
 
@@ -134,13 +134,13 @@ export default function GroupsPage() {
               </div>
             )
           })}
-          {messages.length === 0 ? <p className={styles.empty}>Nhóm này chưa có tin nhắn.</p> : null}
+          {messages.length === 0 ? <p className={styles.empty}>Nhóm này chưa có tin nhĂ¡º¯n.</p> : null}
         </div>
 
         <footer className={styles.composer}>
-          <button type="button" className={styles.iconBtn} title="Thêm nội dung"><CirclePlus size={16} /></button>
+          <button type="button" className={styles.iconBtn} title="Thêm nĂ¡»™i dung"><CirclePlus size={16} /></button>
           <input
-            placeholder="Nhắn tin cho nhóm..."
+            placeholder="NhĂ¡º¯n tin cho nhóm..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -151,7 +151,7 @@ export default function GroupsPage() {
             }}
           />
           <button type="button" className={styles.iconBtn} title="Chèn emoji"><Smile size={16} /></button>
-          <button type="button" className={styles.sendBtn} title="Gửi tin nhắn" onClick={handleSend} disabled={!draft.trim()}>
+          <button type="button" className={styles.sendBtn} title="GĂ¡»­i tin nhĂ¡º¯n" onClick={handleSend} disabled={!draft.trim()}>
             <Send size={16} />
           </button>
         </footer>
@@ -160,8 +160,8 @@ export default function GroupsPage() {
       <aside className={styles.infoCol}>
         <div className={styles.infoCard}>
           <div className={styles.heroAvatar}>{(selectedGroup?.name?.[0] || 'G').toUpperCase()}</div>
-          <h4>{selectedGroup?.name || 'Chưa chọn nhóm'}</h4>
-          <p>{selectedGroup ? `Thành lập #${selectedGroup.id}` : 'Không có dữ liệu'}</p>
+          <h4>{selectedGroup?.name || 'Chưa chĂ¡»n nhóm'}</h4>
+          <p>{selectedGroup ? `Thành lĂ¡º­p #${selectedGroup.id}` : 'Không có dĂ¡»¯ liĂ¡»‡u'}</p>
         </div>
 
         <div className={styles.infoCard}>
@@ -182,3 +182,4 @@ export default function GroupsPage() {
     </div>
   )
 }
+

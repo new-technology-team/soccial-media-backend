@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { Ban, Undo2, UserRoundCheck } from 'lucide-react'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
-import type { User } from '@/lib/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
+import type { User } from '@/types'
 import styles from './page.module.css'
 
 export default function ModeratorUsersPage() {
@@ -36,14 +36,14 @@ export default function ModeratorUsersPage() {
     <div className={styles.page}>
       <header className={styles.hero}>
         <p>Stitch4 / User moderation</p>
-        <h1>Kiểm duyệt người dùng</h1>
+        <h1>KiĂ¡»ƒm duyĂ¡»‡t ngưĂ¡»i dùng</h1>
       </header>
 
       <section className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Người dùng</th>
+              <th>NgưĂ¡»i dùng</th>
               <th>Vai trò</th>
               <th>Trạng thái</th>
               <th>Thao tác</th>
@@ -61,10 +61,10 @@ export default function ModeratorUsersPage() {
                 <td>
                   <div className={styles.actions}>
                     <button type="button" onClick={() => updateUser(user.id, 'restricted')}>
-                      <Ban size={14} /> Hạn chế
+                      <Ban size={14} /> Hạn chĂ¡º¿
                     </button>
                     <button type="button" onClick={() => updateUser(user.id, 'active')}>
-                      <Undo2 size={14} /> Khôi phục
+                      <Undo2 size={14} /> Khôi phĂ¡»¥c
                     </button>
                   </div>
                 </td>
@@ -74,10 +74,11 @@ export default function ModeratorUsersPage() {
         </table>
         {riskyUsers.length === 0 ? (
           <div className={styles.empty}>
-            <UserRoundCheck size={16} /> Không có người dùng cần xử lý.
+            <UserRoundCheck size={16} /> Không có ngưĂ¡»i dùng cần xĂ¡»  lý.
           </div>
         ) : null}
       </section>
     </div>
   )
 }
+

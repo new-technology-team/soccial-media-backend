@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { EyeOff, FileText, Globe, Heart, Lock, PencilLine, RefreshCcw, Save, Search, Trash2 } from 'lucide-react'
-import { useAuthStore } from '@/lib/store/auth-store'
-import { api } from '@/lib/api'
-import type { FeedPost } from '@/lib/types'
+import { useAuthStore } from '@/contexts/auth-store'
+import { api } from '@/api/client'
+import type { FeedPost } from '@/types'
 import styles from './page.module.css'
 
 function toFeedPost(raw: Record<string, unknown>): FeedPost {
@@ -60,7 +60,7 @@ export default function AdminPostManagementPage() {
       const visibleIds = new Set(mapped.map((item) => item.id))
       setSelectedPostIds((prev) => prev.filter((id) => visibleIds.has(id)))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể tải danh sách bài viết'
+      const message = err instanceof Error ? err.message : 'Không thể tĂ¡º£i danh sách bài viết'
       setError(message)
     } finally {
       setLoading(false)
@@ -123,10 +123,10 @@ export default function AdminPostManagementPage() {
         visibility: editVisibility,
       })
       closeEdit()
-      setNotice('Đã cập nhật bài viết thành công')
+      setNotice('ĐĂ£ cĂ¡º­p nhĂ¡º­t bài viết thành công')
       await loadPosts()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể cập nhật bài viết')
+      setError(err instanceof Error ? err.message : 'Không thể cĂ¡º­p nhĂ¡º­t bài viết')
     }
   }
 
@@ -135,24 +135,24 @@ export default function AdminPostManagementPage() {
     try {
       setError('')
       setNotice('')
-      await api.updateAdminPost(postId, { status })
-      setNotice(`Đã cập nhật trạng thái bài viết #${postId}`)
+      await api.updateAdminPost(token, postId, { status })
+      setNotice(`ĐĂ£ cĂ¡º­p nhĂ¡º­t trạng thái bài viết #${postId}`)
       await loadPosts()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái bài viết')
+      setError(err instanceof Error ? err.message : 'Không thể cĂ¡º­p nhĂ¡º­t trạng thái bài viết')
     }
   }
 
   const deletePost = async (postId: number) => {
     if (!token) return
-    const ok = window.confirm('Xóa bài viết này khỏi feed? Hành động này sẽ chuyển trạng thái sang deleted.')
+    const ok = window.confirm('Xóa bài viết này khĂ¡»i feed? Hành đĂ¡»™ng này sẽ chuyĂ¡»ƒn trạng thái sang deleted.')
     if (!ok) return
 
     try {
       setError('')
       setNotice('')
-      await api.deleteAdminPost(postId)
-      setNotice(`Đã xóa bài viết #${postId}`)
+      await api.deleteAdminPost(token, postId)
+      setNotice(`ĐĂ£ xóa bài viết #${postId}`)
       await loadPosts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể xóa bài viết')
@@ -177,7 +177,7 @@ export default function AdminPostManagementPage() {
     if (selectedPostIds.length === 0 || bulkWorking) return
 
     const actionLabel = action === 'hide' ? 'ẩn' : 'xóa'
-    const ok = window.confirm(`Xác nhận ${actionLabel} ${selectedPostIds.length} bài viết đã chọn?`)
+    const ok = window.confirm(`Xác nhĂ¡º­n ${actionLabel} ${selectedPostIds.length} bài viết đã chĂ¡»n?`)
     if (!ok) return
 
     setBulkWorking(true)
@@ -198,9 +198,9 @@ export default function AdminPostManagementPage() {
       const success = results.length - failed
 
       if (failed > 0) {
-        setError(`Bulk ${actionLabel}: thành công ${success}, thất bại ${failed}. Vui lòng thử lại các mục lỗi.`)
+        setError(`Bulk ${actionLabel}: thành công ${success}, thĂ¡º¥t bại ${failed}. Vui lòng thĂ¡»  lại các mĂ¡»¥c lĂ¡»—i.`)
       } else {
-        setNotice(`Đã ${actionLabel} thành công ${success} bài viết.`)
+        setNotice(`ĐĂ£ ${actionLabel} thành công ${success} bài viết.`)
       }
 
       setSelectedPostIds([])
@@ -210,22 +210,22 @@ export default function AdminPostManagementPage() {
     }
   }
 
-  if (user?.role?.toLowerCase() !== 'admin') {
-    return <div className={styles.denied}>Bạn không có quyền truy cập khu vực admin.</div>
+  if (user?.role !== 'admin') {
+    return <div className={styles.denied}>Bạn không có quyĂ¡»n truy cĂ¡º­p khu vĂ¡»±c admin.</div>
   }
 
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
         <p className={styles.eyebrow}>Admin CRM / Content Ops</p>
-        <h1>Quản lý bài viết end-to-end</h1>
-        <p>Quản trị toàn bộ bài viết: lọc, sửa nội dung, đổi trạng thái hiển thị và xóa nội dung vi phạm.</p>
+        <h1>QuĂ¡º£n lý bài viết end-to-end</h1>
+        <p>QuĂ¡º£n trĂ¡»‹ toàn bĂ¡»™ bài viết: lĂ¡»c, sĂ¡»­a nĂ¡»™i dung, đĂ¡»•i trạng thái hiển thĂ¡»‹ và xóa nĂ¡»™i dung vi phạm.</p>
       </header>
 
       <section className={styles.grid}>
         <article className={styles.card}>
           <div className={styles.cardTop}>
-            <span>Tổng bài viết</span>
+            <span>TĂ¡»•ng bài viết</span>
             <FileText size={18} />
           </div>
           <strong>{analytics.totalPosts.toLocaleString('vi-VN')}</strong>
@@ -249,7 +249,7 @@ export default function AdminPostManagementPage() {
 
         <article className={styles.card}>
           <div className={styles.cardTop}>
-            <span>Tổng bình luận</span>
+            <span>TĂ¡»•ng bình luĂ¡º­n</span>
             <FileText size={18} />
           </div>
           <strong>{analytics.totalComments.toLocaleString('vi-VN')}</strong>
@@ -257,7 +257,7 @@ export default function AdminPostManagementPage() {
 
         <article className={styles.card}>
           <div className={styles.cardTop}>
-            <span>Tổng cảm xúc</span>
+            <span>TĂ¡»•ng cĂ¡º£m xúc</span>
             <Heart size={18} />
           </div>
           <strong>{analytics.totalReactions.toLocaleString('vi-VN')}</strong>
@@ -271,12 +271,12 @@ export default function AdminPostManagementPage() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm theo nội dung hoặc tên tác giả"
+              placeholder="Tìm theo nĂ¡»™i dung hoặc tên tác giĂ¡º£"
             />
           </label>
 
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | PostStatus)}>
-            <option value="all">Tất cả trạng thái</option>
+            <option value="all">TĂ¡º¥t cĂ¡º£ trạng thái</option>
             <option value="published">published</option>
             <option value="hidden">hidden</option>
             <option value="deleted">deleted</option>
@@ -286,16 +286,16 @@ export default function AdminPostManagementPage() {
             value={visibilityFilter}
             onChange={(event) => setVisibilityFilter(event.target.value as 'all' | PostVisibility)}
           >
-            <option value="all">Tất cả quyền xem</option>
+            <option value="all">TĂ¡º¥t cĂ¡º£ quyĂ¡»n xem</option>
             <option value="public">public</option>
             <option value="private">private</option>
           </select>
 
           <button type="button" className={styles.refreshBtn} onClick={loadPosts}>
-            <RefreshCcw size={15} /> Làm mới
+            <RefreshCcw size={15} /> Làm mĂ¡»›i
           </button>
           <button type="button" className={styles.refreshBtn} onClick={loadPosts}>
-            <Search size={15} /> Lọc
+            <Search size={15} /> LĂ¡»c
           </button>
         </div>
 
@@ -307,17 +307,17 @@ export default function AdminPostManagementPage() {
             <Lock size={14} /> Riêng tư: <b>{analytics.privatePosts}</b>
           </span>
           <span>
-            Đang hiển thị: <b>{analytics.publishedPosts}</b>
+            Ä ang hiển thĂ¡»‹: <b>{analytics.publishedPosts}</b>
           </span>
         </div>
 
         <div className={styles.bulkBar}>
           <span>
-            Đang chọn <b>{selectedPostIds.length}</b> / {posts.length} bài
+            Ä ang chĂ¡»n <b>{selectedPostIds.length}</b> / {posts.length} bài
           </span>
           <div className={styles.bulkActions}>
             <button type="button" className={styles.bulkBtn} onClick={toggleSelectAllVisible}>
-              {posts.length > 0 && posts.every((item) => selectedPostIds.includes(item.id)) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              {posts.length > 0 && posts.every((item) => selectedPostIds.includes(item.id)) ? 'BĂ¡» chĂ¡»n tĂ¡º¥t cĂ¡º£' : 'ChĂ¡»n tĂ¡º¥t cĂ¡º£'}
             </button>
             <button
               type="button"
@@ -325,7 +325,7 @@ export default function AdminPostManagementPage() {
               disabled={selectedPostIds.length === 0 || bulkWorking}
               onClick={() => runBulkAction('hide')}
             >
-              Ẩn đã chọn
+              Ă¡º¨n đã chĂ¡»n
             </button>
             <button
               type="button"
@@ -333,7 +333,7 @@ export default function AdminPostManagementPage() {
               disabled={selectedPostIds.length === 0 || bulkWorking}
               onClick={() => runBulkAction('delete')}
             >
-              Xóa đã chọn
+              Xóa đã chĂ¡»n
             </button>
           </div>
         </div>
@@ -348,15 +348,15 @@ export default function AdminPostManagementPage() {
                 <th>
                   <input
                     type="checkbox"
-                    aria-label="Chọn tất cả bài viết"
+                    aria-label="ChĂ¡»n tĂ¡º¥t cĂ¡º£ bài viết"
                     checked={posts.length > 0 && posts.every((item) => selectedPostIds.includes(item.id))}
                     onChange={toggleSelectAllVisible}
                   />
                 </th>
                 <th>ID</th>
-                <th>Tác giả</th>
-                <th>Nội dung</th>
-                <th>Hiển thị</th>
+                <th>Tác giĂ¡º£</th>
+                <th>NĂ¡»™i dung</th>
+                <th>HiĂ¡»ƒn thĂ¡»‹</th>
                 <th>Trạng thái</th>
                 <th>Tương tác</th>
                 <th>Thao tác</th>
@@ -370,7 +370,7 @@ export default function AdminPostManagementPage() {
                     <td>
                       <input
                         type="checkbox"
-                        aria-label={`Chọn bài viết ${post.id}`}
+                        aria-label={`ChĂ¡»n bài viết ${post.id}`}
                         checked={selectedPostIds.includes(post.id)}
                         onChange={() => toggleSelectPost(post.id)}
                       />
@@ -383,7 +383,7 @@ export default function AdminPostManagementPage() {
                           <textarea
                             value={editContent}
                             onChange={(event) => setEditContent(event.target.value)}
-                            placeholder="Nội dung bài viết"
+                            placeholder="NĂ¡»™i dung bài viết"
                           />
                           <input
                             value={editMediaUrl}
@@ -436,13 +436,13 @@ export default function AdminPostManagementPage() {
                         ) : (
                           <>
                             <button type="button" onClick={() => openEdit(post)}>
-                              <PencilLine size={14} /> Sửa
+                              <PencilLine size={14} /> SĂ¡»­a
                             </button>
                             <button type="button" onClick={() => quickUpdateStatus(post.id, 'hidden')}>
-                              Ẩn
+                              Ă¡º¨n
                             </button>
                             <button type="button" onClick={() => quickUpdateStatus(post.id, 'published')}>
-                              Hiện
+                              HiĂ¡»‡n
                             </button>
                             <button type="button" className={styles.danger} onClick={() => deletePost(post.id)}>
                               <Trash2 size={14} /> Xóa
@@ -457,15 +457,16 @@ export default function AdminPostManagementPage() {
 
               {!loading && posts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className={styles.empty}>Không có bài viết phù hợp bộ lọc.</td>
+                  <td colSpan={8} className={styles.empty}>Không có bài viết phù hĂ¡»£p bĂ¡»™ lĂ¡»c.</td>
                 </tr>
               ) : null}
             </tbody>
           </table>
         </div>
 
-        {loading ? <p className={styles.empty}>Đang tải dữ liệu...</p> : null}
+        {loading ? <p className={styles.empty}>Ä ang tĂ¡º£i dĂ¡»¯ liĂ¡»‡u...</p> : null}
       </section>
     </div>
   )
 }
+

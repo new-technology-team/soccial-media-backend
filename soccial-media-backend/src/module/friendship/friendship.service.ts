@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Friendship } from './friendship.entity';
@@ -139,6 +139,27 @@ export class FriendshipService {
         fullName: friend?.fullName || 'Người dùng',
         avatarUrl: friend?.avatarUrl || null,
         status: f.status,
+      };
+    });
+  }
+
+  async listPendingRequests(userId: number) {
+    const friendships = await this.friendshipRepo.find({
+      where: { userId2: userId, status: FriendshipStatus.PENDING },
+    });
+
+    const requesterIds = friendships.map(f => f.userId1);
+    if (requesterIds.length === 0) return [];
+
+    const users = await this.userService.findByIds(requesterIds);
+    const userMap = new Map(users.map(u => [u.userId, u]));
+
+    return friendships.map(f => {
+      const requester = userMap.get(f.userId1);
+      return {
+        id: f.userId1,
+        fullName: requester?.fullName || 'Người dùng',
+        avatarUrl: requester?.avatarUrl || null,
       };
     });
   }

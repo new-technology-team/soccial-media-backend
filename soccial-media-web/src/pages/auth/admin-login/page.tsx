@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Eye, EyeOff, Lock, Shield } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { api } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
 import styles from '../auth.module.css'
 
 export default function AdminLoginPage() {
@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const reason = searchParams.get('reason')
     if (reason === 'session-expired') {
-      setError('Phiên đăng nhập admin đã hết hạn. Vui lòng đăng nhập lại.')
+      setError('Phiên đăng nhĂ¡º­p admin đã hết hạn. Vui lòng đăng nhĂ¡º­p lại.')
     }
   }, [searchParams])
 
@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
       const res = await api.login({ emailOrPhone: formData.emailOrPhone, password: formData.password })
       if ((res.user as Record<string, unknown>).role !== 'ADMIN') {
         clearAuth()
-        setError('Tài khoản này không có quyền truy cập khu vực quản trị admin.')
+        setError('Tài khoĂ¡º£n này không có quyĂ¡»n truy cĂ¡º­p khu vĂ¡»±c quĂ¡º£n trĂ¡»‹ admin.')
         return
       }
 
@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
       const nextPath = searchParams.get('next') || '/admin/dashboard'
       navigate(nextPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Thông tin đăng nhập admin không hợp lệ.')
+      setError(err instanceof Error ? err.message : 'Thông tin đăng nhĂ¡º­p admin không hợp lĂ¡»‡.')
     } finally {
       setIsLoading(false)
     }
@@ -68,8 +68,8 @@ export default function AdminLoginPage() {
       <div className={`${styles.panel} ${styles.adminPanel}`}>
         <header>
           <p className={styles.adminBadge}>Admin Only</p>
-          <h2 className={styles.heading}>Đăng nhập quản trị</h2>
-          <p className={styles.subheading}>Khu vực dành riêng cho tài khoản admin hệ thống</p>
+          <h2 className={styles.heading}>Đăng nhĂ¡º­p quĂ¡º£n trĂ¡»‹</h2>
+          <p className={styles.subheading}>Khu vĂ¡»±c dành riêng cho tài khoĂ¡º£n admin hĂ¡»‡ thống</p>
         </header>
 
         <div className={styles.alertSpace}>
@@ -101,14 +101,14 @@ export default function AdminLoginPage() {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="password">Mật khẩu</label>
+            <label htmlFor="password">MĂ¡º­t khẩu</label>
             <div className={styles.inputWrap}>
               <Lock size={18} className={styles.inputIcon} />
               <input
                 id="password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
+                placeholder="Ă¢€¢Ă¢€¢Ă¢€¢Ă¢€¢Ă¢€¢Ă¢€¢Ă¢€¢Ă¢€¢"
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -122,18 +122,19 @@ export default function AdminLoginPage() {
           </div>
 
           <button type="submit" className={styles.submit} disabled={isLoading}>
-            {isLoading ? 'Đang đăng nhập...' : 'Vào khu quản trị'}
+            {isLoading ? 'Đang đăng nhĂ¡º­p...' : 'Vào khu quĂ¡º£n trĂ¡»‹'}
           </button>
 
           <p className={styles.switchText}>
-            Đăng nhập người dùng thường? <Link to="/auth/login">Đổi sang đăng nhập người dùng</Link>
+            Đăng nhĂ¡º­p ngưĂ¡»i dùng thưĂ¡»ng? <Link to="/auth/login">ĐĂ¡»•i sang đăng nhĂ¡º­p ngưĂ¡»i dùng</Link>
           </p>
         </form>
       </div>
 
       <aside className={styles.loginNotes}>
-        <p>Trang này dành riêng cho quản trị viên. Hệ thống sẽ chặn nếu tài khoản không phải vai trò admin.</p>
+        <p>Trang này dành riêng cho quĂ¡º£n trĂ¡»‹ viên. HĂ¡»‡ thĂ¡»‘ng sẽ chặn nĂ¡º¿u tài khoĂ¡º£n không phĂ¡º£i vai trò admin.</p>
       </aside>
     </div>
   )
 }
+

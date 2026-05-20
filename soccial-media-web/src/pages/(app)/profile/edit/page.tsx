@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { Link } from 'react-router-dom'
 import { ChangeEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '@/lib/api'
-import { useAuthStore } from '@/lib/store/auth-store'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/contexts/auth-store'
 import styles from './page.module.css'
 
 export default function EditProfilePage() {
@@ -15,7 +15,7 @@ export default function EditProfilePage() {
   const refreshToken = useAuthStore((state) => state.refreshToken)
   const [fullName, setFullName] = useState(me?.fullName || '')
   const [username, setUsername] = useState((me?.fullName || '').toLowerCase().replace(/\s+/g, '.'))
-  const [bio, setBio] = useState('Nhà sáng tạo nội dung số, tập trung vào trải nghiệm tối giản và rõ ràng.')
+  const [bio, setBio] = useState('Nhà sáng tạo nĂ¡»™i dung sĂ¡»‘, tĂ¡º­p trung vào trĂ¡º£i nghiĂ¡»‡m tĂ¡»‘i giĂ¡º£n và rõ ràng.')
   const [showActivity, setShowActivity] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(me?.avatarUrl || '')
   const [busySave, setBusySave] = useState(false)
@@ -30,7 +30,7 @@ export default function EditProfilePage() {
         const result = typeof reader.result === 'string' ? reader.result : ''
         resolve(result.includes(',') ? result.split(',')[1] : result)
       }
-      reader.onerror = () => reject(new Error('Không thể đọc ảnh đại diện'))
+      reader.onerror = () => reject(new Error('Không thể đĂ¡»c Ă¡º£nh đại diĂ¡»‡n'))
       reader.readAsDataURL(file)
     })
 
@@ -57,14 +57,14 @@ export default function EditProfilePage() {
       }).then((res) => res.json())
 
       if (!uploaded.mediaUrl) {
-        throw new Error(uploaded.message || 'Upload avatar thất bại')
+        throw new Error(uploaded.message || 'Upload avatar thĂ¡º¥t bại')
       }
 
       setAvatarUrl(uploaded.mediaUrl)
-      setMessage('Đã tải ảnh đại diện mới.')
+      setMessage('ĐĂ£ tĂ¡º£i Ă¡º£nh đại diĂ¡»‡n mĂ¡»›i.')
     } catch (error) {
       console.error(error)
-      setMessage('Không thể tải ảnh đại diện.')
+      setMessage('Không thể tĂ¡º£i Ă¡º£nh đại diĂ¡»‡n.')
     } finally {
       setBusyUpload(false)
       event.target.value = ''
@@ -73,7 +73,7 @@ export default function EditProfilePage() {
 
   const handleSave = async () => {
     if (!token || !me || !refreshToken) {
-      setMessage('Phiên đăng nhập không hợp lệ.')
+      setMessage('Phiên đăng nhĂ¡º­p không hĂ¡»£p lĂ¡»‡.')
       return
     }
 
@@ -90,11 +90,11 @@ export default function EditProfilePage() {
         user: response.user,
       })
 
-      setMessage('Lưu thay đổi thành công.')
+      setMessage('Lưu thay đĂ¡»•i thành công.')
       navigate(`/profile/${response.user.id}`)
     } catch (error) {
       console.error(error)
-      setMessage('Không thể lưu hồ sơ. Vui lòng thử lại.')
+      setMessage('Không thể lưu hĂ¡»“ sơ. Vui lòng thĂ¡»  lại.')
     } finally {
       setBusySave(false)
     }
@@ -103,13 +103,13 @@ export default function EditProfilePage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>Chỉnh sửa hồ sơ</h1>
+        <h1>ChĂ¡»‰nh sĂ¡»­a hĂ¡»“ sơ</h1>
         <div className={styles.actions}>
           <Link to={me ? `/profile/${me.id}` : '/feed'} className={styles.cancelBtn}>
             Hủy
           </Link>
           <button type="button" className={styles.saveBtn} onClick={handleSave} disabled={busySave || busyUpload}>
-            {busySave ? 'Đang lưu...' : 'Lưu thay đổi'}
+            {busySave ? 'Ä ang lưu...' : 'Lưu thay đĂ¡»•i'}
           </button>
         </div>
       </header>
@@ -122,7 +122,7 @@ export default function EditProfilePage() {
           ) : (
             <div className={styles.avatar}>{(me?.fullName?.[0] || 'U').toUpperCase()}</div>
           )}
-          <span>{busyUpload ? 'Đang tải ảnh...' : 'Đổi ảnh đại diện'}</span>
+          <span>{busyUpload ? 'Ä ang tĂ¡º£i Ă¡º£nh...' : 'ĐĂ¡»•i Ă¡º£nh đại diĂ¡»‡n'}</span>
         </button>
       </section>
 
@@ -131,27 +131,27 @@ export default function EditProfilePage() {
       <div className={styles.layout}>
         <section className={styles.mainCol}>
           <article className={styles.card}>
-            <h2>Thông tin cơ bản</h2>
+            <h2>Thông tin cơ bĂ¡º£n</h2>
             <div className={styles.formGrid}>
               <label>
-                <span>Họ và tên</span>
+                <span>HĂ¡» và tên</span>
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
               </label>
               <label>
-                <span>Tên hiển thị</span>
+                <span>Tên hiển thĂ¡»‹</span>
                 <input value={username} onChange={(e) => setUsername(e.target.value)} />
               </label>
               <label className={styles.fullWidth}>
-                <span>Tiểu sử</span>
+                <span>TiĂ¡»ƒu sĂ¡»­</span>
                 <textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
               </label>
               <label>
-                <span>Giới tính</span>
+                <span>GiĂ¡»›i tính</span>
                 <select defaultValue="Khác">
                   <option>Khác</option>
                   <option>Nam</option>
-                  <option>Nữ</option>
-                  <option>Không tiết lộ</option>
+                  <option>NĂ¡»¯</option>
+                  <option>Không tiĂ¡º¿t lĂ¡»™</option>
                 </select>
               </label>
               <label>
@@ -162,40 +162,40 @@ export default function EditProfilePage() {
           </article>
 
           <article className={styles.card}>
-            <h2>Bảo mật tài khoản</h2>
+            <h2>BĂ¡º£o mĂ¡º­t tài khoĂ¡º£n</h2>
             <div className={styles.securityItem}>
               <div>
-                <b>Đổi mật khẩu</b>
-                <small>Cập nhật gần nhất 3 tháng trước</small>
+                <b>ĐĂ¡»•i mĂ¡º­t khẩu</b>
+                <small>CĂ¡º­p nhĂ¡º­t gần nhĂ¡º¥t 3 tháng trưĂ¡»›c</small>
               </div>
-              <button type="button">Cập nhật mật khẩu</button>
+              <button type="button">CĂ¡º­p nhĂ¡º­t mĂ¡º­t khẩu</button>
             </div>
             <div className={styles.securityItem}>
               <div>
-                <b>Xác thực 2 lớp</b>
-                <small>Đã bật bằng ứng dụng Authenticator</small>
+                <b>Xác thĂ¡»±c 2 lĂ¡»›p</b>
+                <small>ĐĂ£ bĂ¡º­t bằng Ă¡»©ng dĂ¡»¥ng Authenticator</small>
               </div>
-              <strong>Đang bật</strong>
+              <strong>Ä ang bĂ¡º­t</strong>
             </div>
           </article>
         </section>
 
         <aside className={styles.sideCol}>
           <article className={styles.card}>
-            <h3>Liên kết tài khoản</h3>
-            <div className={styles.linkItem}><b>Google</b><button type="button">Ngắt kết nối</button></div>
-            <div className={styles.linkItem}><b>Dribbble</b><button type="button">Ngắt kết nối</button></div>
-            <button type="button" className={styles.addBtn}>+ Thêm tài khoản</button>
+            <h3>Liên kĂ¡º¿t tài khoĂ¡º£n</h3>
+            <div className={styles.linkItem}><b>Google</b><button type="button">NgĂ¡º¯t kết nối</button></div>
+            <div className={styles.linkItem}><b>Dribbble</b><button type="button">NgĂ¡º¯t kết nối</button></div>
+            <button type="button" className={styles.addBtn}>+ Thêm tài khoĂ¡º£n</button>
           </article>
 
           <article className={styles.card}>
-            <h3>Quyền riêng tư hồ sơ</h3>
+            <h3>QuyĂ¡»n riêng tư hĂ¡»“ sơ</h3>
             <div className={styles.switchRow}>
-              <span>Hồ sơ công khai</span>
+              <span>HĂ¡»“ sơ công khai</span>
               <label className={styles.switch}><input type="checkbox" defaultChecked /><span></span></label>
             </div>
             <div className={styles.switchRow}>
-              <span>Hiện hoạt động</span>
+              <span>HiĂ¡»‡n hoạt đĂ¡»™ng</span>
               <label className={styles.switch}><input type="checkbox" checked={showActivity} onChange={(e) => setShowActivity(e.target.checked)} /><span></span></label>
             </div>
           </article>
@@ -204,3 +204,4 @@ export default function EditProfilePage() {
     </div>
   )
 }
+

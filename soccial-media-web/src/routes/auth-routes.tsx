@@ -1,6 +1,6 @@
-import { Outlet, Route } from 'react-router-dom'
+﻿import { Outlet, Route } from 'react-router-dom'
 
-import AuthLayout from '@/layouts/AuthLayout'
+import AuthLayout from '@/components/layouts/AuthLayout'
 import AdminLoginPage from '@/pages/auth/admin-login/page'
 import ForgotPasswordPage from '@/pages/auth/forgot-password/page'
 import LoginPage from '@/pages/auth/login/page'
@@ -26,3 +26,4 @@ export function renderAuthRoutes() {
     </Route>
   )
 }
+
