@@ -3,17 +3,14 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-} from "@nestjs/common";
+} from '@nestjs/common';
 
-import {
-  GEMINI_CHAT_MODEL,
-  GEMINI_STABLE_MODEL,
-} from './ai.provider';
-import { ConfigService } from "@nestjs/config";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { GEMINI_MODEL } from "./ai.constants";
+import { GEMINI_CHAT_MODEL, GEMINI_STABLE_MODEL } from './ai.provider';
+import { ConfigService } from '@nestjs/config';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { StringOutputParser } from '@langchain/core/output_parsers';
+import { GEMINI_MODEL } from './ai.constants';
 
 export interface TranslateResult {
   translatedText: string;
@@ -24,7 +21,7 @@ export interface TranslateResult {
 }
 
 export interface SentimentResult {
-  sentiment: "positive" | "neutral" | "negative";
+  sentiment: 'positive' | 'neutral' | 'negative';
   score: number; // 0.0 → 1.0
   detail: string; // mô tả ngắn tiếng Việt
   emotions: string[]; // tối đa 3 cảm xúc cụ thể
@@ -40,15 +37,15 @@ export interface ChatMessageSummaryInput {
 export class ChatAnalysisService {
   private readonly logger = new Logger(ChatAnalysisService.name);
 
-  constructor(private readonly config: ConfigService,  // ✅ Inject model thường cho summarize và suggestReplies
+  constructor(
+    private readonly config: ConfigService, // ✅ Inject model thường cho summarize và suggestReplies
     @Inject(GEMINI_CHAT_MODEL)
     private readonly chatModel: ChatGoogleGenerativeAI,
 
     // ✅ Inject stable model cho analyzeSentiment và translateMessage
     @Inject(GEMINI_STABLE_MODEL)
-    private readonly stableModel: ChatGoogleGenerativeAI,) {
-
-  }
+    private readonly stableModel: ChatGoogleGenerativeAI,
+  ) {}
 
   /**
    * Feature 2: Tóm tắt tin nhắn lịch sử
@@ -59,7 +56,7 @@ export class ChatAnalysisService {
     messages: ChatMessageSummaryInput[],
   ): Promise<{ summary: string }> {
     if (!messages || messages.length === 0) {
-      return { summary: "Không có đoạn chat nào để tóm tắt." };
+      return { summary: 'Không có đoạn chat nào để tóm tắt.' };
     }
 
     try {
@@ -82,9 +79,9 @@ TÓM TẮT CỦA BẠN:
       const formattedHistory = messages
         .map(
           (m) =>
-            `[${m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : "N/A"}] ${m.sender}: ${m.content}`,
+            `[${m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : 'N/A'}] ${m.sender}: ${m.content}`,
         )
-        .join("\n");
+        .join('\n');
 
       this.logger.debug(
         `Đang tiến hành tóm tắt cuộc hội thoại (${messages.length} tin nhắn)...`,
@@ -102,11 +99,11 @@ TÓM TẮT CỦA BẠN:
       return { summary };
     } catch (error) {
       this.logger.error(
-        "Lỗi khi ứng dụng tóm tắt tin nhắn (ChatAnalysis):",
+        'Lỗi khi ứng dụng tóm tắt tin nhắn (ChatAnalysis):',
         error instanceof Error ? error.stack : error,
       );
       throw new InternalServerErrorException(
-        "Đã xảy ra lỗi trong quá trình phân tích và tóm tắt tin nhắn.",
+        'Đã xảy ra lỗi trong quá trình phân tích và tóm tắt tin nhắn.',
       );
     }
   }
@@ -148,7 +145,7 @@ HỘI THOẠI GẦN NHẤT:
       const recentMessages = messages.slice(-10);
       const formattedHistory = recentMessages
         .map((m) => `${m.sender}: ${m.content}`)
-        .join("\n");
+        .join('\n');
 
       const chain = promptTemplate
         .pipe(this.chatModel)
@@ -161,7 +158,7 @@ HỘI THOẠI GẦN NHẤT:
 
       // Parse kết quả — mỗi dòng là 1 gợi ý
       const suggestions = result
-        .split("\n")
+        .split('\n')
         .map((s) => s.trim())
         // Lọc dòng trống và dòng có vẻ là giải thích (quá dài)
         .filter((s) => s.length > 0 && s.length <= 100)
@@ -169,9 +166,9 @@ HỘI THOẠI GẦN NHẤT:
 
       // Đảm bảo luôn trả về đủ 3 gợi ý, fallback nếu Gemini trả thiếu
       const fallbacks = [
-        "Được bạn ơi!",
-        "Cho mình hỏi thêm nhé?",
-        "Mình hiểu rồi 👍",
+        'Được bạn ơi!',
+        'Cho mình hỏi thêm nhé?',
+        'Mình hiểu rồi 👍',
       ];
       while (suggestions.length < 3) {
         suggestions.push(fallbacks[suggestions.length]);
@@ -180,11 +177,11 @@ HỘI THOẠI GẦN NHẤT:
       return { suggestions };
     } catch (error) {
       this.logger.error(
-        "Lỗi khi gợi ý câu trả lời (SmartReply):",
+        'Lỗi khi gợi ý câu trả lời (SmartReply):',
         error instanceof Error ? error.stack : error,
       );
       throw new InternalServerErrorException(
-        "Đã xảy ra lỗi khi tạo gợi ý câu trả lời.",
+        'Đã xảy ra lỗi khi tạo gợi ý câu trả lời.',
       );
     }
   }
@@ -198,9 +195,9 @@ HỘI THOẠI GẦN NHẤT:
   ): Promise<SentimentResult> {
     if (!messages || messages.length === 0) {
       return {
-        sentiment: "neutral",
+        sentiment: 'neutral',
         score: 0.5,
-        detail: "Không có tin nhắn để phân tích.",
+        detail: 'Không có tin nhắn để phân tích.',
         emotions: [],
       };
     }
@@ -229,26 +226,26 @@ HỘI THOẠI:
       const formattedHistory = recentMessages
         .map((m) => {
           const time = m.timestamp
-            ? `[${new Date(m.timestamp).toLocaleTimeString("vi-VN")}] `
-            : "";
+            ? `[${new Date(m.timestamp).toLocaleTimeString('vi-VN')}] `
+            : '';
           return `${time}${m.sender}: ${m.content}`;
         })
-        .join("\n");
+        .join('\n');
 
-
-
-      const chain = promptTemplate.pipe(this.stableModel).pipe(new StringOutputParser());
+      const chain = promptTemplate
+        .pipe(this.stableModel)
+        .pipe(new StringOutputParser());
 
       const raw = await chain.invoke({ chatHistory: formattedHistory });
 
       return this.parseSentimentJson(raw);
     } catch (error) {
       this.logger.error(
-        "Lỗi khi phân tích sentiment:",
+        'Lỗi khi phân tích sentiment:',
         error instanceof Error ? error.stack : error,
       );
       throw new InternalServerErrorException(
-        "Đã xảy ra lỗi khi phân tích cảm xúc hội thoại.",
+        'Đã xảy ra lỗi khi phân tích cảm xúc hội thoại.',
       );
     }
   }
@@ -260,31 +257,31 @@ HỘI THOẠI:
     try {
       // Gemini đôi khi bọc trong ```json ... ``` dù đã dặn không làm vậy
       const cleaned = raw
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/gi, "")
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
         .trim();
 
       const parsed = JSON.parse(cleaned);
 
       // Validate và normalize từng field — tránh LLM trả sai kiểu
-      const sentiment = ["positive", "neutral", "negative"].includes(
+      const sentiment = ['positive', 'neutral', 'negative'].includes(
         parsed.sentiment,
       )
         ? parsed.sentiment
-        : "neutral";
+        : 'neutral';
 
       const score =
-        typeof parsed.score === "number"
+        typeof parsed.score === 'number'
           ? Math.min(1, Math.max(0, parsed.score)) // clamp 0–1
           : 0.5;
 
       const detail =
-        typeof parsed.detail === "string"
+        typeof parsed.detail === 'string'
           ? parsed.detail
-          : "Không xác định được cảm xúc.";
+          : 'Không xác định được cảm xúc.';
 
       const emotions = Array.isArray(parsed.emotions)
-        ? parsed.emotions.filter((e: any) => typeof e === "string").slice(0, 3)
+        ? parsed.emotions.filter((e: any) => typeof e === 'string').slice(0, 3)
         : [];
 
       return { sentiment, score, detail, emotions };
@@ -292,9 +289,9 @@ HỘI THOẠI:
       this.logger.warn(`Không parse được JSON sentiment, raw: ${raw}`);
       // Fallback an toàn thay vì throw
       return {
-        sentiment: "neutral",
+        sentiment: 'neutral',
         score: 0.5,
-        detail: "Không phân tích được cảm xúc.",
+        detail: 'Không phân tích được cảm xúc.',
         emotions: [],
       };
     }
@@ -311,9 +308,9 @@ HỘI THOẠI:
   ): Promise<TranslateResult> {
     if (!text || text.trim().length === 0) {
       return {
-        translatedText: "",
-        detectedLanguage: "unknown",
-        detectedLanguageName: "Không xác định",
+        translatedText: '',
+        detectedLanguage: 'unknown',
+        detectedLanguageName: 'Không xác định',
         targetLanguage,
         isSameLanguage: false,
       };
@@ -342,9 +339,9 @@ TIN NHẮN CẦN DỊCH:
 {text}
     `);
 
-
-
-      const chain = promptTemplate.pipe(this.stableModel).pipe(new StringOutputParser());
+      const chain = promptTemplate
+        .pipe(this.stableModel)
+        .pipe(new StringOutputParser());
 
       const raw = await chain.invoke({
         text,
@@ -354,11 +351,11 @@ TIN NHẮN CẦN DỊCH:
       return this.parseTranslateJson(raw, targetLanguage);
     } catch (error) {
       this.logger.error(
-        "Lỗi khi dịch tin nhắn:",
+        'Lỗi khi dịch tin nhắn:',
         error instanceof Error ? error.stack : error,
       );
       throw new InternalServerErrorException(
-        "Đã xảy ra lỗi trong quá trình dịch tin nhắn.",
+        'Đã xảy ra lỗi trong quá trình dịch tin nhắn.',
       );
     }
   }
@@ -372,28 +369,28 @@ TIN NHẮN CẦN DỊCH:
   ): TranslateResult {
     try {
       const cleaned = raw
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/gi, "")
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
         .trim();
 
       const parsed = JSON.parse(cleaned);
 
       return {
         translatedText:
-          typeof parsed.translatedText === "string"
+          typeof parsed.translatedText === 'string'
             ? parsed.translatedText
             : raw.trim(),
         detectedLanguage:
-          typeof parsed.detectedLanguage === "string"
+          typeof parsed.detectedLanguage === 'string'
             ? parsed.detectedLanguage
-            : "unknown",
+            : 'unknown',
         detectedLanguageName:
-          typeof parsed.detectedLanguageName === "string"
+          typeof parsed.detectedLanguageName === 'string'
             ? parsed.detectedLanguageName
-            : "Không xác định",
+            : 'Không xác định',
         targetLanguage,
         isSameLanguage:
-          typeof parsed.isSameLanguage === "boolean"
+          typeof parsed.isSameLanguage === 'boolean'
             ? parsed.isSameLanguage
             : false,
       };
@@ -402,8 +399,8 @@ TIN NHẮN CẦN DỊCH:
       // Fallback — trả về raw text luôn thay vì throw
       return {
         translatedText: raw.trim(),
-        detectedLanguage: "unknown",
-        detectedLanguageName: "Không xác định",
+        detectedLanguage: 'unknown',
+        detectedLanguageName: 'Không xác định',
         targetLanguage,
         isSameLanguage: false,
       };

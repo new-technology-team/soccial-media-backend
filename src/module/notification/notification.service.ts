@@ -2,6 +2,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
+import { emitToConversation } from '../../common/socket/chat-socket';
 
 @Injectable()
 export class NotificationService {
@@ -10,7 +11,12 @@ export class NotificationService {
     private readonly notifRepo: Repository<Notification>,
   ) {}
 
-  async create(data: { userId: number; title: string; content: string; link?: string }) {
+  async create(data: {
+    userId: number;
+    title: string;
+    content: string;
+    link?: string;
+  }) {
     const notif = this.notifRepo.create({
       userId: String(data.userId),
       title: data.title,
@@ -18,7 +24,20 @@ export class NotificationService {
       link: data.link || '',
       createdAt: new Date(),
     });
-    return this.notifRepo.save(notif);
+    const saved = await this.notifRepo.save(notif);
+
+    emitToConversation(`user:${data.userId}`, 'notification:new', {
+      id: String((saved as any)._id || ''),
+      userId: String(data.userId),
+      title: saved.title,
+      body: saved.content,
+      link: saved.link,
+      isRead: Boolean(saved.isRead),
+      is_read: Boolean(saved.isRead),
+      createdAt: saved.createdAt?.toISOString?.() ?? new Date().toISOString(),
+    });
+
+    return saved;
   }
 
   async findByUser(userId: number, limit = 50) {
@@ -30,7 +49,10 @@ export class NotificationService {
   }
 
   async markRead(id: string) {
-    await this.notifRepo.update({ _id: this.toObjectId(id) } as any, { isRead: true } as any);
+    await this.notifRepo.update(
+      { _id: this.toObjectId(id) } as any,
+      { isRead: true } as any,
+    );
     return { message: 'Notification marked as read' };
   }
 
@@ -38,7 +60,11 @@ export class NotificationService {
     const notifications = await this.notifRepo.find({
       where: { userId: String(userId), isRead: false },
     });
-    await Promise.all(notifications.map(n => this.notifRepo.update({ _id: n._id } as any, { isRead: true } as any)));
+    await Promise.all(
+      notifications.map((n) =>
+        this.notifRepo.update({ _id: n._id } as any, { isRead: true } as any),
+      ),
+    );
     return { message: 'All notifications marked as read' };
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Friendship } from './friendship.entity';
@@ -62,7 +66,11 @@ export class FriendshipService {
 
   async acceptRequest(userId: number, requesterUserId: number) {
     const friendship = await this.friendshipRepo.findOne({
-      where: { userId1: requesterUserId, userId2: userId, status: FriendshipStatus.PENDING },
+      where: {
+        userId1: requesterUserId,
+        userId2: userId,
+        status: FriendshipStatus.PENDING,
+      },
     });
 
     if (!friendship) {
@@ -88,7 +96,11 @@ export class FriendshipService {
 
   async rejectRequest(userId: number, requesterUserId: number) {
     const friendship = await this.friendshipRepo.findOne({
-      where: { userId1: requesterUserId, userId2: userId, status: FriendshipStatus.PENDING },
+      where: {
+        userId1: requesterUserId,
+        userId2: userId,
+        status: FriendshipStatus.PENDING,
+      },
     });
 
     if (!friendship) {
@@ -124,14 +136,14 @@ export class FriendshipService {
       ],
     });
 
-    const friendIds = friendships.map(f =>
+    const friendIds = friendships.map((f) =>
       f.userId1 === userId ? f.userId2 : f.userId1,
     );
 
     const users = await this.userService.findByIds(friendIds);
-    const userMap = new Map(users.map(u => [u.userId, u]));
+    const userMap = new Map(users.map((u) => [u.userId, u]));
 
-    return friendships.map(f => {
+    return friendships.map((f) => {
       const friendId = f.userId1 === userId ? f.userId2 : f.userId1;
       const friend = userMap.get(friendId);
       return {
@@ -148,13 +160,13 @@ export class FriendshipService {
       where: { userId2: userId, status: FriendshipStatus.PENDING },
     });
 
-    const requesterIds = friendships.map(f => f.userId1);
+    const requesterIds = friendships.map((f) => f.userId1);
     if (requesterIds.length === 0) return [];
 
     const users = await this.userService.findByIds(requesterIds);
-    const userMap = new Map(users.map(u => [u.userId, u]));
+    const userMap = new Map(users.map((u) => [u.userId, u]));
 
-    return friendships.map(f => {
+    return friendships.map((f) => {
       const requester = userMap.get(f.userId1);
       return {
         id: f.userId1,
@@ -166,7 +178,7 @@ export class FriendshipService {
 
   async searchUsers(keyword: string, limit = 20) {
     const users = await this.userService.search(keyword, limit);
-    return users.map(u => ({
+    return users.map((u) => ({
       id: u.userId,
       username: u.username,
       full_name: u.fullName,

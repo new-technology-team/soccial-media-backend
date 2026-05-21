@@ -1,4 +1,13 @@
-﻿import { Body, Controller, Get, Post, Delete, Param, UseGuards, Req } from '@nestjs/common';
+﻿import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
@@ -13,7 +22,12 @@ export class CommentController {
     @Body() body: { content: string; parentId?: string },
     @Req() req: any,
   ) {
-    return this.commentService.create(postId, body.content, body.parentId || null, req.user.sub);
+    return this.commentService.create(
+      postId,
+      body.content,
+      body.parentId || null,
+      req.user.sub,
+    );
   }
 
   @Get('posts/:postId/comments')
@@ -23,7 +37,11 @@ export class CommentController {
 
   @Post('comments/:id/reaction')
   @UseGuards(JwtAuthGuard)
-  react(@Param('id') id: string, @Body() body: { type?: string }, @Req() req: any) {
+  react(
+    @Param('id') id: string,
+    @Body() body: { type?: string },
+    @Req() req: any,
+  ) {
     return this.commentService.react(id, req.user.sub, body.type || 'like');
   }
 

@@ -1,4 +1,12 @@
-﻿import { Controller, Get, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
+﻿import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
@@ -9,9 +17,11 @@ export class NotificationController {
   @Get('notifications')
   @UseGuards(JwtAuthGuard)
   async listNotifications(@Req() req: any) {
-    const notifications = await this.notificationService.findByUser(req.user.sub);
+    const notifications = await this.notificationService.findByUser(
+      req.user.sub,
+    );
     return {
-      notifications: notifications.map(n => ({
+      notifications: notifications.map((n) => ({
         id: String(n._id),
         userId: n.userId,
         title: n.title,

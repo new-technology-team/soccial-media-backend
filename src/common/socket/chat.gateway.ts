@@ -19,7 +19,9 @@ import { JwtService } from '@nestjs/jwt';
   },
   namespace: '/',
 })
-export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -32,14 +34,20 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake?.auth?.token || client.handshake?.headers?.authorization?.replace('Bearer ', '');
+      const token =
+        client.handshake?.auth?.token ||
+        client.handshake?.headers?.authorization?.replace('Bearer ', '');
       if (token) {
         const payload = await this.jwtService.verifyAsync(token, {
           secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
         });
         client.data.userId = payload.sub;
         client.data.username = payload.username;
-        console.log(`Socket connected: user ${payload.username} (${payload.sub})`);
+        client.join(`user:${payload.sub}`);
+        client.join('global-feed');
+        console.log(
+          `Socket connected: user ${payload.username} (${payload.sub})`,
+        );
       } else {
         console.log('Socket connected without auth');
       }
@@ -103,7 +111,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   handleNotificationNew(@MessageBody() payload: any) {
     const userId = payload?.userId;
     if (userId) {
-      emitToConversation(`user-${userId}`, 'notification:new', payload);
+      emitToConversation(`user:${userId}`, 'notification:new', payload);
     }
   }
 

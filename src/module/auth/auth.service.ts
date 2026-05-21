@@ -1,4 +1,8 @@
-﻿import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -45,7 +49,8 @@ export class AuthService {
     const payload = { sub: user.userId, username: user.username };
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
+      secret:
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
       expiresIn: '7d',
     });
 
@@ -67,16 +72,21 @@ export class AuthService {
     // Handle emailOrPhone from mobile app
     const emailOrPhone = registerDto.emailOrPhone || registerDto.email || '';
     const isEmail = emailOrPhone.includes('@');
-    
-    const email = isEmail ? emailOrPhone : `${emailOrPhone.replace(/\D/g, '')}@phone.local`;
-    const username = registerDto.username || (isEmail ? emailOrPhone.split('@')[0] : `user_${Date.now()}`);
-    
+
+    const email = isEmail
+      ? emailOrPhone
+      : `${emailOrPhone.replace(/\D/g, '')}@phone.local`;
+    const username =
+      registerDto.username ||
+      (isEmail ? emailOrPhone.split('@')[0] : `user_${Date.now()}`);
+
     const existingByEmail = await this.userService.findOneByEmail(email);
     if (existingByEmail) {
       throw new ConflictException('Email đã được sử dụng');
     }
 
-    const existingByUsername = await this.userService.findOneByUsername(username);
+    const existingByUsername =
+      await this.userService.findOneByUsername(username);
     if (existingByUsername) {
       throw new ConflictException('Tên đăng nhập đã được sử dụng');
     }
@@ -93,7 +103,8 @@ export class AuthService {
     const payload = { sub: newUser.userId, username: newUser.username };
     const accessToken = await this.jwtService.signAsync(payload);
     const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
+      secret:
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
       expiresIn: '7d',
     });
 
@@ -114,7 +125,10 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
+        secret:
+          process.env.JWT_REFRESH_SECRET ||
+          process.env.JWT_SECRET ||
+          'secretKey',
       });
 
       const user = await this.userService.findOne(payload.sub);
@@ -125,7 +139,10 @@ export class AuthService {
       const newPayload = { sub: user.userId, username: user.username };
       const accessToken = await this.jwtService.signAsync(newPayload);
       const newRefreshToken = await this.jwtService.signAsync(newPayload, {
-        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
+        secret:
+          process.env.JWT_REFRESH_SECRET ||
+          process.env.JWT_SECRET ||
+          'secretKey',
         expiresIn: '7d',
       });
 
@@ -134,7 +151,9 @@ export class AuthService {
         refresh_token: newRefreshToken,
       };
     } catch {
-      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
+      );
     }
   }
 
@@ -151,25 +170,40 @@ export class AuthService {
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       sex: user.sex,
-      dateOfBirth: user.dateOfBirth ? String(user.dateOfBirth).split('T')[0] : null,
+      dateOfBirth: user.dateOfBirth
+        ? String(user.dateOfBirth).split('T')[0]
+        : null,
       phone: user.phone,
       role: user.role,
     };
   }
 
-  async updateMe(userId: number, data: {
-    fullName?: string;
-    avatarUrl?: string;
-    dateOfBirth?: string | null;
-    gender?: string | null;
-  }) {
+  async updateMe(
+    userId: number,
+    data: {
+      fullName?: string;
+      avatarUrl?: string;
+      dateOfBirth?: string | null;
+      gender?: string | null;
+    },
+  ) {
     const user = await this.userService.findOne(userId);
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
 
-    const sexMap: Record<string, number> = { male: 1, female: 2, other: 0 };
-    const sex = data.gender ? sexMap[data.gender] ?? 0 : undefined;
+    const normalizeGender = (value?: string | null) => {
+      const lower = String(value || '')
+        .trim()
+        .toLowerCase();
+
+      if (['male', 'nam', 'm'].includes(lower)) return 1;
+      if (['female', 'nu', 'n', 'f'].includes(lower)) return 2;
+      if (['other', 'khac', 'o'].includes(lower)) return 0;
+      return undefined;
+    };
+
+    const sex = normalizeGender(data.gender);
 
     const updated = await this.userService.update(userId, {
       fullName: data.fullName,
@@ -185,13 +219,19 @@ export class AuthService {
       fullName: updated.fullName,
       avatarUrl: updated.avatarUrl,
       sex: updated.sex,
-      dateOfBirth: updated.dateOfBirth ? String(updated.dateOfBirth).split('T')[0] : null,
+      dateOfBirth: updated.dateOfBirth
+        ? String(updated.dateOfBirth).split('T')[0]
+        : null,
       phone: updated.phone,
       role: updated.role,
     };
   }
 
-  async changePassword(userId: number, currentPassword: string, newPassword: string) {
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ) {
     const user = await this.userService.findOne(userId);
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');

@@ -1,6 +1,6 @@
-import { IsArray, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
-import { MessageInputDto } from "./suggest-replies.dto";
+import { IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { MessageInputDto } from './suggest-replies.dto';
 
 export class AnalyzeSentimentDto {
   @IsArray()

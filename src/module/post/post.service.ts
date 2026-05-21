@@ -1,4 +1,8 @@
-﻿import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
@@ -15,7 +19,7 @@ export class PostService {
   ) {}
 
   private toResponse(post: Post, viewerId?: number) {
-    const userInteracts = (post.interacts || []).map(i => ({
+    const userInteracts = (post.interacts || []).map((i) => ({
       userId: i.userId,
       displayName: i.displayName,
       avatarUrl: i.avatarUrl,
@@ -24,7 +28,7 @@ export class PostService {
     }));
 
     const viewerInteract = viewerId
-      ? userInteracts.find(i => i.userId === viewerId)
+      ? userInteracts.find((i) => i.userId === viewerId)
       : null;
 
     return {
@@ -67,7 +71,11 @@ export class PostService {
     const saved = await this.postsRepository.save(post);
 
     // Emit realtime event for feed update
-    emitToConversation('global-feed', 'post:new', this.toResponse(saved, ownerId));
+    emitToConversation(
+      'global-feed',
+      'post:new',
+      this.toResponse(saved, ownerId),
+    );
 
     return this.toResponse(saved, ownerId);
   }
@@ -78,11 +86,13 @@ export class PostService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
-    return posts.map(p => this.toResponse(p, viewerId));
+    return posts.map((p) => this.toResponse(p, viewerId));
   }
 
   async findById(id: string, viewerId?: number) {
-    const post = await this.postsRepository.findOne({ where: { _id: this.toObjectId(id) } as any });
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
     if (!post) throw new NotFoundException('Post not found');
     return this.toResponse(post, viewerId);
   }
@@ -92,13 +102,20 @@ export class PostService {
       where: { 'owner.userId': userId } as any,
       order: { createdAt: 'DESC' },
     });
-    return posts.map(p => this.toResponse(p, viewerId));
+    return posts.map((p) => this.toResponse(p, viewerId));
   }
 
-  async update(id: string, data: { content?: string; mediaUrl?: string; visibility?: string }, userId: number) {
-    const post = await this.postsRepository.findOne({ where: { _id: this.toObjectId(id) } as any });
+  async update(
+    id: string,
+    data: { content?: string; mediaUrl?: string; visibility?: string },
+    userId: number,
+  ) {
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.owner?.userId !== userId) throw new ForbiddenException('Not authorized');
+    if (post.owner?.userId !== userId)
+      throw new ForbiddenException('Not authorized');
 
     if (data.content !== undefined) post.content = data.content;
     if (data.mediaUrl !== undefined) post.mediaUrl = data.mediaUrl;
@@ -109,9 +126,12 @@ export class PostService {
   }
 
   async delete(id: string, userId: number) {
-    const post = await this.postsRepository.findOne({ where: { _id: this.toObjectId(id) } as any });
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.owner?.userId !== userId) throw new ForbiddenException('Not authorized');
+    if (post.owner?.userId !== userId)
+      throw new ForbiddenException('Not authorized');
 
     await this.postsRepository.delete({ _id: this.toObjectId(id) } as any);
     return { message: 'Post deleted successfully' };
@@ -121,11 +141,13 @@ export class PostService {
     const user = await this.userService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
 
-    const post = await this.postsRepository.findOne({ where: { _id: this.toObjectId(id) } as any });
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
     if (!post) throw new NotFoundException('Post not found');
 
     // Remove existing reaction
-    post.interacts = (post.interacts || []).filter(i => i.userId !== userId);
+    post.interacts = (post.interacts || []).filter((i) => i.userId !== userId);
 
     // Add new reaction
     post.interacts.push({
@@ -144,10 +166,12 @@ export class PostService {
     const user = await this.userService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
 
-    const post = await this.postsRepository.findOne({ where: { _id: this.toObjectId(id) } as any });
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
     if (!post) throw new NotFoundException('Post not found');
 
-    post.interacts = (post.interacts || []).filter(i => i.userId !== userId);
+    post.interacts = (post.interacts || []).filter((i) => i.userId !== userId);
     const saved = await this.postsRepository.save(post);
     return this.toResponse(saved, userId);
   }

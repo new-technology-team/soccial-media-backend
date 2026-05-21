@@ -45,7 +45,6 @@ function buildMongoUrl(): string {
   return process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/zalo_app';
 }
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -54,15 +53,15 @@ function buildMongoUrl(): string {
     TypeOrmModule.forRoot({
       name: 'mariadb',
       type: 'mariadb',
-      url: process.env.DATABASE_URL_MARIA,
+      url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, Report],
+      entities: [User, Friendship, Report, AuthOtp],
       logging: false,
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',
       type: 'mongodb',
-      url: process.env.DATABASE_URL_MONGO,
+      url: buildMongoUrl(),
       synchronize: true,
       entities: [Comment, Conversation, Message, Notification, Post, AiMessage],
     }),

@@ -1,4 +1,8 @@
-﻿import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+﻿import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './comment.entity';
@@ -17,7 +21,7 @@ export class CommentService {
 
   private toResponse(comment: Comment, viewerId?: number) {
     const viewerReact = viewerId
-      ? (comment.reacts || []).find(r => r.userId === viewerId)
+      ? (comment.reacts || []).find((r) => r.userId === viewerId)
       : null;
 
     return {
@@ -37,7 +41,12 @@ export class CommentService {
     };
   }
 
-  async create(postId: string, content: string, parentId: string | null, userId: number) {
+  async create(
+    postId: string,
+    content: string,
+    parentId: string | null,
+    userId: number,
+  ) {
     const user = await this.userService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
 
@@ -60,11 +69,21 @@ export class CommentService {
     // Increment post comment count
     try {
       await this.postService.incrementCommentCount(postId);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Emit realtime event
-    emitToConversation(`post-${postId}`, 'comment:new', this.toResponse(saved, userId));
-    emitToConversation('global-feed', 'comment:new', this.toResponse(saved, userId));
+    emitToConversation(
+      `post-${postId}`,
+      'comment:new',
+      this.toResponse(saved, userId),
+    );
+    emitToConversation(
+      'global-feed',
+      'comment:new',
+      this.toResponse(saved, userId),
+    );
 
     return { comment: this.toResponse(saved, userId) };
   }
@@ -88,7 +107,7 @@ export class CommentService {
     }
 
     return {
-      comments: comments.map(c => ({
+      comments: comments.map((c) => ({
         ...this.toResponse(c, viewerId),
         replyCount: commentMap.get(String(c._id))?.length || 0,
         replies: commentMap.get(String(c._id)) || [],
@@ -106,7 +125,7 @@ export class CommentService {
     });
     if (!comment) throw new NotFoundException('Comment not found');
 
-    comment.reacts = (comment.reacts || []).filter(r => r.userId !== userId);
+    comment.reacts = (comment.reacts || []).filter((r) => r.userId !== userId);
     comment.reacts.push({
       userId: user.userId,
       displayName: user.fullName,
@@ -125,7 +144,7 @@ export class CommentService {
     });
     if (!comment) throw new NotFoundException('Comment not found');
 
-    comment.reacts = (comment.reacts || []).filter(r => r.userId !== userId);
+    comment.reacts = (comment.reacts || []).filter((r) => r.userId !== userId);
     const saved = await this.commentsRepository.save(comment);
     return { comment: this.toResponse(saved, userId) };
   }
@@ -135,9 +154,12 @@ export class CommentService {
       where: { _id: this.toObjectId(commentId) } as any,
     });
     if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.owner?.userId !== userId) throw new ForbiddenException('Not authorized');
+    if (comment.owner?.userId !== userId)
+      throw new ForbiddenException('Not authorized');
 
-    await this.commentsRepository.delete({ _id: this.toObjectId(commentId) } as any);
+    await this.commentsRepository.delete({
+      _id: this.toObjectId(commentId),
+    } as any);
     return { message: 'Comment deleted successfully' };
   }
 

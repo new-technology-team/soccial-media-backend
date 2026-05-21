@@ -68,14 +68,17 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
-  async update(userId: number, data: Partial<{
-    fullName: string;
-    avatarUrl: string;
-    dateOfBirth: Date;
-    sex: number;
-    password: string;
-    phone: string;
-  }>): Promise<User> {
+  async update(
+    userId: number,
+    data: Partial<{
+      fullName: string;
+      avatarUrl: string;
+      dateOfBirth: Date;
+      sex: number;
+      password: string;
+      phone: string;
+    }>,
+  ): Promise<User> {
     const user = await this.findOne(userId);
     if (!user) {
       throw new BadRequestException('User not found');
@@ -91,13 +94,16 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
-  async updateSettings(userId: number, data: Partial<{
-    privacyLastSeen: boolean;
-    privacyProfilePhoto: boolean;
-    allowFriendRequests: boolean;
-    notificationMessages: boolean;
-    notificationCalls: boolean;
-  }>): Promise<User> {
+  async updateSettings(
+    userId: number,
+    data: Partial<{
+      privacyLastSeen: boolean;
+      privacyProfilePhoto: boolean;
+      allowFriendRequests: boolean;
+      notificationMessages: boolean;
+      notificationCalls: boolean;
+    }>,
+  ): Promise<User> {
     const user = await this.findOne(userId);
     if (!user) {
       throw new BadRequestException('User not found');

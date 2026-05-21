@@ -34,7 +34,11 @@ export class User {
   @Column({ type: 'enum', enum: ['ADMIN', 'USER'], default: 'USER' })
   role: string;
 
-  @Column({ type: 'enum', enum: ['ACTIVE', 'BLOCKED', 'RESTRICTED', 'HIDDEN'], default: 'ACTIVE' })
+  @Column({
+    type: 'enum',
+    enum: ['ACTIVE', 'BLOCKED', 'RESTRICTED', 'HIDDEN'],
+    default: 'ACTIVE',
+  })
   status: string;
 
   @Column({ default: true })

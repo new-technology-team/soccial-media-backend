@@ -1,29 +1,37 @@
 import {
-  Inject,              // ← thêm Inject vào đây
+  Inject, // ← thêm Inject vào đây
   Injectable,
   InternalServerErrorException,
   Logger,
   OnModuleInit,
-} from "@nestjs/common";
+} from '@nestjs/common';
 import { GEMINI_CHAT_MODEL, GEMINI_EMBEDDINGS } from './ai.provider';
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { ConfigService } from "@nestjs/config";
-import * as fs from "fs";
-import * as path from "path";
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ChatGoogleGenerativeAI,
   GoogleGenerativeAIEmbeddings,
-} from "@langchain/google-genai";
-import { Chroma } from "@langchain/community/vectorstores/chroma";
-import { Document } from "@langchain/core/documents";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { RunnableSequence } from "@langchain/core/runnables";
-import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
-import { GEMINI_MODEL, MAX_HISTORY_TURNS, ZCHAT_SYSTEM_PROMPT } from "./ai.constants";
-import { AiChatDto, ChatHistoryEntryDto } from "./dto/ai-chat.dto";
-import { AiMessage as AiMessageEntity } from "./ai-message.entity";
+} from '@langchain/google-genai';
+import { Chroma } from '@langchain/community/vectorstores/chroma';
+import { Document } from '@langchain/core/documents';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { StringOutputParser } from '@langchain/core/output_parsers';
+import { RunnableSequence } from '@langchain/core/runnables';
+import {
+  HumanMessage,
+  SystemMessage,
+  AIMessage,
+} from '@langchain/core/messages';
+import {
+  GEMINI_MODEL,
+  MAX_HISTORY_TURNS,
+  ZCHAT_SYSTEM_PROMPT,
+} from './ai.constants';
+import { AiChatDto, ChatHistoryEntryDto } from './dto/ai-chat.dto';
+import { AiMessage as AiMessageEntity } from './ai-message.entity';
 
 interface KnowledgeEntry {
   id?: string;
@@ -43,7 +51,7 @@ export class AiService implements OnModuleInit {
 
   constructor(
     private readonly config: ConfigService,
-    @InjectRepository(AiMessageEntity, "mongodb")
+    @InjectRepository(AiMessageEntity, 'mongodb')
     private readonly aiMessageRepo: Repository<AiMessageEntity>,
 
     // ✅ Inject từ provider thay vì tự khởi tạo
@@ -52,15 +60,12 @@ export class AiService implements OnModuleInit {
 
     @Inject(GEMINI_EMBEDDINGS)
     private readonly embeddings: GoogleGenerativeAIEmbeddings,
-  ) {
-
-
-  }
+  ) {}
 
   async onModuleInit() {
-    if (!this.config.get<string>("GEMINI_API_KEY")) {
+    if (!this.config.get<string>('GEMINI_API_KEY')) {
       this.logger.warn(
-        "GEMINI_API_KEY chưa được cấu hình. Bỏ qua khởi tạo Chroma/RAG.",
+        'GEMINI_API_KEY chưa được cấu hình. Bỏ qua khởi tạo Chroma/RAG.',
       );
       this.vectorStore = null;
       this.qnaChain = null;
@@ -69,17 +74,17 @@ export class AiService implements OnModuleInit {
     }
 
     const chromaUrl =
-      this.config.get<string>("CHROMA_URL") || "http://localhost:8000";
+      this.config.get<string>('CHROMA_URL') || 'http://localhost:8000';
     this.logger.log(`Khởi tạo Chroma Vector Store tại ${chromaUrl}...`);
 
     try {
       this.vectorStore = new Chroma(this.embeddings, {
-        collectionName: "app_docs",
+        collectionName: 'app_docs',
         url: chromaUrl,
       });
 
       // Kiểm tra kết nối ChromaDB bằng cách thực hiện một query nhỏ
-      await this.vectorStore.similaritySearch("test", 1);
+      await this.vectorStore.similaritySearch('test', 1);
 
       // Seed kiến thức nếu DB trống
       await this.seedKnowledgeBase();
@@ -87,11 +92,12 @@ export class AiService implements OnModuleInit {
       this.setupRagChain();
       this.ragReady = true;
       this.logger.log(
-        "✅ Chroma Vector Store & RAG Chain khởi tạo thành công.",
+        '✅ Chroma Vector Store & RAG Chain khởi tạo thành công.',
       );
     } catch (e) {
       this.logger.warn(
-        `⚠️  ChromaDB chưa sẵn sàng (${chromaUrl}). AI sẽ dùng chế độ Direct Chat (không RAG). Lỗi: ${e instanceof Error ? e.message : String(e)
+        `⚠️  ChromaDB chưa sẵn sàng (${chromaUrl}). AI sẽ dùng chế độ Direct Chat (không RAG). Lỗi: ${
+          e instanceof Error ? e.message : String(e)
         }`,
       );
       this.vectorStore = null;
@@ -108,114 +114,114 @@ export class AiService implements OnModuleInit {
     const q = question.toLowerCase();
 
     const categoryMap: Record<string, string[]> = {
-      "Nhắn tin": [
-        "tin nhắn",
-        "nhắn tin",
-        "chat",
-        "gửi",
-        "thu hồi",
-        "ghim",
-        "chuyển tiếp",
-        "sticker",
-        "emoji",
-        "hình ảnh",
-        "video",
-        "ảnh",
-        "đính kèm",
-        "file",
-        "gọi thoại",
-        "gọi video",
-        "voice call",
-        "video call",
-        "gọi điện",
-        "nhóm",
-        "group",
-        "tạo nhóm",
-        "thành viên",
-        "rời nhóm",
-        "forward",
-        "unsend",
-        "recall",
-        "pin",
-        "media",
+      'Nhắn tin': [
+        'tin nhắn',
+        'nhắn tin',
+        'chat',
+        'gửi',
+        'thu hồi',
+        'ghim',
+        'chuyển tiếp',
+        'sticker',
+        'emoji',
+        'hình ảnh',
+        'video',
+        'ảnh',
+        'đính kèm',
+        'file',
+        'gọi thoại',
+        'gọi video',
+        'voice call',
+        'video call',
+        'gọi điện',
+        'nhóm',
+        'group',
+        'tạo nhóm',
+        'thành viên',
+        'rời nhóm',
+        'forward',
+        'unsend',
+        'recall',
+        'pin',
+        'media',
       ],
-      "Bạn bè": [
-        "bạn bè",
-        "kết bạn",
-        "lời mời",
-        "thêm bạn",
-        "xóa bạn",
-        "chặn",
-        "block",
-        "danh sách bạn",
-        "friend",
-        "add friend",
-        "chấp nhận",
-        "từ chối",
-        "friend request",
+      'Bạn bè': [
+        'bạn bè',
+        'kết bạn',
+        'lời mời',
+        'thêm bạn',
+        'xóa bạn',
+        'chặn',
+        'block',
+        'danh sách bạn',
+        'friend',
+        'add friend',
+        'chấp nhận',
+        'từ chối',
+        'friend request',
       ],
-      "Mạng xã hội": [
-        "bài đăng",
-        "đăng bài",
-        "feed",
-        "bảng tin",
-        "bình luận",
-        "comment",
-        "reaction",
-        "like",
-        "tim",
-        "thả tim",
-        "quyền riêng tư",
-        "privacy",
-        "public",
-        "private",
-        "post",
-        "trạng thái",
-        "status",
+      'Mạng xã hội': [
+        'bài đăng',
+        'đăng bài',
+        'feed',
+        'bảng tin',
+        'bình luận',
+        'comment',
+        'reaction',
+        'like',
+        'tim',
+        'thả tim',
+        'quyền riêng tư',
+        'privacy',
+        'public',
+        'private',
+        'post',
+        'trạng thái',
+        'status',
       ],
-      "Tài khoản": [
-        "đăng ký",
-        "đăng nhập",
-        "mật khẩu",
-        "tài khoản",
-        "hồ sơ",
-        "avatar",
-        "ảnh đại diện",
-        "otp",
-        "xác thực",
-        "profile",
-        "login",
-        "register",
-        "sign up",
-        "sign in",
-        "đổi mật khẩu",
-        "tên hiển thị",
-        "cập nhật thông tin",
+      'Tài khoản': [
+        'đăng ký',
+        'đăng nhập',
+        'mật khẩu',
+        'tài khoản',
+        'hồ sơ',
+        'avatar',
+        'ảnh đại diện',
+        'otp',
+        'xác thực',
+        'profile',
+        'login',
+        'register',
+        'sign up',
+        'sign in',
+        'đổi mật khẩu',
+        'tên hiển thị',
+        'cập nhật thông tin',
       ],
-      "Thông báo": [
-        "thông báo",
-        "notification",
-        "push",
-        "chuông",
-        "báo",
-        "nhận thông báo",
-        "tắt thông báo",
+      'Thông báo': [
+        'thông báo',
+        'notification',
+        'push',
+        'chuông',
+        'báo',
+        'nhận thông báo',
+        'tắt thông báo',
       ],
-      "Trí tuệ nhân tạo (AI)": [
-        "ai",
-        "trí tuệ nhân tạo",
-        "tóm tắt",
-        "phân tích",
-        "cảm xúc",
-        "sentiment",
-        "dịch",
-        "translate",
-        "phiên dịch",
-        "gợi ý",
-        "smart reply",
-        "trả lời nhanh",
-        "tự động"
-      ]
+      'Trí tuệ nhân tạo (AI)': [
+        'ai',
+        'trí tuệ nhân tạo',
+        'tóm tắt',
+        'phân tích',
+        'cảm xúc',
+        'sentiment',
+        'dịch',
+        'translate',
+        'phiên dịch',
+        'gợi ý',
+        'smart reply',
+        'trả lời nhanh',
+        'tự động',
+      ],
     };
 
     // Đếm số keyword khớp cho từng category → chọn category có nhiều nhất
@@ -261,9 +267,9 @@ export class AiService implements OnModuleInit {
         context: async (input: { question: string; history: string }) => {
           try {
             const docs = await this.retrieveWithFilter(input.question);
-            return docs.map((d) => d.pageContent).join("\n\n");
+            return docs.map((d) => d.pageContent).join('\n\n');
           } catch {
-            return "";
+            return '';
           }
         },
         question: (input: { question: string; history: string }) =>
@@ -335,15 +341,15 @@ export class AiService implements OnModuleInit {
       const count = await this.getCollectionCount();
       if (count === 0) {
         this.logger.log(
-          "ChromaDB đang trống. Tiến hành seed dữ liệu từ knowledge.json...",
+          'ChromaDB đang trống. Tiến hành seed dữ liệu từ knowledge.json...',
         );
         const filePath = path.join(
           process.cwd(),
-          "src",
-          "module",
-          "ai",
-          "data",
-          "knowledge.json",
+          'src',
+          'module',
+          'ai',
+          'data',
+          'knowledge.json',
         );
 
         if (!fs.existsSync(filePath)) {
@@ -354,7 +360,7 @@ export class AiService implements OnModuleInit {
         }
 
         const data: KnowledgeEntry[] = JSON.parse(
-          fs.readFileSync(filePath, "utf8"),
+          fs.readFileSync(filePath, 'utf8'),
         );
 
         // ✅ Embed đủ 5 field thay vì chỉ 3 field như trước
@@ -362,19 +368,19 @@ export class AiService implements OnModuleInit {
           const parts = [
             `${item.category} - ${item.feature}`,
             item.description,
-            item.howTo ? `Cách thực hiện: ${item.howTo}` : "",
+            item.howTo ? `Cách thực hiện: ${item.howTo}` : '',
             item.faq?.length
-              ? `Câu hỏi thường gặp: ${item.faq.join(". ")}`
-              : "",
-            item.keywords?.length ? `Từ khóa: ${item.keywords.join(", ")}` : "",
+              ? `Câu hỏi thường gặp: ${item.faq.join('. ')}`
+              : '',
+            item.keywords?.length ? `Từ khóa: ${item.keywords.join(', ')}` : '',
           ];
-          return parts.filter(Boolean).join("\n");
+          return parts.filter(Boolean).join('\n');
         });
 
         const metadatas = data.map((item) => ({
-          id: item.id ?? "",
-          category: item.category ?? "",
-          feature: item.feature ?? "",
+          id: item.id ?? '',
+          category: item.category ?? '',
+          feature: item.feature ?? '',
         }));
 
         await this.ingestKnowledgeBase(texts, metadatas);
@@ -383,7 +389,7 @@ export class AiService implements OnModuleInit {
         this.logger.log(`ChromaDB đã có ${count} docs. Bỏ qua seed.`);
       }
     } catch (error) {
-      this.logger.error("Lỗi khi seed ChromaDB:", error);
+      this.logger.error('Lỗi khi seed ChromaDB:', error);
     }
   }
 
@@ -394,18 +400,18 @@ export class AiService implements OnModuleInit {
       try {
         return await store.collection.count();
       } catch {
-        this.logger.debug("getCollectionCount: cách 1 thất bại, thử cách 2");
+        this.logger.debug('getCollectionCount: cách 1 thất bại, thử cách 2');
       }
     }
 
     if (store._client?.getCollection) {
       try {
         const col = await store._client.getCollection({
-          name: store.collectionName ?? "app_docs",
+          name: store.collectionName ?? 'app_docs',
         });
         return await col.count();
       } catch {
-        this.logger.debug("getCollectionCount: cách 2 thất bại, thử cách 3");
+        this.logger.debug('getCollectionCount: cách 2 thất bại, thử cách 3');
       }
     }
 
@@ -414,12 +420,12 @@ export class AiService implements OnModuleInit {
         const peeked = await store.collection.peek({ limit: 1 });
         return peeked?.ids?.length ?? 0;
       } catch {
-        this.logger.debug("getCollectionCount: cách 3 thất bại, mặc định seed");
+        this.logger.debug('getCollectionCount: cách 3 thất bại, mặc định seed');
       }
     }
 
     this.logger.warn(
-      "Không lấy được collection count, tiến hành seed để an toàn",
+      'Không lấy được collection count, tiến hành seed để an toàn',
     );
     return 0;
   }
@@ -430,7 +436,7 @@ export class AiService implements OnModuleInit {
   async getHistory(userId: number) {
     const messages = await this.aiMessageRepo.find({
       where: { userId },
-      order: { createdAt: "ASC" },
+      order: { createdAt: 'ASC' },
     });
     return messages.map((msg) => ({
       role: msg.role,
@@ -446,17 +452,17 @@ export class AiService implements OnModuleInit {
    */
   async chat(dto: AiChatDto, userId: number): Promise<{ reply: string }> {
     const apiKey =
-      this.config.get<string>("GEMINI_API_KEY") || "missing-gemini-api-key";
+      this.config.get<string>('GEMINI_API_KEY') || 'missing-gemini-api-key';
     if (!apiKey) {
       throw new InternalServerErrorException(
-        "GEMINI_API_KEY chưa được cấu hình trên server.",
+        'GEMINI_API_KEY chưa được cấu hình trên server.',
       );
     }
 
     // 1. Lấy lịch sử trước- Lúc này db chưa có tin nhắn hiện tại
     const historyDocs = await this.aiMessageRepo.find({
       where: { userId },
-      order: { createdAt: "ASC" },
+      order: { createdAt: 'ASC' },
       take: MAX_HISTORY_TURNS * 2,
     });
 
@@ -469,15 +475,15 @@ export class AiService implements OnModuleInit {
     // 2. Lưu tin nhắn của user vào DB sau khi đã lấy History (để tránh lấy luôn tin nhắn hiện tại vào history)
     await this.aiMessageRepo.save({
       userId,
-      role: "user",
+      role: 'user',
       text: dto.message,
     });
 
-    let reply = "";
+    let reply = '';
 
-    if (apiKey === "missing-gemini-api-key") {
+    if (apiKey === 'missing-gemini-api-key') {
       reply =
-        "AI đang chờ cấu hình GEMINI_API_KEY trên server. Bạn vẫn có thể tiếp tục dùng các chức năng khác.";
+        'AI đang chờ cấu hình GEMINI_API_KEY trên server. Bạn vẫn có thể tiếp tục dùng các chức năng khác.';
     }
 
     // --- Chế độ RAG (nếu ChromaDB sẵn sàng) ---
@@ -490,7 +496,7 @@ export class AiService implements OnModuleInit {
         });
       } catch (error) {
         this.logger.error(
-          "RAG Q&A lỗi, thử fallback sang Direct Chat:",
+          'RAG Q&A lỗi, thử fallback sang Direct Chat:',
           error instanceof Error ? error.message : error,
         );
         // Fallback sang direct chat nếu RAG lỗi giữa chừng
@@ -510,11 +516,11 @@ export class AiService implements OnModuleInit {
         reply = await chain.invoke(messages);
       } catch (error) {
         this.logger.error(
-          "Direct Chat lỗi:",
+          'Direct Chat lỗi:',
           error instanceof Error ? error.stack : error,
         );
         throw new InternalServerErrorException(
-          "Trợ lý AI tạm thời gặp sự cố. Vui lòng thử lại sau.",
+          'Trợ lý AI tạm thời gặp sự cố. Vui lòng thử lại sau.',
         );
       }
     }
@@ -522,7 +528,7 @@ export class AiService implements OnModuleInit {
     // 3. Lưu câu trả lời của AI vào DB
     await this.aiMessageRepo.save({
       userId,
-      role: "model",
+      role: 'model',
       text: reply,
     });
 
@@ -537,7 +543,7 @@ export class AiService implements OnModuleInit {
     metadatas?: Record<string, any>[],
   ): Promise<boolean> {
     if (!this.vectorStore) {
-      this.logger.warn("ChromaDB chưa sẵn sàng, không thể ingest tài liệu.");
+      this.logger.warn('ChromaDB chưa sẵn sàng, không thể ingest tài liệu.');
       return false;
     }
     try {
@@ -552,7 +558,7 @@ export class AiService implements OnModuleInit {
       this.logger.log(`Đã thêm ${docs.length} tài liệu vào ChromaDB`);
       return true;
     } catch (error) {
-      this.logger.error("Lỗi khi nạp dữ liệu vào ChromaDB", error);
+      this.logger.error('Lỗi khi nạp dữ liệu vào ChromaDB', error);
       return false;
     }
   }
@@ -563,8 +569,8 @@ export class AiService implements OnModuleInit {
   private formatHistory(history: ChatHistoryEntryDto[]): string {
     const sliced = history.slice(-MAX_HISTORY_TURNS * 2);
     return sliced
-      .map((e) => `${e.role === "user" ? "User" : "AI"}: ${e.text}`)
-      .join("\n");
+      .map((e) => `${e.role === 'user' ? 'User' : 'AI'}: ${e.text}`)
+      .join('\n');
   }
 
   /**
@@ -573,7 +579,7 @@ export class AiService implements OnModuleInit {
   private buildHistoryMessages(history: ChatHistoryEntryDto[]) {
     const sliced = history.slice(-MAX_HISTORY_TURNS * 2);
     return sliced.map((entry) => {
-      return entry.role === "user"
+      return entry.role === 'user'
         ? new HumanMessage(entry.text)
         : new AIMessage(entry.text);
     });

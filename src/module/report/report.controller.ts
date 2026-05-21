@@ -8,12 +8,16 @@ export class ReportController {
 
   @Post('reports')
   @UseGuards(JwtAuthGuard)
-  create(@Body() body: {
-    targetType: string;
-    targetId: string | number;
-    reason: string;
-    details?: string;
-  }, @Req() req: any) {
+  create(
+    @Body()
+    body: {
+      targetType: string;
+      targetId: string | number;
+      reason: string;
+      details?: string;
+    },
+    @Req() req: any,
+  ) {
     return this.reportService.create({
       userId: req.user.sub,
       targetType: body.targetType,
