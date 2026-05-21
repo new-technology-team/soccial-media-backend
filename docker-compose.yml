@@ -12,6 +12,24 @@ services:
       - mariadb_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  mongodb:
+    image: mongo:7
+    container_name: zalo_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: zalo_chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+
   backend:
     build: .
     container_name: zalo_backend
@@ -20,8 +38,14 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    environment:
+      - CHROMA_URL=http://chromadb:8000
     depends_on:
       - mariadb
+      - mongodb
+      - chromadb
 
 volumes:
   mariadb_data:
+  mongodb_data:
+  chromadb_data:

@@ -1,0 +1,49 @@
+﻿import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Notification } from './notification.entity';
+
+@Injectable()
+export class NotificationService {
+  constructor(
+    @InjectRepository(Notification, 'mongodb')
+    private readonly notifRepo: Repository<Notification>,
+  ) {}
+
+  async create(data: { userId: number; title: string; content: string; link?: string }) {
+    const notif = this.notifRepo.create({
+      userId: String(data.userId),
+      title: data.title,
+      content: data.content,
+      link: data.link || '',
+      createdAt: new Date(),
+    });
+    return this.notifRepo.save(notif);
+  }
+
+  async findByUser(userId: number, limit = 50) {
+    return this.notifRepo.find({
+      where: { userId: String(userId) },
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async markRead(id: string) {
+    await this.notifRepo.update({ _id: this.toObjectId(id) } as any, { isRead: true } as any);
+    return { message: 'Notification marked as read' };
+  }
+
+  async markAllRead(userId: number) {
+    const notifications = await this.notifRepo.find({
+      where: { userId: String(userId), isRead: false },
+    });
+    await Promise.all(notifications.map(n => this.notifRepo.update({ _id: n._id } as any, { isRead: true } as any)));
+    return { message: 'All notifications marked as read' };
+  }
+
+  private toObjectId(id: string): any {
+    const { Types } = require('mongodb');
+    return Types.ObjectId.createFromHexString(id);
+  }
+}

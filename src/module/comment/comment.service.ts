@@ -1,0 +1,148 @@
+﻿import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Comment } from './comment.entity';
+import { UserService } from '../user/user.service';
+import { PostService } from '../post/post.service';
+import { emitToConversation } from '../../common/socket/chat-socket';
+
+@Injectable()
+export class CommentService {
+  constructor(
+    @InjectRepository(Comment, 'mongodb')
+    private readonly commentsRepository: Repository<Comment>,
+    private readonly userService: UserService,
+    private readonly postService: PostService,
+  ) {}
+
+  private toResponse(comment: Comment, viewerId?: number) {
+    const viewerReact = viewerId
+      ? (comment.reacts || []).find(r => r.userId === viewerId)
+      : null;
+
+    return {
+      id: String(comment._id),
+      postId: comment.postId,
+      parentId: comment.parentId || null,
+      content: comment.content,
+      fileUrl: comment.fileUrl,
+      createdAt: comment.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      userId: comment.owner?.userId,
+      authorName: comment.owner?.displayName || 'Người dùng',
+      authorAvatar: comment.owner?.avatarUrl,
+      owner: comment.owner,
+      reactionCount: (comment.reacts || []).length,
+      viewerReaction: viewerReact?.type || null,
+      replyCount: 0,
+    };
+  }
+
+  async create(postId: string, content: string, parentId: string | null, userId: number) {
+    const user = await this.userService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const comment = this.commentsRepository.create({
+      postId,
+      content,
+      parentId: parentId || '',
+      fileUrl: '',
+      createdAt: new Date(),
+      owner: {
+        userId: user.userId,
+        displayName: user.fullName,
+        avatarUrl: user.avatarUrl,
+      },
+      reacts: [],
+    });
+
+    const saved = await this.commentsRepository.save(comment);
+
+    // Increment post comment count
+    try {
+      await this.postService.incrementCommentCount(postId);
+    } catch { /* ignore */ }
+
+    // Emit realtime event
+    emitToConversation(`post-${postId}`, 'comment:new', this.toResponse(saved, userId));
+    emitToConversation('global-feed', 'comment:new', this.toResponse(saved, userId));
+
+    return { comment: this.toResponse(saved, userId) };
+  }
+
+  async findByPost(postId: string, viewerId?: number) {
+    const comments = await this.commentsRepository.find({
+      where: { postId, parentId: { $in: ['', null] } as any },
+      order: { createdAt: 'ASC' },
+    });
+
+    const replies = await this.commentsRepository.find({
+      where: { postId, parentId: { $ne: '' } as any },
+      order: { createdAt: 'ASC' },
+    });
+
+    const commentMap = new Map<string, any[]>();
+    for (const reply of replies) {
+      const parentKey = reply.parentId || String(reply._id);
+      if (!commentMap.has(parentKey)) commentMap.set(parentKey, []);
+      commentMap.get(parentKey)!.push(this.toResponse(reply, viewerId));
+    }
+
+    return {
+      comments: comments.map(c => ({
+        ...this.toResponse(c, viewerId),
+        replyCount: commentMap.get(String(c._id))?.length || 0,
+        replies: commentMap.get(String(c._id)) || [],
+      })),
+      total: comments.length,
+    };
+  }
+
+  async react(commentId: string, userId: number, type: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    comment.reacts = (comment.reacts || []).filter(r => r.userId !== userId);
+    comment.reacts.push({
+      userId: user.userId,
+      displayName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      type,
+      createdAt: new Date(),
+    });
+
+    const saved = await this.commentsRepository.save(comment);
+    return { comment: this.toResponse(saved, userId) };
+  }
+
+  async unreact(commentId: string, userId: number) {
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    comment.reacts = (comment.reacts || []).filter(r => r.userId !== userId);
+    const saved = await this.commentsRepository.save(comment);
+    return { comment: this.toResponse(saved, userId) };
+  }
+
+  async delete(commentId: string, userId: number) {
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (comment.owner?.userId !== userId) throw new ForbiddenException('Not authorized');
+
+    await this.commentsRepository.delete({ _id: this.toObjectId(commentId) } as any);
+    return { message: 'Comment deleted successfully' };
+  }
+
+  private toObjectId(id: string): any {
+    const { Types } = require('mongodb');
+    return Types.ObjectId.createFromHexString(id);
+  }
+}
