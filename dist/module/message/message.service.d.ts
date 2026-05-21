@@ -12,6 +12,9 @@ export declare class MessageService {
     constructor(messageRepository: Repository<Message>, conversationService: ConversationService, userService: UserService, notificationService: NotificationService);
     private mapMessage;
     private sanitizeFileName;
+    private getS3Config;
+    private getS3Client;
+    private buildS3Url;
     listMessages(actorId: number, conversationId: string, limit?: number, beforeId?: string): Promise<{
         messages: {
             id: string;

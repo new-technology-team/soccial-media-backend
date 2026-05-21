@@ -47,6 +47,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageService = void 0;
 const common_1 = require("@nestjs/common");
+const client_s3_1 = require("@aws-sdk/client-s3");
+const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const typeorm_1 = require("@nestjs/typeorm");
 const mongodb_1 = require("mongodb");
 const typeorm_2 = require("typeorm");
@@ -63,7 +65,7 @@ let MessageService = class MessageService {
         this.conversationService = conversationService;
         this.userService = userService;
         this.notificationService = notificationService;
-        this.allowedMessageReactions = new Set(['smile', 'sad', 'like', 'love', 'wow', 'cry', 'angry']);
+        this.allowedMessageReactions = new Set(["smile", "sad", "like", "love", "wow", "cry", "angry"]);
     }
     mapMessage(row, viewerUserId, conversation) {
         const senderId = Number(row.senderId || 0);
@@ -72,7 +74,7 @@ let MessageService = class MessageService {
         const senderAvatar = row.senderAvatar || row.meta?.senderAvatar || senderMember?.avatarUrl || null;
         const reactions = (row.reactions || []).map((item) => ({
             userId: Number(item.userId),
-            reaction: String(item.type || item.reaction || 'like'),
+            reaction: String(item.type || item.reaction || "like"),
             createdAt: item.createdAt || null,
         }));
         const viewerReaction = reactions.find((item) => Number(item.userId) === Number(viewerUserId))?.reaction || null;
@@ -83,7 +85,7 @@ let MessageService = class MessageService {
             senderName,
             senderAvatar,
             type: row.type,
-            text: row.isRecalled ? 'Tin nhắn đã được thu hồi' : row.text || null,
+            text: row.isRecalled ? "Tin nhắn đã được thu hồi" : row.text || null,
             mediaUrl: row.isRecalled ? null : row.mediaUrl || null,
             fileName: row.fileName || null,
             mimeType: row.mimeType || null,
@@ -98,16 +100,37 @@ let MessageService = class MessageService {
         };
     }
     sanitizeFileName(name) {
-        return String(name || 'file')
-            .replace(/[^a-zA-Z0-9._-]/g, '-')
-            .replace(/-+/g, '-')
+        return String(name || "file")
+            .replace(/[^a-zA-Z0-9._-]/g, "-")
+            .replace(/-+/g, "-")
             .slice(0, 120);
+    }
+    getS3Config() {
+        const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || "";
+        const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "ap-southeast-1";
+        return { bucket, region };
+    }
+    getS3Client() {
+        const { region } = this.getS3Config();
+        return new client_s3_1.S3Client({
+            region,
+            credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+                ? {
+                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                }
+                : undefined,
+        });
+    }
+    buildS3Url(key) {
+        const { bucket, region } = this.getS3Config();
+        return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
     }
     async listMessages(actorId, conversationId, limit = 30, beforeId) {
         const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
         const rows = await this.messageRepository.find({
             where: { conversationId },
-            order: { createdAt: 'DESC' },
+            order: { createdAt: "DESC" },
             take: Math.min(Math.max(Number(limit || 30), 1), 100),
         });
         const visible = rows.filter((item) => !(item.deletedForUserIds || []).some((uid) => Number(uid) === Number(actorId)));
@@ -118,9 +141,9 @@ let MessageService = class MessageService {
     }
     async sendMessage(actorId, conversationId, body) {
         const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
-        const type = String(body?.type || 'text');
-        if (type === 'text' && !String(body?.text || '').trim()) {
-            throw new common_1.BadRequestException('Tin nhắn văn bản không được để trống');
+        const type = String(body?.type || "text");
+        if (type === "text" && !String(body?.text || "").trim()) {
+            throw new common_1.BadRequestException("Tin nhắn văn bản không được để trống");
         }
         const now = new Date();
         const created = await this.messageRepository.save(this.messageRepository.create({
@@ -150,24 +173,24 @@ let MessageService = class MessageService {
             mediaUrl: payload.mediaUrl,
             createdAt: payload.createdAt,
         });
-        (0, chat_socket_1.emitToConversation)(conversationId, 'message:new', payload);
+        (0, chat_socket_1.emitToConversation)(conversationId, "message:new", payload);
         for (const member of conversation.members || []) {
             if (Number(member.userId) === Number(actorId))
                 continue;
             await this.notificationService.createNotification({
                 userId: member.userId,
-                type: 'message',
-                title: 'Tin nhắn mới',
-                body: payload.text || 'Bạn nhận được một tin nhắn đa phương tiện',
+                type: "message",
+                title: "Tin nhắn mới",
+                body: payload.text || "Bạn nhận được một tin nhắn đa phương tiện",
                 meta: { conversationId, messageId: payload.id },
             });
         }
         return { message: payload };
     }
     async searchMessages(actorId, q) {
-        const keyword = String(q || '').trim().toLowerCase();
+        const keyword = String(q || "").trim().toLowerCase();
         if (!keyword) {
-            throw new common_1.BadRequestException('Thiếu từ khóa tìm kiếm');
+            throw new common_1.BadRequestException("Thiếu từ khóa tìm kiếm");
         }
         const rows = await this.messageRepository.find();
         const conversationCache = new Map();
@@ -187,7 +210,7 @@ let MessageService = class MessageService {
                 continue;
             if ((item.deletedForUserIds || []).some((uid) => Number(uid) === Number(actorId)))
                 continue;
-            if (!String(item.text || '').toLowerCase().includes(keyword))
+            if (!String(item.text || "").toLowerCase().includes(keyword))
                 continue;
             matched.push(this.mapMessage(item, actorId, conversation));
         }
@@ -196,12 +219,12 @@ let MessageService = class MessageService {
     async reactMessage(actorId, messageId, type) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
-        const reactionType = String(type || 'like');
+        const reactionType = String(type || "like");
         if (!this.allowedMessageReactions.has(reactionType)) {
-            throw new common_1.BadRequestException('Cảm xúc tin nhắn không hợp lệ');
+            throw new common_1.BadRequestException("Cảm xúc tin nhắn không hợp lệ");
         }
         const reactions = (message.reactions || []).filter((item) => item.userId !== actorId);
         reactions.push({ userId: actorId, type: reactionType, createdAt: new Date() });
@@ -209,53 +232,53 @@ let MessageService = class MessageService {
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
         const payload = this.mapMessage(saved, actorId, conversation);
-        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
+        (0, chat_socket_1.emitToConversation)(message.conversationId, "message:reaction", {
             conversationId: message.conversationId,
             message: payload,
         });
-        return { message: 'Đã cập nhật tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
+        return { message: "Đã cập nhật tương tác tin nhắn", chatMessage: this.mapMessage(saved, actorId) };
     }
     async removeReaction(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         message.reactions = (message.reactions || []).filter((item) => item.userId !== actorId);
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
         const payload = this.mapMessage(saved, actorId, conversation);
-        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:reaction', {
+        (0, chat_socket_1.emitToConversation)(message.conversationId, "message:reaction", {
             conversationId: message.conversationId,
             message: payload,
         });
-        return { message: 'Đã gỡ tương tác tin nhắn', chatMessage: this.mapMessage(saved, actorId) };
+        return { message: "Đã gỡ tương tác tin nhắn", chatMessage: this.mapMessage(saved, actorId) };
     }
     async recallMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
         if (Number(message.senderId) !== Number(actorId)) {
-            throw new common_1.ForbiddenException('Bạn chỉ có thể thu hồi tin nhắn của mình');
+            throw new common_1.ForbiddenException("Bạn chỉ có thể thu hồi tin nhắn của mình");
         }
         message.isRecalled = true;
         message.updatedAt = new Date();
         const saved = await this.messageRepository.save(message);
         const payload = this.mapMessage(saved, actorId, conversation);
-        (0, chat_socket_1.emitToConversation)(message.conversationId, 'message:updated', {
+        (0, chat_socket_1.emitToConversation)(message.conversationId, "message:updated", {
             conversationId: message.conversationId,
             message: payload,
         });
-        return { message: 'Đã thu hồi tin nhắn', chatMessage: payload };
+        return { message: "Đã thu hồi tin nhắn", chatMessage: payload };
     }
     async forwardMessage(actorId, messageId, targetConversationId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message || message.isRecalled) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
-        const sourceConversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
+        await this.conversationService.ensureMembership(message.conversationId, actorId);
         const targetConversation = await this.conversationService.ensureMembership(targetConversationId, actorId);
         const now = new Date();
         const forwarded = await this.messageRepository.save(this.messageRepository.create({
@@ -289,28 +312,28 @@ let MessageService = class MessageService {
             mediaUrl: payload.mediaUrl,
             createdAt: payload.createdAt,
         });
-        (0, chat_socket_1.emitToConversation)(targetConversationId, 'message:new', payload);
+        (0, chat_socket_1.emitToConversation)(targetConversationId, "message:new", payload);
         for (const member of targetConversation.members || []) {
             if (Number(member.userId) === Number(actorId))
                 continue;
             await this.notificationService.createNotification({
                 userId: member.userId,
-                type: 'message',
-                title: 'Tin nhắn được chuyển tiếp',
-                body: payload.text || 'Bạn nhận được một tin nhắn đa phương tiện',
+                type: "message",
+                title: "Tin nhắn được chuyển tiếp",
+                body: payload.text || "Bạn nhận được một tin nhắn đa phương tiện",
                 meta: { conversationId: targetConversationId, messageId: payload.id },
             });
         }
-        return { message: 'Đã chuyển tiếp tin nhắn', chatMessage: payload };
+        return { message: "Đã chuyển tiếp tin nhắn", chatMessage: payload };
     }
     async deleteMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         await this.conversationService.ensureMembership(message.conversationId, actorId);
         if (Number(message.senderId) !== Number(actorId)) {
-            throw new common_1.ForbiddenException('Bạn chỉ có thể xóa tin nhắn của mình');
+            throw new common_1.ForbiddenException("Bạn chỉ có thể xóa tin nhắn của mình");
         }
         const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
         if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
@@ -319,7 +342,7 @@ let MessageService = class MessageService {
         message.deletedForUserIds = deletedForUserIds;
         message.updatedAt = new Date();
         await this.messageRepository.save(message);
-        return { message: 'Đã xóa tin nhắn ở phía bạn' };
+        return { message: "Đã xóa tin nhắn ở phía bạn" };
     }
     async clearConversationMessages(actorId, conversationId) {
         await this.conversationService.ensureMembership(conversationId, actorId);
@@ -335,58 +358,94 @@ let MessageService = class MessageService {
                 await this.messageRepository.save(row);
             }
         }
-        return { message: 'Đã xóa đoạn chat ở phía bạn' };
+        return { message: "Đã xóa đoạn chat ở phía bạn" };
     }
     async pinMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         await this.conversationService.pinMessage(message.conversationId, actorId, messageId);
-        return { message: 'Đã ghim tin nhắn' };
+        return { message: "Đã ghim tin nhắn" };
     }
     async unpinMessage(actorId, messageId) {
         const message = await this.messageRepository.findOne({ where: { _id: new mongodb_1.ObjectId(messageId) } });
         if (!message) {
-            throw new common_1.NotFoundException('Không tìm thấy tin nhắn');
+            throw new common_1.NotFoundException("Không tìm thấy tin nhắn");
         }
         await this.conversationService.unpinMessage(message.conversationId, actorId, messageId);
-        return { message: 'Đã bỏ ghim tin nhắn' };
+        return { message: "Đã bỏ ghim tin nhắn" };
     }
     async getMessageUploadUrl(_actorId, _conversationId, body) {
-        const conversationId = String(_conversationId || 'general');
+        const conversationId = String(_conversationId || "general");
         const fileName = this.sanitizeFileName(body?.fileName || `file-${Date.now()}`);
         const outputName = `${Date.now()}-${fileName}`;
+        const { bucket } = this.getS3Config();
+        if (bucket) {
+            const key = `uploads/messages/${conversationId}/${outputName}`;
+            const command = new client_s3_1.PutObjectCommand({
+                Bucket: bucket,
+                Key: key,
+                ContentType: body?.contentType || "application/octet-stream",
+            });
+            return {
+                uploadUrl: await (0, s3_request_presigner_1.getSignedUrl)(this.getS3Client(), command, { expiresIn: 900 }),
+                fileUrl: this.buildS3Url(key),
+                expiresIn: 900,
+                note: "Đã tạo URL tải tệp lên Amazon S3.",
+            };
+        }
         const relative = `/uploads/messages/${conversationId}/${outputName}`;
         return {
             uploadUrl: relative,
             fileUrl: relative,
             expiresIn: 900,
-            note: 'Local upload URL ready.',
+            note: "Đã tạo URL tải tệp lên bộ nhớ cục bộ.",
         };
     }
     async uploadMessageBase64(_actorId, _conversationId, body) {
-        const conversationId = String(_conversationId || 'general');
+        const conversationId = String(_conversationId || "general");
         const fileName = this.sanitizeFileName(body?.fileName || `file-${Date.now()}.bin`);
-        const outputDir = path.join(process.cwd(), 'uploads', 'messages', conversationId);
-        await fs.mkdir(outputDir, { recursive: true });
         const outputName = `${Date.now()}-${fileName}`;
+        const base64 = String(body?.base64Data || "").replace(/^data:[^;]+;base64,/, "");
+        const buffer = Buffer.from(base64, "base64");
+        const contentType = body?.contentType || "application/octet-stream";
+        const { bucket } = this.getS3Config();
+        if (bucket) {
+            const key = `uploads/messages/${conversationId}/${outputName}`;
+            try {
+                await this.getS3Client().send(new client_s3_1.PutObjectCommand({
+                    Bucket: bucket,
+                    Key: key,
+                    Body: buffer,
+                    ContentType: contentType,
+                }));
+                return {
+                    fileUrl: this.buildS3Url(key),
+                    contentType,
+                    note: "Đã tải tệp lên Amazon S3.",
+                };
+            }
+            catch (error) {
+                console.warn("Không thể tải tệp tin nhắn lên S3, chuyển sang bộ nhớ cục bộ:", error instanceof Error ? error.message : error);
+            }
+        }
+        const outputDir = path.join(process.cwd(), "uploads", "messages", conversationId);
+        await fs.mkdir(outputDir, { recursive: true });
         const outputPath = path.join(outputDir, outputName);
-        const base64 = String(body?.base64Data || '').replace(/^data:[^;]+;base64,/, '');
-        const buffer = Buffer.from(base64, 'base64');
         await fs.writeFile(outputPath, buffer);
         const fileUrl = `/uploads/messages/${conversationId}/${outputName}`;
         return {
             fileUrl,
-            contentType: body?.contentType || 'application/octet-stream',
-            note: 'Uploaded to local storage.',
+            contentType,
+            note: "Đã tải tệp lên bộ nhớ cục bộ.",
         };
     }
 };
 exports.MessageService = MessageService;
 exports.MessageService = MessageService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(message_entity_1.Message, 'mongodb')),
+    __param(0, (0, typeorm_1.InjectRepository)(message_entity_1.Message, "mongodb")),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         conversation_service_1.ConversationService,
         user_service_1.UserService,
