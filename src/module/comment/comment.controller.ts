@@ -29,4 +29,10 @@ export class CommentController {
 	removeFeedCommentReaction(@CurrentUser() user: any, @Param('commentId') commentId: string) {
 		return this.commentService.removeCommentReaction(user.id, commentId);
 	}
+
+	@UseGuards(JwtAuthGuard)
+	@Delete('comments/:commentId')
+	deleteFeedComment(@CurrentUser() user: any, @Param('commentId') commentId: string) {
+		return this.commentService.deleteComment(user.id, commentId);
+	}
 }

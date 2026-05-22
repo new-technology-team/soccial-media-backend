@@ -10,6 +10,14 @@ import { CreatePostDto } from "./dto/create-post.dto";
 import { Post } from "./post.entity";
 import { User } from "../user/user.entity";
 import { Comment } from "../comment/comment.entity";
+import { NotificationService } from "../notification/notification.service";
+
+type AdminPostQuery = {
+    q?: string;
+    status?: string;
+    visibility?: string;
+    limit?: number;
+};
 
 @Injectable()
 export class PostService {
@@ -20,7 +28,14 @@ export class PostService {
         private readonly commentsRepository: Repository<Comment>,
         @InjectRepository(User, 'mariadb')
         private readonly usersRepository: Repository<User>,
+        private readonly notificationService: NotificationService,
     ) { }
+
+    private assertAdmin(actor: any) {
+        if (String(actor?.role || '').toLowerCase() !== 'admin') {
+            throw new ForbiddenException('Chỉ admin mới có quyền truy cập');
+        }
+    }
 
     private getS3Config() {
         const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || '';
@@ -177,6 +192,75 @@ export class PostService {
         return { post: await this.toFeedPost(row, viewerUserId) };
     }
 
+    async listAdminPosts(actor: any, query: AdminPostQuery = {}) {
+        this.assertAdmin(actor);
+
+        const normalizedQuery = String(query.q || '').trim().toLowerCase();
+        const normalizedStatus = String(query.status || '').trim().toLowerCase();
+        const normalizedVisibility = String(query.visibility || '').trim().toLowerCase();
+        const safeLimit = Math.min(Math.max(Number(query.limit || 200), 1), 500);
+
+        const rows = await this.postsRepository.find({ order: { createdAt: 'DESC' } });
+        const posts: any[] = [];
+
+        for (const row of rows as any[]) {
+            const post = await this.toFeedPost(row, actor?.id);
+            const matchesStatus = !normalizedStatus || String(post.status || '').toLowerCase() === normalizedStatus;
+            const matchesVisibility = !normalizedVisibility || String(post.visibility || '').toLowerCase() === normalizedVisibility;
+            const matchesQuery = !normalizedQuery ||
+                String(post.content || '').toLowerCase().includes(normalizedQuery) ||
+                String(post.authorName || '').toLowerCase().includes(normalizedQuery);
+
+            if (matchesStatus && matchesVisibility && matchesQuery) {
+                posts.push(post);
+            }
+
+            if (posts.length >= safeLimit) {
+                break;
+            }
+        }
+
+        return { posts };
+    }
+
+    async updateAdminPost(actor: any, postId: string, body: any) {
+        this.assertAdmin(actor);
+
+        const row = await this.getPostById(postId);
+        const nextContent = body?.content !== undefined ? String(body.content || '') : row.content || '';
+        const nextMedia = body?.mediaUrl !== undefined ? (body.mediaUrl || null) : row.mediaUrl || null;
+        const nextVisibility = body?.visibility ? String(body.visibility) : row.visibility || 'public';
+        const nextStatus = body?.status ? String(body.status) : row.status || 'published';
+
+        if (!nextContent.trim() && !nextMedia) {
+            throw new BadRequestException('Bai viet can co noi dung hoac media');
+        }
+
+        if (row.mediaUrl && row.mediaUrl !== nextMedia) {
+            await this.deleteMediaUrl(row.mediaUrl);
+        }
+
+        row.content = nextContent;
+        row.mediaUrl = nextMedia;
+        row.visibility = nextVisibility;
+        row.status = nextStatus;
+        row.updatedAt = new Date();
+        await this.postsRepository.save(row);
+
+        return { message: 'Đã cập nhật bài viết', post: await this.toFeedPost(row, actor?.id) };
+    }
+
+    async deleteAdminPost(actor: any, postId: string) {
+        this.assertAdmin(actor);
+
+        const row = await this.getPostById(postId);
+        row.status = 'deleted';
+        row.updatedAt = new Date();
+        await this.postsRepository.save(row);
+
+        return { message: 'Đã xóa bài viết', post: await this.toFeedPost(row, actor?.id) };
+    }
+
     async uploadPostBase64(actorId: number, body: { fileName: string; contentType: string; base64Data: string }) {
         if (!body?.base64Data) {
             throw new BadRequestException('Thieu du lieu anh hoac video');
@@ -226,6 +310,13 @@ export class PostService {
         await this.postsRepository.save(row);
     }
 
+    async decreaseCommentCount(postId: string) {
+        const row = await this.getPostById(postId);
+        row.commentCount = Math.max(0, Number(row.commentCount || 0) - 1);
+        row.updatedAt = new Date();
+        await this.postsRepository.save(row);
+    }
+
     async updateFeedPost(actorId: number, postId: string, body: any) {
         const row = await this.getPostById(postId);
         if (Number(row.authorId) !== Number(actorId)) {
@@ -268,7 +359,33 @@ export class PostService {
         row.reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        if (Number(row.authorId) !== Number(actorId)) {
+            const actor = await this.usersRepository.findOne({ where: { userId: actorId } });
+            await this.notificationService.createNotification({
+                userId: Number(row.authorId),
+                type: 'like',
+                title: `${actor?.displayName || 'Một người dùng'} đã thả cảm xúc bài viết`,
+                body: String(row.content || '').slice(0, 120) || 'Bài viết có media mới được tương tác.',
+                meta: { postId, actorId, reaction: type || 'like' },
+            });
+        }
         return { message: 'Da cap nhat tuong tac', post: await this.toFeedPost(row, actorId) };
+    }
+
+    async listPostReactions(postId: string) {
+        const row = await this.getPostById(postId);
+        const reactions: any[] = [];
+        for (const reaction of row.reactions || []) {
+            const actor = await this.usersRepository.findOne({ where: { userId: Number(reaction.userId) } });
+            reactions.push({
+                userId: Number(reaction.userId),
+                fullName: actor?.displayName || `Người dùng #${reaction.userId}`,
+                avatarUrl: actor?.avatarUrl || null,
+                reaction: reaction.type || 'like',
+                createdAt: reaction.createdAt || null,
+            });
+        }
+        return { reactions };
     }
 
     async removeReaction(actorId: number, postId: string) {

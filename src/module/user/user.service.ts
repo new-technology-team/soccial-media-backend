@@ -151,8 +151,8 @@ export class UserService {
             fullName: user.displayName,
             dateOfBirth: user.dateOfBirth || null,
             gender: user.sex ?? null,
-            role: user.role,
-            accountStatus: user.status,
+            role: String(user.role || '').toLowerCase(),
+            accountStatus: String(user.status || '').toLowerCase(),
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
         };

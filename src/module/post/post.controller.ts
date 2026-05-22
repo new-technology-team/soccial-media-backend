@@ -48,9 +48,32 @@ export class PostController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get('admin/posts')
+    listAdminPosts(@CurrentUser() user: any, @Query('q') q?: string, @Query('status') status?: string, @Query('visibility') visibility?: string, @Query('limit') limit?: string) {
+        return this.postService.listAdminPosts(user, { q, status, visibility, limit: Number(limit || 200) });
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('admin/posts/:postId')
+    updateAdminPost(@CurrentUser() user: any, @Param('postId') postId: string, @Body() body: any) {
+        return this.postService.updateAdminPost(user, postId, body);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('admin/posts/:postId')
+    deleteAdminPost(@CurrentUser() user: any, @Param('postId') postId: string) {
+        return this.postService.deleteAdminPost(user, postId);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post('posts/:postId/reaction')
     reactPost(@CurrentUser() user: any, @Param('postId') postId: string, @Body() body: { type: string }) {
         return this.postService.reactPost(user.id, postId, body?.type || 'like');
+    }
+
+    @Get('posts/:postId/reactions')
+    listReactions(@Param('postId') postId: string) {
+        return this.postService.listPostReactions(postId);
     }
 
     @UseGuards(JwtAuthGuard)
