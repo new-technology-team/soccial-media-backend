@@ -47,4 +47,14 @@ export class FriendshipController {
 	deleteFriend(@CurrentUser() user: any, @Param('userId') userId: string) {
 		return this.friendshipService.deleteFriend(user.id, Number(userId));
 	}
+
+	@Post('users/:userId/block')
+	blockUser(@CurrentUser() user: any, @Param('userId') userId: string) {
+		return this.friendshipService.blockUser(user.id, Number(userId));
+	}
+
+	@Delete('users/:userId/block')
+	unblockUser(@CurrentUser() user: any, @Param('userId') userId: string) {
+		return this.friendshipService.unblockUser(user.id, Number(userId));
+	}
 }

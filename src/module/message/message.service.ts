@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ObjectId } from "mongodb";
@@ -8,6 +8,7 @@ import { Message } from "./message.entity";
 import { ConversationService } from "../conversation/conversation.service";
 import { UserService } from "../user/user.service";
 import { NotificationService } from "../notification/notification.service";
+import { FriendshipService } from "../friendship/friendship.service";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { emitToConversation } from "../../common/socket/chat-socket";
@@ -22,12 +23,13 @@ export class MessageService {
 		private readonly conversationService: ConversationService,
 		private readonly userService: UserService,
 		private readonly notificationService: NotificationService,
+		private readonly friendshipService: FriendshipService,
 	) {}
 
 	private mapMessage(row: any, viewerUserId?: number, conversation?: any) {
 		const senderId = Number(row.senderId || 0);
 		const senderMember = (conversation?.members || []).find((item: any) => Number(item.userId) === senderId);
-		const senderName = row.senderName || row.meta?.senderName || senderMember?.fullName || `Người dùng #${senderId}`;
+		const senderName = senderMember?.nickname || row.senderName || row.meta?.senderName || senderMember?.fullName || `Người dùng #${senderId}`;
 		const senderAvatar = row.senderAvatar || row.meta?.senderAvatar || senderMember?.avatarUrl || null;
 		const reactions = (row.reactions || []).map((item: any) => ({
 			userId: Number(item.userId),
@@ -35,6 +37,20 @@ export class MessageService {
 			createdAt: item.createdAt || null,
 		}));
 		const viewerReaction = reactions.find((item: any) => Number(item.userId) === Number(viewerUserId))?.reaction || null;
+		const readBy = (row.readBy || []).map((item: any) => ({
+			userId: Number(item.userId),
+			at: item.at || item.readAt || null,
+		}));
+		const deliveredTo = (row.deliveredTo || []).map((item: any) => ({
+			userId: Number(item.userId),
+			at: item.at || item.deliveredAt || null,
+		}));
+		const recipientIds = (conversation?.members || [])
+			.map((item: any) => Number(item.userId))
+			.filter((id: number) => id > 0 && id !== senderId);
+		const seenCount = readBy.filter((item: any) => recipientIds.includes(Number(item.userId))).length;
+		const deliveredCount = deliveredTo.filter((item: any) => recipientIds.includes(Number(item.userId))).length;
+		const status = seenCount > 0 ? "seen" : deliveredCount > 0 ? "delivered" : "sent";
 
 		return {
 			id: String(row._id),
@@ -49,6 +65,10 @@ export class MessageService {
 			mimeType: row.mimeType || null,
 			fileSize: row.fileSize || null,
 			meta: row.meta || null,
+			links: Array.isArray(row.links) ? row.links : this.extractLinks(row.text),
+			status,
+			readBy,
+			deliveredTo,
 			reactionCount: reactions.length,
 			viewerReaction,
 			reactions,
@@ -56,6 +76,69 @@ export class MessageService {
 			updatedAt: row.updatedAt,
 			isDeleted: Boolean(row.isRecalled),
 		};
+	}
+
+	private extractLinks(value: unknown) {
+		const matches = String(value || "").match(/https?:\/\/[^\s<>()]+/gi) || [];
+		return [...new Set(matches.map((item) => item.replace(/[.,!?;:]+$/, "")))];
+	}
+
+	private hasLink(row: any) {
+		return (Array.isArray(row.links) && row.links.length > 0) || this.extractLinks(row.text).length > 0 || row.type === "link";
+	}
+
+	private isVisibleAfterHistoryClear(row: any, conversation: any, actorId: number) {
+		const member = (conversation?.members || []).find((item: any) => Number(item.userId) === Number(actorId));
+		if (!member?.deletedHistoryAt) return true;
+		const rowTime = new Date(row.createdAt).getTime();
+		const clearedTime = new Date(member.deletedHistoryAt).getTime();
+		return Number.isNaN(rowTime) || Number.isNaN(clearedTime) || rowTime > clearedTime;
+	}
+
+	private async markDelivered(rows: any[], conversation: any, actorId: number) {
+		const now = new Date();
+		for (const row of rows as any[]) {
+			if (Number(row.senderId) === Number(actorId)) continue;
+			const deliveredTo = Array.isArray(row.deliveredTo) ? [...row.deliveredTo] : [];
+			if (deliveredTo.some((item: any) => Number(item.userId) === Number(actorId))) continue;
+			deliveredTo.push({ userId: actorId, at: now });
+			row.deliveredTo = deliveredTo;
+			row.updatedAt = now;
+			await this.messageRepository.save(row);
+			emitToConversation(row.conversationId, "message:delivery", {
+				conversationId: row.conversationId,
+				messageId: String(row._id),
+				userId: actorId,
+				deliveredAt: now,
+			});
+		}
+	}
+
+	private matchesFilters(row: any, filters?: { senderId?: number; type?: string; sentDate?: string; q?: string }) {
+		if (filters?.senderId && Number(row.senderId) !== Number(filters.senderId)) return false;
+		if (filters?.q && !String(row.text || "").toLowerCase().includes(String(filters.q).trim().toLowerCase())) return false;
+		if (filters?.type) {
+			const wantedType = String(filters.type).toLowerCase();
+			if (wantedType === "link") {
+				if (!this.hasLink(row)) return false;
+			} else if (String(row.type || "text").toLowerCase() !== wantedType) {
+				return false;
+			}
+		}
+		if (filters?.sentDate) {
+			const actual = new Date(row.createdAt);
+			const expected = new Date(filters.sentDate);
+			if (Number.isNaN(actual.getTime()) || Number.isNaN(expected.getTime())) return false;
+			if (actual.toISOString().slice(0, 10) !== expected.toISOString().slice(0, 10)) return false;
+		}
+		return true;
+	}
+
+	private shouldNotifyMember(member: any) {
+		if (member.notificationsEnabled === false && !member.mutedUntil) return false;
+		if (!member.mutedUntil) return true;
+		const mutedUntil = new Date(member.mutedUntil).getTime();
+		return Number.isNaN(mutedUntil) || mutedUntil <= Date.now();
 	}
 
 	private sanitizeFileName(name: string) {
@@ -79,6 +162,7 @@ export class MessageService {
 				? {
 					accessKeyId: process.env.AWS_ACCESS_KEY_ID,
 					secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+					sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
 				}
 				: undefined,
 		});
@@ -89,29 +173,91 @@ export class MessageService {
 		return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 	}
 
-	async listMessages(actorId: number, conversationId: string, limit = 30, beforeId?: string) {
+	private extractS3Key(fileUrl: string | null | undefined) {
+		if (!fileUrl) return null;
+		const { bucket } = this.getS3Config();
+		if (!bucket) return null;
+
+		try {
+			const url = new URL(fileUrl);
+			if (url.hostname === `${bucket}.s3.amazonaws.com` || url.hostname.startsWith(`${bucket}.s3.`)) {
+				return decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+			}
+
+			const pathParts = url.pathname.replace(/^\/+/, "").split("/");
+			if (pathParts[0] === bucket) {
+				return decodeURIComponent(pathParts.slice(1).join("/"));
+			}
+		} catch {
+			return null;
+		}
+
+		return null;
+	}
+
+	private async deleteMediaUrl(fileUrl: string | null | undefined, ignoreMessageId?: string) {
+		if (!fileUrl) return;
+		const sharedRows = await this.messageRepository.find({ where: { mediaUrl: fileUrl } as any });
+		const isStillReferenced = (sharedRows as any[]).some((item) =>
+			String(item._id) !== String(ignoreMessageId || "") && !item.isRecalled,
+		);
+		if (isStillReferenced) return;
+
+		const key = this.extractS3Key(fileUrl);
+		const { bucket } = this.getS3Config();
+		if (key && bucket) {
+			await this.getS3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+			return;
+		}
+
+		if (fileUrl.startsWith("/uploads/")) {
+			const resolved = path.resolve(process.cwd(), fileUrl.replace(/^\/+/, ""));
+			const uploadsRoot = path.resolve(process.cwd(), "uploads");
+			if (resolved.startsWith(uploadsRoot)) {
+				await fs.unlink(resolved).catch(() => undefined);
+			}
+		}
+	}
+
+	async listMessages(
+		actorId: number,
+		conversationId: string,
+		limit = 30,
+		beforeId?: string,
+		filters?: { senderId?: number; type?: string; sentDate?: string; q?: string },
+	) {
 		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
 		const rows = await this.messageRepository.find({
 			where: { conversationId } as any,
 			order: { createdAt: "DESC" },
-			take: Math.min(Math.max(Number(limit || 30), 1), 100),
 		});
+		const take = Math.min(Math.max(Number(limit || 30), 1), 100);
 
 		const visible = rows.filter(
 			(item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId)),
-		);
+		).filter((item: any) => this.isVisibleAfterHistoryClear(item, conversation, actorId));
 
 		const filtered = beforeId
 			? visible.filter((item: any) => String(item._id) < beforeId)
 			: visible;
+		const filteredByFacet = filtered.filter((item: any) => this.matchesFilters(item, filters)).slice(0, take);
+		await this.markDelivered(filteredByFacet, conversation, actorId);
 
-		return { messages: filtered.reverse().map((item) => this.mapMessage(item, actorId, conversation)) };
+		return { messages: filteredByFacet.reverse().map((item) => this.mapMessage(item, actorId, conversation)) };
 	}
 
 	async sendMessage(actorId: number, conversationId: string, body: any) {
 		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
+		if (conversation.type === "direct") {
+			const peer = (conversation.members || []).find((member: any) => Number(member.userId) !== Number(actorId));
+			if (peer && await this.friendshipService.isBlockedBetween(actorId, Number(peer.userId))) {
+				throw new ForbiddenException("Không thể gửi tin nhắn vì một trong hai bên đã chặn người còn lại");
+			}
+		}
 
-		const type = String(body?.type || "text");
+		const links = this.extractLinks(body?.text);
+		const requestedType = String(body?.type || "text");
+		const type = requestedType === "text" && links.length > 0 && links.join("") === String(body?.text || "").trim() ? "link" : requestedType;
 		if (type === "text" && !String(body?.text || "").trim()) {
 			throw new BadRequestException("Tin nhắn văn bản không được để trống");
 		}
@@ -128,11 +274,14 @@ export class MessageService {
 				mimeType: body?.mimeType || null,
 				fileSize: body?.fileSize || null,
 				meta: body?.sticker ? { sticker: body.sticker } : null,
+				links,
 				reactions: [],
 				createdAt: now,
 				updatedAt: now,
 				isRecalled: false,
 				deletedForUserIds: [],
+				deliveredTo: [],
+				readBy: [],
 			}),
 		);
 
@@ -150,7 +299,7 @@ export class MessageService {
 		emitToConversation(conversationId, "message:new", payload);
 
 		for (const member of conversation.members || []) {
-			if (Number(member.userId) === Number(actorId)) continue;
+			if (Number(member.userId) === Number(actorId) || !this.shouldNotifyMember(member)) continue;
 			await this.notificationService.createNotification({
 				userId: member.userId,
 				type: "message",
@@ -246,9 +395,11 @@ export class MessageService {
 			throw new ForbiddenException("Bạn chỉ có thể thu hồi tin nhắn của mình");
 		}
 
+		const recalledMediaUrl = message.mediaUrl;
 		message.isRecalled = true;
 		message.updatedAt = new Date();
 		const saved = await this.messageRepository.save(message);
+		await this.deleteMediaUrl(recalledMediaUrl, String(saved._id));
 		const payload = this.mapMessage(saved, actorId, conversation);
 		emitToConversation(message.conversationId, "message:updated", {
 			conversationId: message.conversationId,
@@ -283,10 +434,13 @@ export class MessageService {
 					forwardedFromConversationId: message.conversationId,
 				},
 				reactions: [],
+				links: Array.isArray(message.links) ? message.links : this.extractLinks(message.text),
 				createdAt: now,
 				updatedAt: now,
 				isRecalled: false,
 				deletedForUserIds: [],
+				deliveredTo: [],
+				readBy: [],
 			}),
 		);
 
@@ -304,7 +458,7 @@ export class MessageService {
 		emitToConversation(targetConversationId, "message:new", payload);
 
 		for (const member of targetConversation.members || []) {
-			if (Number(member.userId) === Number(actorId)) continue;
+			if (Number(member.userId) === Number(actorId) || !this.shouldNotifyMember(member)) continue;
 			await this.notificationService.createNotification({
 				userId: member.userId,
 				type: "message",
@@ -340,7 +494,7 @@ export class MessageService {
 	}
 
 	async clearConversationMessages(actorId: number, conversationId: string) {
-		await this.conversationService.ensureMembership(conversationId, actorId);
+		await this.conversationService.clearHistoryCursor(conversationId, actorId);
 		const rows = await this.messageRepository.find({
 			where: { conversationId } as any,
 		});
@@ -356,6 +510,51 @@ export class MessageService {
 		}
 
 		return { message: "Đã xóa đoạn chat ở phía bạn" };
+	}
+
+	async markConversationRead(actorId: number, conversationId: string, lastReadMessageId?: string | null) {
+		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
+		const rows = await this.messageRepository.find({ where: { conversationId } as any });
+		const now = new Date();
+		let effectiveLastId = lastReadMessageId || null;
+		for (const row of rows as any[]) {
+			if (Number(row.senderId) === Number(actorId)) continue;
+			if (!this.isVisibleAfterHistoryClear(row, conversation, actorId)) continue;
+			const readBy = Array.isArray(row.readBy) ? [...row.readBy] : [];
+			if (!readBy.some((item: any) => Number(item.userId) === Number(actorId))) {
+				readBy.push({ userId: actorId, at: now });
+				row.readBy = readBy;
+				row.updatedAt = now;
+				await this.messageRepository.save(row);
+				emitToConversation(conversationId, "message:seen", {
+					conversationId,
+					messageId: String(row._id),
+					userId: actorId,
+					seenAt: now,
+				});
+			}
+			effectiveLastId = String(row._id);
+		}
+		await this.conversationService.setSeen(conversationId, actorId, effectiveLastId);
+		return { message: "Đã cập nhật trạng thái đã xem" };
+	}
+
+	async getSharedConversationContent(actorId: number, conversationId: string) {
+		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
+		const rows = await this.messageRepository.find({
+			where: { conversationId } as any,
+			order: { createdAt: "DESC" },
+		});
+		const visible = rows
+			.filter((item: any) => !item.isRecalled)
+			.filter((item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId)))
+			.filter((item: any) => this.isVisibleAfterHistoryClear(item, conversation, actorId));
+		const mapped = visible.map((item) => this.mapMessage(item, actorId, conversation));
+		return {
+			photosVideos: mapped.filter((item) => item.type === "image" || item.type === "video"),
+			files: mapped.filter((item) => item.type === "file" || (item.mediaUrl && item.type !== "image" && item.type !== "video")),
+			links: mapped.filter((item) => item.type === "link" || (item.links || []).length > 0),
+		};
 	}
 
 	async pinMessage(actorId: number, messageId: string) {
@@ -428,7 +627,9 @@ export class MessageService {
 					note: "Đã tải tệp lên Amazon S3.",
 				};
 			} catch (error) {
-				console.warn("Không thể tải tệp tin nhắn lên S3, chuyển sang bộ nhớ cục bộ:", error instanceof Error ? error.message : error);
+				const detail = error instanceof Error ? error.message : "Lỗi S3 không xác định";
+				console.error("S3 message upload failed:", detail);
+				throw new BadRequestException(`Không thể tải tệp tin nhắn lên S3: ${detail}`);
 			}
 		}
 

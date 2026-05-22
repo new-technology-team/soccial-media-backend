@@ -7,20 +7,20 @@ import { json, urlencoded } from 'express';
 import { registerChatSocketHandlers, setChatSocketServer } from './common/socket/chat-socket';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
   const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:19006')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  app.use(json({ limit: '20mb' }));
+  app.use(urlencoded({ extended: true, limit: '20mb' }));
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
   });
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
-  app.use(json({ limit: '20mb' }));
-  app.use(urlencoded({ extended: true, limit: '20mb' }));
 
   const io = new Server(app.getHttpServer(), {
     cors: {

@@ -36,6 +36,7 @@ export class PostService {
                 ? {
                     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
                     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
                 }
                 : undefined,
         });
@@ -203,8 +204,9 @@ export class PostService {
                     mediaUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
                 };
             } catch (error) {
-                // Fallback to local storage when S3 credentials/signature are invalid.
-                console.warn('S3 upload failed, fallback to local uploads:', error instanceof Error ? error.message : error);
+                const detail = error instanceof Error ? error.message : 'Lỗi S3 không xác định';
+                console.error('S3 post upload failed:', detail);
+                throw new BadRequestException(`Không thể tải media bài viết lên S3: ${detail}`);
             }
         }
 

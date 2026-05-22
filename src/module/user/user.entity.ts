@@ -52,6 +52,9 @@ export class User {
     @Column({ default: true })
     notificationCalls: boolean;
 
+    @Column({ type: 'datetime', nullable: true })
+    lastActiveAt: Date | null;
+
     @Column({
         type: "enum",
         enum: UserRole,

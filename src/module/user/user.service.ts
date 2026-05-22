@@ -81,6 +81,11 @@ export class UserService {
         return this.findOne(userId);
     }
 
+    async touchActivity(userId: number): Promise<void> {
+        if (!userId) return;
+        await this.usersRepository.update({ userId }, { lastActiveAt: new Date() });
+    }
+
     async updatePassword(userId: number, plainPassword: string): Promise<void> {
         const hashed = await bcrypt.hash(plainPassword, 10);
         await this.usersRepository.update({ userId }, { password: hashed });

@@ -2,6 +2,8 @@ import { Server, Socket } from 'socket.io';
 import * as jwt from 'jsonwebtoken';
 
 let chatSocketServer: Server | null = null;
+const onlineSocketsByUser = new Map<number, Set<string>>();
+const lastActiveByUser = new Map<number, Date>();
 
 export const setChatSocketServer = (server: Server) => {
 	chatSocketServer = server;
@@ -11,6 +13,22 @@ export const getChatSocketServer = () => chatSocketServer;
 
 export const emitToConversation = (conversationId: string, eventName: string, payload: any) => {
 	chatSocketServer?.to(String(conversationId)).emit(eventName, payload);
+};
+
+export const emitToUser = (userId: number, eventName: string, payload: any) => {
+	chatSocketServer?.to(`user:${Number(userId)}`).emit(eventName, payload);
+};
+
+export const isChatUserOnline = (userId: number) => Boolean(onlineSocketsByUser.get(Number(userId))?.size);
+
+export const getChatUserLastActiveAt = (userId: number) => lastActiveByUser.get(Number(userId)) || null;
+
+const broadcastPresence = (userId: number, online: boolean) => {
+	chatSocketServer?.emit('presence:updated', {
+		userId,
+		online,
+		lastActiveAt: (getChatUserLastActiveAt(userId) || new Date()).toISOString(),
+	});
 };
 
 const relayConversationEvent = (socket: Socket, eventName: string, payload: any) => {
@@ -62,6 +80,11 @@ export const registerChatSocketHandlers = (server: Server) => {
 		const userId = resolveSocketUserId(socket);
 		if (userId) {
 			socket.join(`user:${userId}`);
+			const sockets = onlineSocketsByUser.get(userId) || new Set<string>();
+			sockets.add(socket.id);
+			onlineSocketsByUser.set(userId, sockets);
+			lastActiveByUser.set(userId, new Date());
+			broadcastPresence(userId, true);
 		}
 
 		socket.on('join-conversation', (conversationId: string) => {
@@ -113,6 +136,17 @@ export const registerChatSocketHandlers = (server: Server) => {
 					participantCount: Number(payload?.participantCount || 0),
 					participantIds: Array.isArray(payload?.participantIds) ? payload.participantIds : [],
 				});
+			}
+		});
+
+		socket.on('disconnect', () => {
+			if (!userId) return;
+			const sockets = onlineSocketsByUser.get(userId);
+			sockets?.delete(socket.id);
+			lastActiveByUser.set(userId, new Date());
+			if (!sockets?.size) {
+				onlineSocketsByUser.delete(userId);
+				broadcastPresence(userId, false);
 			}
 		});
 	});
