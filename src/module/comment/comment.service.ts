@@ -1,9 +1,11 @@
-﻿import {
+import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { Comment } from './comment.entity';
 import { UserService } from '../user/user.service';
@@ -32,7 +34,7 @@ export class CommentService {
       fileUrl: comment.fileUrl,
       createdAt: comment.createdAt?.toISOString?.() ?? new Date().toISOString(),
       userId: comment.owner?.userId,
-      authorName: comment.owner?.displayName || 'Người dùng',
+      authorName: comment.owner?.displayName || 'Nguoi dung',
       authorAvatar: comment.owner?.avatarUrl,
       owner: comment.owner,
       reactionCount: (comment.reacts || []).length,
@@ -164,7 +166,10 @@ export class CommentService {
   }
 
   private toObjectId(id: string): any {
-    const { Types } = require('mongodb');
-    return Types.ObjectId.createFromHexString(id);
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestException('Comment id khong hop le');
+    }
+    return new ObjectId(id);
   }
 }
+

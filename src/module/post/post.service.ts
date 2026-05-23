@@ -1,22 +1,41 @@
-﻿import {
+import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ObjectId } from 'mongodb';
 import { Post } from './post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UserService } from '../user/user.service';
 import { emitToConversation } from '../../common/socket/chat-socket';
+import { Friendship } from '../friendship/friendship.entity';
+import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectRepository(Post, 'mongodb')
     private readonly postsRepository: Repository<Post>,
+    @InjectRepository(Friendship, 'mariadb')
+    private readonly friendshipRepo: Repository<Friendship>,
     private readonly userService: UserService,
   ) {}
+
+  private async getAcceptedFriendIds(userId: number): Promise<number[]> {
+    const friendships = await this.friendshipRepo.find({
+      where: [
+        { userId1: userId, status: FriendshipStatus.ACCEPTED },
+        { userId2: userId, status: FriendshipStatus.ACCEPTED },
+      ],
+    });
+
+    return friendships.map((item) =>
+      Number(item.userId1) === Number(userId) ? item.userId2 : item.userId1,
+    );
+  }
 
   private toResponse(post: Post, viewerId?: number) {
     const userInteracts = (post.interacts || []).map((i) => ({
@@ -53,11 +72,17 @@ export class PostService {
     const user = await this.userService.findOne(ownerId);
     if (!user) throw new NotFoundException('User not found');
 
+    const content = String(createPostDto.content || '').trim();
+    const mediaUrl = String(createPostDto.mediaUrl || '').trim();
+    if (!content && !mediaUrl) {
+      throw new BadRequestException('Bai viet can co noi dung hoac anh/video');
+    }
+
     const post = this.postsRepository.create({
-      title: createPostDto.title || '',
-      content: createPostDto.content,
+      title: String(createPostDto.title || '').trim(),
+      content,
       visibility: createPostDto.visibility || 'public',
-      mediaUrl: createPostDto.mediaUrl || '',
+      mediaUrl,
       createdAt: new Date(),
       interacts: [],
       commentCount: 0,
@@ -81,11 +106,39 @@ export class PostService {
   }
 
   async findAll(viewerId?: number, limit = 30) {
-    const posts = await this.postsRepository.find({
-      where: { visibility: 'public' },
+    if (!viewerId) {
+      const posts = await this.postsRepository.find({
+        where: { visibility: 'public' } as any,
+        order: { createdAt: 'DESC' },
+        take: limit,
+      });
+      return posts.map((p) => this.toResponse(p));
+    }
+
+    const friendIds = await this.getAcceptedFriendIds(viewerId);
+    const allowedAuthorIds = new Set<number>([viewerId, ...friendIds]);
+
+    const rawPosts = await this.postsRepository.find({
       order: { createdAt: 'DESC' },
-      take: limit,
+      take: Math.max(limit * 5, 150),
     });
+
+    const posts = rawPosts
+      .filter((post) => {
+        const authorId = Number(post.owner?.userId || 0);
+        if (!authorId || !allowedAuthorIds.has(authorId)) {
+          return false;
+        }
+
+        // Owner always sees their own posts (including private).
+        if (authorId === viewerId) {
+          return true;
+        }
+
+        return String(post.visibility || 'public') !== 'private';
+      })
+      .slice(0, Math.max(limit, 1));
+
     return posts.map((p) => this.toResponse(p, viewerId));
   }
 
@@ -94,15 +147,44 @@ export class PostService {
       where: { _id: this.toObjectId(id) } as any,
     });
     if (!post) throw new NotFoundException('Post not found');
+
+    if (viewerId) {
+      const authorId = Number(post.owner?.userId || 0);
+      if (authorId !== viewerId) {
+        const friendIds = await this.getAcceptedFriendIds(viewerId);
+        const isFriend = friendIds.includes(authorId);
+        const isPublic = String(post.visibility || 'public') !== 'private';
+        if (!isFriend || !isPublic) {
+          throw new ForbiddenException('Ban khong co quyen xem bai viet nay');
+        }
+      }
+    }
+
     return this.toResponse(post, viewerId);
   }
 
   async findByUser(userId: number, viewerId?: number) {
-    const posts = await this.postsRepository.find({
-      where: { 'owner.userId': userId } as any,
+    const requestedUserId = Number(userId);
+    const currentUserId = Number(viewerId || 0);
+
+    const allUserPosts = await this.postsRepository.find({
+      where: { 'owner.userId': requestedUserId } as any,
       order: { createdAt: 'DESC' },
     });
-    return posts.map((p) => this.toResponse(p, viewerId));
+
+    if (!currentUserId || currentUserId === requestedUserId) {
+      return allUserPosts.map((p) => this.toResponse(p, viewerId));
+    }
+
+    const friendIds = await this.getAcceptedFriendIds(currentUserId);
+    const isFriend = friendIds.includes(requestedUserId);
+    if (!isFriend) {
+      return [];
+    }
+
+    return allUserPosts
+      .filter((post) => String(post.visibility || 'public') !== 'private')
+      .map((p) => this.toResponse(p, viewerId));
   }
 
   async update(
@@ -184,7 +266,9 @@ export class PostService {
   }
 
   private toObjectId(id: string): any {
-    const { Types } = require('mongodb');
-    return Types.ObjectId.createFromHexString(id);
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestException('Post id khong hop le');
+    }
+    return new ObjectId(id);
   }
 }

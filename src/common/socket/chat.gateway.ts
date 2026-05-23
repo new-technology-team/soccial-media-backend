@@ -29,35 +29,33 @@ export class ChatGateway
 
   afterInit(server: Server) {
     setChatSocketServer(server);
-    console.log('WebSocket Gateway initialized');
+    void server;
   }
 
   async handleConnection(client: Socket) {
+    const token =
+      client.handshake?.auth?.token ||
+      client.handshake?.headers?.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return;
+    }
+
     try {
-      const token =
-        client.handshake?.auth?.token ||
-        client.handshake?.headers?.authorization?.replace('Bearer ', '');
-      if (token) {
-        const payload = await this.jwtService.verifyAsync(token, {
-          secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
-        });
-        client.data.userId = payload.sub;
-        client.data.username = payload.username;
-        client.join(`user:${payload.sub}`);
-        client.join('global-feed');
-        console.log(
-          `Socket connected: user ${payload.username} (${payload.sub})`,
-        );
-      } else {
-        console.log('Socket connected without auth');
-      }
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
+      });
+      client.data.userId = payload.sub;
+      client.data.username = payload.username;
+      client.join(`user:${payload.sub}`);
+      client.join('global-feed');
     } catch {
-      console.log('Socket connection auth failed');
+      client.disconnect(true);
     }
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Socket disconnected: ${client.data.username || 'unknown'}`);
+    void client;
   }
 
   @SubscribeMessage('join-conversation')
@@ -68,7 +66,6 @@ export class ChatGateway
     const roomId = String(conversationId || '').trim();
     if (roomId) {
       client.join(roomId);
-      console.log(`${client.data.username} joined room ${roomId}`);
     }
   }
 

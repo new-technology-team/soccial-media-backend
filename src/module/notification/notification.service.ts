@@ -1,5 +1,6 @@
-﻿import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
 import { emitToConversation } from '../../common/socket/chat-socket';
@@ -69,7 +70,10 @@ export class NotificationService {
   }
 
   private toObjectId(id: string): any {
-    const { Types } = require('mongodb');
-    return Types.ObjectId.createFromHexString(id);
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestException('Notification id khong hop le');
+    }
+    return new ObjectId(id);
   }
 }
+

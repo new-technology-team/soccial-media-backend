@@ -28,6 +28,7 @@ export class PostController {
   }
 
   @Get('feed')
+  @UseGuards(JwtAuthGuard)
   async getFeed(@Req() req: any, @Query('limit') limit?: string) {
     const posts = await this.postService.findAll(
       req.user?.sub,
@@ -47,6 +48,7 @@ export class PostController {
   }
 
   @Get('posts/:id')
+  @UseGuards(JwtAuthGuard)
   async getPost(@Param('id') id: string, @Req() req: any) {
     const post = await this.postService.findById(id, req.user?.sub);
     return { post };
