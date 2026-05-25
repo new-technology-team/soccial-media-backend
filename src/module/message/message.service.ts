@@ -74,6 +74,7 @@ export class MessageService {
 			reactions,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
+			expiresAt: row.expiresAt || null,
 			isDeleted: Boolean(row.isRecalled),
 		};
 	}
@@ -93,6 +94,18 @@ export class MessageService {
 		const rowTime = new Date(row.createdAt).getTime();
 		const clearedTime = new Date(member.deletedHistoryAt).getTime();
 		return Number.isNaN(rowTime) || Number.isNaN(clearedTime) || rowTime > clearedTime;
+	}
+
+	private isExpiredMessage(row: any) {
+		if (!row?.expiresAt) return false;
+		const expiresAt = new Date(row.expiresAt).getTime();
+		return !Number.isNaN(expiresAt) && expiresAt <= Date.now();
+	}
+
+	private getConversationExpiresAt(conversation: any, createdAt: Date) {
+		const seconds = Number(conversation?.autoDeleteAfterSeconds || 0);
+		if (!seconds || seconds <= 0) return null;
+		return new Date(createdAt.getTime() + seconds * 1000);
 	}
 
 	private async markDelivered(rows: any[], conversation: any, actorId: number) {
@@ -236,10 +249,11 @@ export class MessageService {
 		const visible = rows.filter(
 			(item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId)),
 		).filter((item: any) => this.isVisibleAfterHistoryClear(item, conversation, actorId));
+		const active = visible.filter((item: any) => !this.isExpiredMessage(item));
 
 		const filtered = beforeId
-			? visible.filter((item: any) => String(item._id) < beforeId)
-			: visible;
+			? active.filter((item: any) => String(item._id) < beforeId)
+			: active;
 		const filteredByFacet = filtered.filter((item: any) => this.matchesFilters(item, filters)).slice(0, take);
 		await this.markDelivered(filteredByFacet, conversation, actorId);
 
@@ -278,6 +292,7 @@ export class MessageService {
 				reactions: [],
 				createdAt: now,
 				updatedAt: now,
+				expiresAt: this.getConversationExpiresAt(conversation, now),
 				isRecalled: false,
 				deletedForUserIds: [],
 				deliveredTo: [],
@@ -295,6 +310,7 @@ export class MessageService {
 			text: payload.text,
 			mediaUrl: payload.mediaUrl,
 			createdAt: payload.createdAt,
+			expiresAt: payload.expiresAt || null,
 		});
 		emitToConversation(conversationId, "message:new", payload);
 
@@ -336,6 +352,7 @@ export class MessageService {
 
 			if (!isJoined) continue;
 			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId))) continue;
+			if (this.isExpiredMessage(item)) continue;
 			if (!String(item.text || "").toLowerCase().includes(keyword)) continue;
 			matched.push(this.mapMessage(item, actorId, conversation));
 		}
@@ -346,6 +363,9 @@ export class MessageService {
 	async reactMessage(actorId: number, messageId: string, type: string) {
 		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
 		if (!message || message.isRecalled) {
+			throw new NotFoundException("Không tìm thấy tin nhắn");
+		}
+		if (this.isExpiredMessage(message)) {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 
@@ -370,6 +390,9 @@ export class MessageService {
 	async removeReaction(actorId: number, messageId: string) {
 		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
 		if (!message || message.isRecalled) {
+			throw new NotFoundException("Không tìm thấy tin nhắn");
+		}
+		if (this.isExpiredMessage(message)) {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
@@ -411,6 +434,9 @@ export class MessageService {
 	async forwardMessage(actorId: number, messageId: string, targetConversationId: string) {
 		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
 		if (!message || message.isRecalled) {
+			throw new NotFoundException("Không tìm thấy tin nhắn");
+		}
+		if (this.isExpiredMessage(message)) {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 
@@ -520,6 +546,7 @@ export class MessageService {
 		for (const row of rows as any[]) {
 			if (Number(row.senderId) === Number(actorId)) continue;
 			if (!this.isVisibleAfterHistoryClear(row, conversation, actorId)) continue;
+			if (this.isExpiredMessage(row)) continue;
 			const readBy = Array.isArray(row.readBy) ? [...row.readBy] : [];
 			if (!readBy.some((item: any) => Number(item.userId) === Number(actorId))) {
 				readBy.push({ userId: actorId, at: now });
@@ -547,6 +574,7 @@ export class MessageService {
 		});
 		const visible = rows
 			.filter((item: any) => !item.isRecalled)
+			.filter((item: any) => !this.isExpiredMessage(item))
 			.filter((item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(actorId)))
 			.filter((item: any) => this.isVisibleAfterHistoryClear(item, conversation, actorId));
 		const mapped = visible.map((item) => this.mapMessage(item, actorId, conversation));

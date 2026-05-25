@@ -41,6 +41,9 @@ export class Message {
     @Column()
     updatedAt: Date;
 
+    @Column({ nullable: true })
+    expiresAt: Date | null;
+
     @Column()
     isRecalled: boolean;
 

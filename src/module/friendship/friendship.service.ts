@@ -58,6 +58,14 @@ export class FriendshipService {
 		return Boolean(row);
 	}
 
+	async isBlockedBy(actorId: number, targetUserId: number) {
+		if (!actorId || !targetUserId || actorId === targetUserId) return false;
+		const row = await this.blockedUserRepository.findOne({
+			where: { blockerId: actorId, blockedUserId: targetUserId },
+		});
+		return Boolean(row);
+	}
+
 	async listFriends(userId: number) {
 		const rows = await this.friendshipRepository.find({
 			where: [

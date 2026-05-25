@@ -227,21 +227,8 @@ export class PostService {
         this.assertAdmin(actor);
 
         const row = await this.getPostById(postId);
-        const nextContent = body?.content !== undefined ? String(body.content || '') : row.content || '';
-        const nextMedia = body?.mediaUrl !== undefined ? (body.mediaUrl || null) : row.mediaUrl || null;
         const nextVisibility = body?.visibility ? String(body.visibility) : row.visibility || 'public';
         const nextStatus = body?.status ? String(body.status) : row.status || 'published';
-
-        if (!nextContent.trim() && !nextMedia) {
-            throw new BadRequestException('Bai viet can co noi dung hoac media');
-        }
-
-        if (row.mediaUrl && row.mediaUrl !== nextMedia) {
-            await this.deleteMediaUrl(row.mediaUrl);
-        }
-
-        row.content = nextContent;
-        row.mediaUrl = nextMedia;
         row.visibility = nextVisibility;
         row.status = nextStatus;
         row.updatedAt = new Date();
