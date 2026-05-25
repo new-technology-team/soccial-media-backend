@@ -7,7 +7,16 @@ import { ReportStatus } from "../../common/enum/report-status.enum";
 import { ReportType } from "../../common/enum/report-type.enum";
 import { User } from "../user/user.entity";
 import { Post } from "../post/post.entity";
+import { Comment } from "../comment/comment.entity";
 import { UserRole } from "../../common/enum/user-role.enum";
+
+function toClientUser(user: any) {
+	return {
+		...user,
+		role: String(user?.role || '').toLowerCase(),
+		accountStatus: String(user?.status || user?.accountStatus || '').toLowerCase(),
+	};
+}
 
 @Injectable()
 export class ReportService {
@@ -18,6 +27,8 @@ export class ReportService {
 		private readonly userRepository: Repository<User>,
 		@InjectRepository(Post, 'mongodb')
 		private readonly postRepository: Repository<Post>,
+		@InjectRepository(Comment, 'mongodb')
+		private readonly commentRepository: Repository<Comment>,
 	) {}
 
 	async submitReport(actorId: number, body: any) {
@@ -96,17 +107,27 @@ export class ReportService {
 			throw new ForbiddenException('Chỉ admin mới có quyền truy cập');
 		}
 
-		const [users, reports, posts] = await Promise.all([
+		const [users, posts, comments, reportRows, postRows, commentRows] = await Promise.all([
 			this.userRepository.count(),
-			this.reportRepository.count(),
 			this.postRepository.count(),
+			this.commentRepository.count(),
+			this.reportRepository.find({} as any),
+			this.postRepository.find({ order: { createdAt: 'DESC' } } as any),
+			this.commentRepository.find({} as any),
 		]);
+
+		const totalReactions = [...(postRows as any[]), ...(commentRows as any[])].reduce((sum, item) => sum + Number(item?.reactions?.length || 0), 0);
+		const pendingReports = (reportRows as any[]).filter((item) => String(item?.status || '').toUpperCase() === ReportStatus.PENDING).length;
+		const resolvedReports = (reportRows as any[]).filter((item) => String(item?.status || '').toUpperCase() === ReportStatus.RESOLVED).length;
 
 		return {
 			stats: {
-				users,
-				reports,
-				posts,
+				totalUsers: users,
+				totalPosts: posts,
+				totalComments: comments,
+				totalReactions,
+				pendingReports,
+				resolvedReports,
 			},
 		};
 	}
@@ -125,7 +146,7 @@ export class ReportService {
 				String(item.email || '').toLowerCase().includes(normalized) ||
 				String(item.phone || '').toLowerCase().includes(normalized)
 			);
-		});
+		}).map((item) => toClientUser(item));
 
 		return { users };
 	}
@@ -148,6 +169,6 @@ export class ReportService {
 		}
 
 		await this.userRepository.save(user);
-		return { message: 'Đã cập nhật người dùng', user };
+		return { message: 'Đã cập nhật người dùng', user: toClientUser(user) };
 	}
 }  

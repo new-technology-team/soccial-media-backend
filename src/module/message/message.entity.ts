@@ -46,4 +46,13 @@ export class Message {
 
     @Column({ nullable: true })
     deletedForUserIds: number[];
+
+    @Column({ nullable: true })
+    deliveredTo: any[];
+
+    @Column({ nullable: true })
+    readBy: any[];
+
+    @Column({ nullable: true })
+    links: string[];
 }

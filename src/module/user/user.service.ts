@@ -81,6 +81,11 @@ export class UserService {
         return this.findOne(userId);
     }
 
+    async touchActivity(userId: number): Promise<void> {
+        if (!userId) return;
+        await this.usersRepository.update({ userId }, { lastActiveAt: new Date() });
+    }
+
     async updatePassword(userId: number, plainPassword: string): Promise<void> {
         const hashed = await bcrypt.hash(plainPassword, 10);
         await this.usersRepository.update({ userId }, { password: hashed });
@@ -146,8 +151,8 @@ export class UserService {
             fullName: user.displayName,
             dateOfBirth: user.dateOfBirth || null,
             gender: user.sex ?? null,
-            role: user.role,
-            accountStatus: user.status,
+            role: String(user.role || '').toLowerCase(),
+            accountStatus: String(user.status || '').toLowerCase(),
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
         };

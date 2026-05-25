@@ -31,4 +31,7 @@ export class Conversation {
 
     @Column({ nullable: true })
     pinnedMessageIds: string[];
+
+    @Column({ nullable: true })
+    deletedForUserIds: number[];
 }

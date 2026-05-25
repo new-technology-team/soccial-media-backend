@@ -3,19 +3,47 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
+import { Message } from "../message/message.entity";
 import { UserService } from "../user/user.service";
 import { FriendshipService } from "../friendship/friendship.service";
+import { emitToConversation, emitToUser, getChatUserLastActiveAt, isChatUserOnline } from "../../common/socket/chat-socket";
 
 @Injectable()
 export class ConversationService {
 	constructor(
 		@InjectRepository(Conversation, 'mongodb')
 		private readonly conversationRepository: Repository<Conversation>,
+		@InjectRepository(Message, 'mongodb')
+		private readonly messageRepository: Repository<Message>,
 		private readonly userService: UserService,
 		private readonly friendshipService: FriendshipService,
 	) {}
 
+	private mapMember(member: any) {
+		const online = isChatUserOnline(Number(member.userId));
+		const lastActiveAt = getChatUserLastActiveAt(Number(member.userId));
+		return {
+			userId: Number(member.userId),
+			fullName: member.nickname || member.fullName,
+			realName: member.fullName,
+			nickname: member.nickname || null,
+			avatarUrl: member.avatarUrl || null,
+			role: this.normalizeRole(member.role),
+			notificationsEnabled: member.notificationsEnabled !== false && !this.isMuted(member),
+			isMuted: this.isMuted(member),
+			mutedUntil: member.mutedUntil || null,
+			isPinned: Boolean(member.isPinned),
+			pinnedAt: member.pinnedAt || null,
+			deletedHistoryAt: member.deletedHistoryAt || null,
+			lastReadAt: member.lastReadAt || null,
+			lastReadMessageId: member.lastReadMessageId || null,
+			online,
+			lastActiveAt: lastActiveAt || member.lastActiveAt || null,
+		};
+	}
+
 	private mapConversation(conversation: any, viewerId: number) {
+		const viewerMember = this.getMemberByUserId(conversation, viewerId);
 		return {
 			id: String(conversation._id),
 			type: conversation.type,
@@ -24,21 +52,52 @@ export class ConversationService {
 			createdBy: conversation.createdBy,
 			createdAt: conversation.createdAt,
 			updatedAt: conversation.updatedAt,
-			members: (conversation.members || []).map((member: any) => ({
-				userId: member.userId,
-				fullName: member.fullName,
-				avatarUrl: member.avatarUrl || null,
-				role: this.normalizeRole(member.role),
-				notificationsEnabled: member.notificationsEnabled !== false,
-				lastReadAt: member.lastReadAt || null,
-			})),
+			groupOwner: conversation.createdBy,
+			members: (conversation.members || []).map((member: any) => this.mapMember(member)),
 			lastMessage: conversation.lastMessage || null,
 			pinnedMessageIds: Array.isArray(conversation.pinnedMessageIds) ? conversation.pinnedMessageIds.map((item: any) => String(item)) : [],
 			unreadCount: 0,
-			role: this.normalizeRole((conversation.members || []).find((item: any) => item.userId === viewerId)?.role),
-			notificationsEnabled:
-				(conversation.members || []).find((item: any) => item.userId === viewerId)?.notificationsEnabled !== false,
+			role: this.normalizeRole(viewerMember?.role),
+			isPinned: Boolean(viewerMember?.isPinned),
+			isMuted: this.isMuted(viewerMember),
+			mutedUntil: viewerMember?.mutedUntil || null,
+			notificationsEnabled: viewerMember?.notificationsEnabled !== false && !this.isMuted(viewerMember),
+			onlineCount: (conversation.members || []).filter((member: any) => isChatUserOnline(Number(member.userId))).length,
 		};
+	}
+
+	private isMuted(member: any) {
+		if (!member) return false;
+		if (member.notificationsEnabled === false && !member.mutedUntil) return true;
+		if (!member.mutedUntil) return false;
+		const mutedUntil = new Date(member.mutedUntil).getTime();
+		return !Number.isNaN(mutedUntil) && mutedUntil > Date.now();
+	}
+
+	private getConversationSortKey(conversation: any) {
+		const raw = conversation?.lastMessage?.createdAt || conversation?.updatedAt || conversation?.createdAt || null;
+		const time = raw ? new Date(raw).getTime() : 0;
+		return Number.isNaN(time) ? 0 : time;
+	}
+
+	private async countUnreadMessages(conversation: any, viewerId: number) {
+		const member = this.getMemberByUserId(conversation, viewerId);
+		const lastReadAt = member?.lastReadAt ? new Date(member.lastReadAt) : null;
+		const deletedHistoryAt = member?.deletedHistoryAt ? new Date(member.deletedHistoryAt) : null;
+		const rows = await this.messageRepository.find({
+			where: { conversationId: String(conversation._id) } as any,
+			order: { createdAt: 'ASC' },
+		});
+
+		return rows.filter((item: any) => {
+			if (!item || item.isRecalled) return false;
+			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(viewerId))) return false;
+			if (Number(item.senderId) === Number(viewerId)) return false;
+			if (!lastReadAt) return true;
+			const createdAt = new Date(item.createdAt).getTime();
+			if (deletedHistoryAt && !Number.isNaN(createdAt) && createdAt <= deletedHistoryAt.getTime()) return false;
+			return !Number.isNaN(createdAt) && createdAt > lastReadAt.getTime();
+		}).length;
 	}
 
 	private normalizeRole(role: unknown) {
@@ -121,7 +180,20 @@ export class ConversationService {
 			}
 		}
 		const mine = rows.filter((item: any) => (item.members || []).some((m: any) => m.userId === userId));
-		return { conversations: mine.map((item) => this.mapConversation(item, userId)) };
+		const visible = mine.filter((item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(userId)));
+		const sorted = [...visible].sort((a: any, b: any) => {
+			const aPinned = Boolean(this.getMemberByUserId(a, userId)?.isPinned);
+			const bPinned = Boolean(this.getMemberByUserId(b, userId)?.isPinned);
+			if (aPinned !== bPinned) return Number(bPinned) - Number(aPinned);
+			return this.getConversationSortKey(b) - this.getConversationSortKey(a);
+		});
+		const conversations = await Promise.all(
+			sorted.map(async (item) => ({
+				...this.mapConversation(item, userId),
+				unreadCount: await this.countUnreadMessages(item, userId),
+			})),
+		);
+		return { conversations };
 	}
 
 	async createDirect(actorId: number, targetUserId: number) {
@@ -163,6 +235,8 @@ export class ConversationService {
 					avatarUrl: actor?.avatarUrl || null,
 					role: 'member',
 					notificationsEnabled: true,
+					isPinned: false,
+					nickname: null,
 					lastReadAt: now,
 				},
 				{
@@ -171,6 +245,8 @@ export class ConversationService {
 					avatarUrl: target.avatarUrl || null,
 					role: 'member',
 					notificationsEnabled: true,
+					isPinned: false,
+					nickname: null,
 					lastReadAt: null,
 				},
 			],
@@ -206,8 +282,10 @@ export class ConversationService {
 				fullName: actor?.displayName || 'Bạn',
 				avatarUrl: actor?.avatarUrl || null,
 				role: 'leader',
-				notificationsEnabled: true,
-				lastReadAt: new Date(),
+					notificationsEnabled: true,
+					isPinned: false,
+					nickname: null,
+					lastReadAt: new Date(),
 			},
 		];
 
@@ -222,6 +300,8 @@ export class ConversationService {
 				avatarUrl: user.avatarUrl || null,
 				role: 'member',
 				notificationsEnabled: true,
+				isPinned: false,
+				nickname: null,
 				lastReadAt: null,
 			});
 		}
@@ -270,12 +350,18 @@ export class ConversationService {
 		return { conversation: this.mapConversation(conversation, userId) };
 	}
 
-	async setSeen(conversationId: string, userId: number) {
+	async setSeen(conversationId: string, userId: number, lastReadMessageId?: string | null) {
 		const conversation = await this.ensureMembership(conversationId, userId);
 		conversation.members = (conversation.members || []).map((item: any) =>
-			item.userId === userId ? { ...item, lastReadAt: new Date() } : item,
+			item.userId === userId ? { ...item, lastReadAt: new Date(), lastReadMessageId: lastReadMessageId || item.lastReadMessageId || null } : item,
 		);
 		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:seen', {
+			conversationId,
+			userId,
+			lastReadAt: this.getMemberByUserId(conversation, userId)?.lastReadAt || new Date(),
+			lastReadMessageId: lastReadMessageId || null,
+		});
 		return { message: 'Đã cập nhật trạng thái đã xem' };
 	}
 
@@ -285,7 +371,79 @@ export class ConversationService {
 			item.userId === userId ? { ...item, notificationsEnabled: Boolean(enabled) } : item,
 		);
 		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:updated', { conversation: this.mapConversation(conversation, userId) });
 		return { message: 'Đã cập nhật cài đặt thông báo' };
+	}
+
+	async setPinned(conversationId: string, userId: number, pinned: boolean) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		conversation.members = (conversation.members || []).map((item: any) =>
+			Number(item.userId) === Number(userId)
+				? { ...item, isPinned: Boolean(pinned), pinnedAt: pinned ? new Date() : null }
+				: item,
+		);
+		await this.conversationRepository.save(conversation);
+		emitToUser(userId, 'conversation:updated', { conversation: this.mapConversation(conversation, userId) });
+		return { message: pinned ? 'Đã ghim cuộc trò chuyện' : 'Đã bỏ ghim cuộc trò chuyện', conversation: this.mapConversation(conversation, userId) };
+	}
+
+	async setMuted(conversationId: string, userId: number, muted: boolean, mutedUntil?: string | null) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		const parsedMutedUntil = mutedUntil ? new Date(mutedUntil) : null;
+		if (parsedMutedUntil && Number.isNaN(parsedMutedUntil.getTime())) {
+			throw new BadRequestException('Thời gian tắt thông báo không hợp lệ');
+		}
+		conversation.members = (conversation.members || []).map((item: any) =>
+			Number(item.userId) === Number(userId)
+				? {
+					...item,
+					notificationsEnabled: muted ? Boolean(parsedMutedUntil) : true,
+					mutedUntil: muted ? parsedMutedUntil || null : null,
+				}
+				: item,
+		);
+		await this.conversationRepository.save(conversation);
+		emitToUser(userId, 'conversation:updated', { conversation: this.mapConversation(conversation, userId) });
+		return { message: muted ? 'Đã tắt thông báo' : 'Đã bật thông báo', conversation: this.mapConversation(conversation, userId) };
+	}
+
+	async clearHistoryCursor(conversationId: string, userId: number) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		conversation.members = (conversation.members || []).map((item: any) =>
+			Number(item.userId) === Number(userId) ? { ...item, deletedHistoryAt: new Date(), lastReadAt: new Date() } : item,
+		);
+		await this.conversationRepository.save(conversation);
+		return conversation;
+	}
+
+	async renameGroup(conversationId: string, actorId: number, name: string, avatarUrl?: string | null) {
+		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (conversation.type !== 'group') throw new BadRequestException('Chỉ nhóm chat mới có thể đổi thông tin');
+		if (!this.isLeaderOrDeputy(conversation, actorId)) throw new ForbiddenException('Bạn không có quyền cập nhật nhóm');
+		const nextName = String(name || conversation.name || '').trim();
+		if (!nextName) throw new BadRequestException('Tên nhóm không được để trống');
+		conversation.name = nextName;
+		if (avatarUrl !== undefined) conversation.avatarUrl = avatarUrl || null;
+		conversation.updatedAt = new Date();
+		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:updated', { conversation: this.mapConversation(conversation, actorId) });
+		return { message: 'Đã cập nhật nhóm', conversation: this.mapConversation(conversation, actorId) };
+	}
+
+	async updateNickname(conversationId: string, actorId: number, targetUserId: number, nickname?: string | null) {
+		const conversation = await this.ensureMembership(conversationId, actorId);
+		if (!this.getMemberByUserId(conversation, targetUserId)) throw new NotFoundException('Thành viên không tồn tại');
+		const normalized = String(nickname || '').trim().slice(0, 60);
+		conversation.members = (conversation.members || []).map((item: any) =>
+			Number(item.userId) === Number(targetUserId) ? { ...item, nickname: normalized || null } : item,
+		);
+		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:nickname', {
+			conversationId,
+			userId: targetUserId,
+			nickname: normalized || null,
+		});
+		return { message: normalized ? 'Đã cập nhật biệt danh' : 'Đã xóa biệt danh', conversation: this.mapConversation(conversation, actorId) };
 	}
 
 	async addMember(conversationId: string, actorId: number, userId: number) {
@@ -314,10 +472,13 @@ export class ConversationService {
 				avatarUrl: user.avatarUrl || null,
 				role: 'member',
 				notificationsEnabled: true,
+				isPinned: false,
+				nickname: null,
 				lastReadAt: null,
 			},
 		];
 		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:members', { conversationId, action: 'added', userId, conversation: this.mapConversation(conversation, actorId) });
 		return { message: 'Đã thêm thành viên' };
 	}
 
@@ -350,6 +511,7 @@ export class ConversationService {
 
 		conversation.members = (conversation.members || []).filter((item: any) => item.userId !== targetUserId);
 		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:members', { conversationId, action: 'removed', userId: targetUserId });
 		return { message: 'Đã xóa thành viên' };
 	}
 
@@ -370,14 +532,13 @@ export class ConversationService {
 				(item: any) => this.normalizeRole(item.role) === 'deputy' && Number(item.userId) !== Number(actorId),
 			);
 
-			if (!deputy) {
-				throw new BadRequestException('Trưởng nhóm cần chỉ định phó nhóm trước khi rời nhóm');
-			}
+			const nextOwner = deputy || (conversation.members || []).find((item: any) => Number(item.userId) !== Number(actorId));
+			if (!nextOwner) throw new BadRequestException('Nhóm cần có thành viên khác trước khi trưởng nhóm rời đi');
 
 			conversation.members = (conversation.members || [])
 				.filter((item: any) => Number(item.userId) !== Number(actorId))
 				.map((item: any) => {
-					if (Number(item.userId) === Number(deputy.userId)) {
+					if (Number(item.userId) === Number(nextOwner.userId)) {
 						return { ...item, role: 'leader' };
 					}
 					if (this.normalizeRole(item.role) === 'leader') {
@@ -385,13 +546,16 @@ export class ConversationService {
 					}
 					return item;
 				});
+			conversation.createdBy = Number(nextOwner.userId);
 
 			await this.conversationRepository.save(conversation);
-			return { message: 'Bạn đã rời nhóm. Quyền trưởng nhóm đã được chuyển cho phó nhóm.' };
+			emitToConversation(conversationId, 'conversation:members', { conversationId, action: 'left', userId: actorId });
+			return { message: 'Bạn đã rời nhóm. Quyền trưởng nhóm đã được tự động chuyển.' };
 		}
 
 		conversation.members = (conversation.members || []).filter((item: any) => Number(item.userId) !== Number(actorId));
 		await this.conversationRepository.save(conversation);
+		emitToConversation(conversationId, 'conversation:members', { conversationId, action: 'left', userId: actorId });
 		return { message: 'Bạn đã rời nhóm chat' };
 	}
 
@@ -421,6 +585,7 @@ export class ConversationService {
 			}
 			return this.normalizeRole(item.role) === 'leader' ? { ...item, role: 'member' } : item;
 		});
+		conversation.createdBy = Number(targetUserId);
 
 		await this.conversationRepository.save(conversation);
 		return { message: 'Đã chuyển quyền trưởng nhóm' };

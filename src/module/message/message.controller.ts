@@ -14,13 +14,32 @@ export class MessageController {
 		@Param('id') id: string,
 		@Query('limit') limit?: string,
 		@Query('beforeId') beforeId?: string,
+		@Query('senderId') senderId?: string,
+		@Query('type') type?: string,
+		@Query('sentDate') sentDate?: string,
+		@Query('q') q?: string,
 	) {
-		return this.messageService.listMessages(user.id, id, Number(limit || 30), beforeId);
+		return this.messageService.listMessages(user.id, id, Number(limit || 30), beforeId, {
+			senderId: senderId ? Number(senderId) : undefined,
+			type,
+			sentDate,
+			q,
+		});
+	}
+
+	@Get('conversations/:id/shared')
+	getSharedConversationContent(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.messageService.getSharedConversationContent(user.id, id);
 	}
 
 	@Post('conversations/:id/messages')
 	sendMessage(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
 		return this.messageService.sendMessage(user.id, id, body);
+	}
+
+	@Patch('conversations/:id/messages/read')
+	markConversationRead(@CurrentUser() user: any, @Param('id') id: string, @Body() body?: { lastReadMessageId?: string }) {
+		return this.messageService.markConversationRead(user.id, id, body?.lastReadMessageId || null);
 	}
 
 	@Post('conversations/:id/messages/upload-url')

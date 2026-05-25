@@ -23,6 +23,8 @@ import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
+import { BlockedUser } from './module/friendship/blocked-user.entity';
+import * as fs from 'fs';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
@@ -44,6 +46,24 @@ function buildMongoUrl(): string {
   return process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/zalo_app';
 }
 
+function buildMariaSsl() {
+  const caPath = process.env.DB_SSL_CA_PATH || 'global-bundle.pem';
+  const shouldUseSsl = process.env.DB_SSL === 'true' || fs.existsSync(caPath);
+
+  if (!shouldUseSsl) {
+    return undefined;
+  }
+
+  if (!fs.existsSync(caPath)) {
+    throw new Error(`MariaDB SSL CA file not found: ${caPath}`);
+  }
+
+  return {
+    ca: fs.readFileSync(caPath),
+    rejectUnauthorized: true,
+  };
+}
+
 
 @Module({
   imports: [
@@ -55,7 +75,8 @@ function buildMongoUrl(): string {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, Report, AuthOtp],
+      entities: [User, Friendship, BlockedUser, Report, AuthOtp],
+      ssl: buildMariaSsl(),
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',

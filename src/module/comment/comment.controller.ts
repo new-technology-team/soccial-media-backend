@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { CommentService } from "./comment.service";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
@@ -8,8 +8,8 @@ export class CommentController {
 	constructor(private readonly commentService: CommentService) {}
 
 	@Get('posts/:postId/comments')
-	getFeedComments(@CurrentUser() user: any, @Param('postId') postId: string) {
-		return this.commentService.listPostComments(postId, user?.id);
+	getFeedComments(@CurrentUser() user: any, @Param('postId') postId: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+		return this.commentService.listPostComments(postId, user?.id, Number(limit || 20), Number(offset || 0));
 	}
 
 	@UseGuards(JwtAuthGuard)
@@ -28,5 +28,11 @@ export class CommentController {
 	@Delete('comments/:commentId/reaction')
 	removeFeedCommentReaction(@CurrentUser() user: any, @Param('commentId') commentId: string) {
 		return this.commentService.removeCommentReaction(user.id, commentId);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@Delete('comments/:commentId')
+	deleteFeedComment(@CurrentUser() user: any, @Param('commentId') commentId: string) {
+		return this.commentService.deleteComment(user.id, commentId);
 	}
 }

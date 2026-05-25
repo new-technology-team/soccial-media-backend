@@ -29,8 +29,46 @@ export class ConversationController {
 	}
 
 	@Patch('conversations/:id/seen')
-	seen(@CurrentUser() user: any, @Param('id') id: string) {
-		return this.conversationService.setSeen(id, user.id);
+	seen(@CurrentUser() user: any, @Param('id') id: string, @Body() body?: { lastReadMessageId?: string }) {
+		return this.conversationService.setSeen(id, user.id, body?.lastReadMessageId || null);
+	}
+
+	@Patch('conversations/:id/pin')
+	pin(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.setPinned(id, user.id, true);
+	}
+
+	@Delete('conversations/:id/pin')
+	unpin(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.setPinned(id, user.id, false);
+	}
+
+	@Patch('conversations/:id/mute')
+	mute(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { muted?: boolean; mutedUntil?: string | null },
+	) {
+		return this.conversationService.setMuted(id, user.id, body?.muted !== false, body?.mutedUntil);
+	}
+
+	@Patch('conversations/:id/profile')
+	updateGroupProfile(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { name?: string; avatarUrl?: string | null },
+	) {
+		return this.conversationService.renameGroup(id, user.id, body?.name || '', body?.avatarUrl);
+	}
+
+	@Patch('conversations/:id/members/:userId/nickname')
+	updateNickname(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Param('userId') userId: string,
+		@Body() body: { nickname?: string | null },
+	) {
+		return this.conversationService.updateNickname(id, user.id, Number(userId), body?.nickname);
 	}
 
 	@Patch('conversations/:id/notifications')

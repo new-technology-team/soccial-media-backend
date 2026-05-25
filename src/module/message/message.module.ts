@@ -6,9 +6,10 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { ConversationModule } from "../conversation/conversation.module";
 import { UserModule } from "../user/user.module";
 import { NotificationModule } from "../notification/notification.module";
+import { FriendshipModule } from "../friendship/friendship.module";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Message], 'mongodb'), ConversationModule, UserModule, NotificationModule],
+    imports: [TypeOrmModule.forFeature([Message], 'mongodb'), ConversationModule, UserModule, NotificationModule, FriendshipModule],
     controllers: [MessageController],
     providers: [MessageService],
     exports: [MessageService, TypeOrmModule],

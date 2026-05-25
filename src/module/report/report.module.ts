@@ -5,10 +5,11 @@ import { Report } from "./report.entity";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../user/user.entity";
 import { Post } from "../post/post.entity";
+import { Comment } from "../comment/comment.entity";
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Report, User], 'mariadb'), TypeOrmModule.forFeature([Post], 'mongodb')],
+    imports: [TypeOrmModule.forFeature([Report, User], 'mariadb'), TypeOrmModule.forFeature([Post, Comment], 'mongodb')],
     controllers: [ReportController],
     providers: [ReportService],
     exports: [ReportService],

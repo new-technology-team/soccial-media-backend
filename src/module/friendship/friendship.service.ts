@@ -5,12 +5,15 @@ import { Friendship } from "./friendship.entity";
 import { FriendshipStatus } from "../../common/enum/friendship-status.enum";
 import { UserService } from "../user/user.service";
 import { NotificationService } from "../notification/notification.service";
+import { BlockedUser } from "./blocked-user.entity";
 
 @Injectable()
 export class FriendshipService {
 	constructor(
 		@InjectRepository(Friendship, 'mariadb')
 		private readonly friendshipRepository: Repository<Friendship>,
+		@InjectRepository(BlockedUser, 'mariadb')
+		private readonly blockedUserRepository: Repository<BlockedUser>,
 		private readonly userService: UserService,
 		private readonly notificationService: NotificationService,
 	) {}
@@ -42,6 +45,17 @@ export class FriendshipService {
 		}
 
 		return friendIds;
+	}
+
+	async isBlockedBetween(userA: number, userB: number) {
+		if (!userA || !userB || userA === userB) return false;
+		const row = await this.blockedUserRepository.findOne({
+			where: [
+				{ blockerId: userA, blockedUserId: userB },
+				{ blockerId: userB, blockedUserId: userA },
+			],
+		});
+		return Boolean(row);
 	}
 
 	async listFriends(userId: number) {
@@ -160,5 +174,34 @@ export class FriendshipService {
 		const [a, b] = this.key(actorId, friendUserId);
 		await this.friendshipRepository.delete({ userId1: a, userId2: b });
 		return { message: 'Đã xóa bạn' };
+	}
+
+	async blockUser(actorId: number, targetUserId: number) {
+		if (!targetUserId || actorId === targetUserId) {
+			throw new BadRequestException('Không thể chặn chính mình');
+		}
+
+		const target = await this.userService.findOne(targetUserId);
+		if (!target) {
+			throw new NotFoundException('Người dùng không tồn tại');
+		}
+
+		const existing = await this.blockedUserRepository.findOne({
+			where: { blockerId: actorId, blockedUserId: targetUserId },
+		});
+		if (!existing) {
+			await this.blockedUserRepository.save(this.blockedUserRepository.create({
+				blockerId: actorId,
+				blockedUserId: targetUserId,
+				createdAt: new Date(),
+			}));
+		}
+
+		return { message: 'Đã chặn người dùng' };
+	}
+
+	async unblockUser(actorId: number, targetUserId: number) {
+		await this.blockedUserRepository.delete({ blockerId: actorId, blockedUserId: targetUserId });
+		return { message: 'Đã bỏ chặn người dùng' };
 	}
 }

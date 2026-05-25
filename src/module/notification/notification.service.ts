@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Notification } from "./notification.entity";
+import { emitToUser } from "../../common/socket/chat-socket";
 
 @Injectable()
 export class NotificationService {
@@ -18,7 +19,7 @@ export class NotificationService {
 		body: string;
 		meta?: any;
 	}) {
-		return this.notificationRepository.save(
+		const notification = await this.notificationRepository.save(
 			this.notificationRepository.create({
 				userId: Number(payload.userId),
 				type: payload.type,
@@ -29,6 +30,17 @@ export class NotificationService {
 				createdAt: new Date(),
 			}),
 		);
+		emitToUser(Number(payload.userId), 'notification:new', {
+			id: String((notification as any)._id),
+			userId: Number(payload.userId),
+			type: payload.type,
+			title: payload.title,
+			body: payload.body,
+			meta: payload.meta || null,
+			isRead: false,
+			createdAt: (notification as any).createdAt,
+		});
+		return notification;
 	}
 
 	async listByUser(userId: number, limit = 50) {
