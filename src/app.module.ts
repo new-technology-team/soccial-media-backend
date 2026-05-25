@@ -23,6 +23,7 @@ import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 import { BlockedUser } from './module/friendship/blocked-user.entity';
+import { DevAdminSeed } from './dev-admin.seed';
 import * as fs from 'fs';
 
 function buildMariaUrl(): string {
@@ -96,7 +97,7 @@ function buildMariaSsl() {
     AiModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, DevAdminSeed],
 })
 
 export class AppModule {
