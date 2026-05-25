@@ -55,6 +55,15 @@ export class User {
     @Column({ type: 'datetime', nullable: true })
     lastActiveAt: Date | null;
 
+    @Column({ type: 'datetime', nullable: true })
+    lockedUntil: Date | null;
+
+    @Column({ type: 'int', default: 0 })
+    warningCount: number;
+
+    @Column({ type: 'text', nullable: true })
+    restrictionReason: string | null;
+
     @Column({
         type: "enum",
         enum: UserRole,

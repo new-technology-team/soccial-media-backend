@@ -155,6 +155,9 @@ export class UserService {
             accountStatus: String(user.status || '').toLowerCase(),
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
+            lockedUntil: user.lockedUntil || null,
+            warningCount: Number(user.warningCount || 0),
+            restrictionReason: user.restrictionReason || null,
         };
     }
 }

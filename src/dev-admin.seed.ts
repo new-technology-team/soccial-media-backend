@@ -20,7 +20,7 @@ export class DevAdminSeed implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    if (process.env.DISABLE_DEV_ADMIN_SEED === 'true') {
+    if (process.env.NODE_ENV === 'production' || process.env.DISABLE_DEV_ADMIN_SEED === 'true') {
       return;
     }
 

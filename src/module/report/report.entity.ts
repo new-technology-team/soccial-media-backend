@@ -33,6 +33,15 @@ export class Report {
     @Column({ type: "int", nullable: true })
     reviewerId: number | null;
 
+    @Column({ type: "int", nullable: true })
+    assignedTo: number | null;
+
+    @Column({ type: "int", nullable: true })
+    resolvedBy: number | null;
+
+    @Column({ type: "varchar", length: 120, nullable: true })
+    reason: string | null;
+
     @Column({
         type: "enum",
         enum: ReportType,
