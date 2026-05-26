@@ -33,6 +33,7 @@ export class AuthService {
 
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) return null;
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') return null;
     return {
       userId: user.userId,
       username: user.username,
@@ -166,6 +167,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
+    }
 
     return {
       id: user.userId,
@@ -194,6 +198,9 @@ export class AuthService {
     const user = await this.userService.findOne(userId);
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
     }
 
     const normalizeGender = (value?: string | null) => {
@@ -255,6 +262,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
+    }
 
     const isValid = await bcryptjs.compare(currentPassword, user.password);
     if (!isValid) {
@@ -263,5 +273,23 @@ export class AuthService {
 
     const hashed = await bcryptjs.hash(newPassword, 10);
     await this.userService.update(userId, { password: hashed });
+  }
+
+  async deleteAccount(userId: number, currentPassword: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
+    }
+
+    const isValid = await bcryptjs.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
+    }
+
+    await this.userService.deactivateAccount(userId);
+    return { message: 'Tai khoan da duoc xoa' };
   }
 }

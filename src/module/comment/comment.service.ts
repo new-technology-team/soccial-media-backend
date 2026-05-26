@@ -11,6 +11,7 @@ import { Comment } from './comment.entity';
 import { UserService } from '../user/user.service';
 import { PostService } from '../post/post.service';
 import { emitToConversation } from '../../common/socket/chat-socket';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class CommentService {
@@ -19,6 +20,7 @@ export class CommentService {
     private readonly commentsRepository: Repository<Comment>,
     private readonly userService: UserService,
     private readonly postService: PostService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private toResponse(comment: Comment, viewerId?: number) {
@@ -87,6 +89,56 @@ export class CommentService {
       this.toResponse(saved, userId),
     );
 
+    try {
+      const postSummary = await this.postService.getPostSummary(postId);
+      const postOwnerId = Number(postSummary?.authorId || 0);
+      if (postOwnerId > 0 && postOwnerId !== Number(userId)) {
+        await this.notificationService.create({
+          userId: postOwnerId,
+          type: 'post_comment',
+          title: 'Co binh luan moi',
+          content: `${user.fullName} vua binh luan bai viet cua ban`,
+          link: '/feed',
+          meta: {
+            postId,
+            commentId: String(saved._id),
+            actorId: Number(user.userId),
+            actorName: user.fullName,
+            parentId: parentId || null,
+          },
+        });
+      }
+
+      if (parentId) {
+        const parentComment = await this.commentsRepository.findOne({
+          where: { _id: this.toObjectId(parentId) } as any,
+        });
+        const parentOwnerId = Number(parentComment?.owner?.userId || 0);
+        if (
+          parentOwnerId > 0 &&
+          parentOwnerId !== Number(userId) &&
+          parentOwnerId !== postOwnerId
+        ) {
+          await this.notificationService.create({
+            userId: parentOwnerId,
+            type: 'comment_reply',
+            title: 'Co phan hoi binh luan moi',
+            content: `${user.fullName} da tra loi binh luan cua ban`,
+            link: '/feed',
+            meta: {
+              postId,
+              commentId: String(saved._id),
+              parentId,
+              actorId: Number(user.userId),
+              actorName: user.fullName,
+            },
+          });
+        }
+      }
+    } catch {
+      /* ignore notification errors */
+    }
+
     return { comment: this.toResponse(saved, userId) };
   }
 
@@ -137,6 +189,29 @@ export class CommentService {
     });
 
     const saved = await this.commentsRepository.save(comment);
+
+    const ownerId = Number(saved.owner?.userId || 0);
+    if (ownerId > 0 && ownerId !== Number(userId)) {
+      try {
+        await this.notificationService.create({
+          userId: ownerId,
+          type: 'comment_reaction',
+          title: 'Co nguoi tha cam xuc binh luan',
+          content: `${user.fullName} da tha cam xuc binh luan cua ban`,
+          link: '/feed',
+          meta: {
+            postId: saved.postId,
+            commentId: String(saved._id),
+            actorId: Number(user.userId),
+            actorName: user.fullName,
+            reactionType: type,
+          },
+        });
+      } catch {
+        /* ignore notification errors */
+      }
+    }
+
     return { comment: this.toResponse(saved, userId) };
   }
 

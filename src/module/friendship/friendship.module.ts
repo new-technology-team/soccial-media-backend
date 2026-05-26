@@ -5,10 +5,11 @@ import { Friendship } from './friendship.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '../user/user.module';
 import { NotificationModule } from '../notification/notification.module';
+import { UserBlock } from '../user/user-block.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Friendship], 'mariadb'),
+    TypeOrmModule.forFeature([Friendship, UserBlock], 'mariadb'),
     UserModule,
     NotificationModule,
   ],

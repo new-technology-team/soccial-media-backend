@@ -13,6 +13,7 @@ import { UserService } from '../user/user.service';
 import { emitToConversation } from '../../common/socket/chat-socket';
 import { Friendship } from '../friendship/friendship.entity';
 import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class PostService {
@@ -22,6 +23,7 @@ export class PostService {
     @InjectRepository(Friendship, 'mariadb')
     private readonly friendshipRepo: Repository<Friendship>,
     private readonly userService: UserService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private async getAcceptedFriendIds(userId: number): Promise<number[]> {
@@ -163,6 +165,22 @@ export class PostService {
     return this.toResponse(post, viewerId);
   }
 
+  async getPostSummary(id: string): Promise<{
+    id: string;
+    authorId: number;
+    authorName: string;
+  } | null> {
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
+    if (!post) return null;
+    return {
+      id: String(post._id),
+      authorId: Number(post.owner?.userId || 0),
+      authorName: String(post.owner?.displayName || 'Nguoi dung'),
+    };
+  }
+
   async findByUser(userId: number, viewerId?: number) {
     const requestedUserId = Number(userId);
     const currentUserId = Number(viewerId || 0);
@@ -241,6 +259,28 @@ export class PostService {
     });
 
     const saved = await this.postsRepository.save(post);
+
+    const authorId = Number(saved.owner?.userId || 0);
+    if (authorId > 0 && authorId !== Number(userId)) {
+      try {
+        await this.notificationService.create({
+          userId: authorId,
+          type: 'post_reaction',
+          title: 'Co nguoi tha cam xuc bai viet',
+          content: `${user.fullName} da tha cam xuc bai viet cua ban`,
+          link: '/feed',
+          meta: {
+            postId: String(saved._id),
+            actorId: Number(user.userId),
+            actorName: user.fullName,
+            reactionType: type,
+          },
+        });
+      } catch {
+        /* ignore notification errors */
+      }
+    }
+
     return this.toResponse(saved, userId);
   }
 

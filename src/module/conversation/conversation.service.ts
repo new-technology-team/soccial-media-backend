@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { emitToConversation } from '../../common/socket/chat-socket';
 import { Message } from '../message/message.entity';
 import { UserService } from '../user/user.service';
+import { UserBlock } from '../user/user-block.entity';
 import { Conversation } from './conversation.entity';
 
 type MemberLike = {
@@ -30,6 +31,8 @@ export class ConversationService {
     private readonly convRepo: Repository<Conversation>,
     @InjectRepository(Message, 'mongodb')
     private readonly messageRepo: Repository<Message>,
+    @InjectRepository(UserBlock, 'mariadb')
+    private readonly userBlockRepo: Repository<UserBlock>,
     private readonly userService: UserService,
   ) {}
 
@@ -74,6 +77,10 @@ export class ConversationService {
   private toResponse(conv: Conversation, currentUserId?: number) {
     const lastMsg = conv.lastMessage;
     const members = (conv.members || []) as MemberLike[];
+    const currentMember =
+      currentUserId !== undefined
+        ? members.find((member) => Number(member.userId) === Number(currentUserId))
+        : undefined;
     const isGroup =
       conv.type === 'group' ||
       Boolean(String(conv.conversationName || '').trim());
@@ -96,6 +103,10 @@ export class ConversationService {
         fullName: member.displayName || member.fullName || 'Người dùng',
         avatarUrl: member.avatarUrl || null,
         role: this.getMemberRole(member),
+        notificationsEnabled:
+          member.notificationsEnabled === undefined
+            ? true
+            : Boolean(member.notificationsEnabled),
       })),
       lastMessage: lastMsg
         ? lastMsg.text || lastMsg.content || '[Tin nhắn đa phương tiện]'
@@ -103,10 +114,65 @@ export class ConversationService {
       lastMessageAt:
         conv.lastMessageAt?.toISOString?.() ?? new Date().toISOString(),
       unreadCount: conv.unreadCount || 0,
+      viewerSettings: {
+        notificationsEnabled:
+          currentMember?.notificationsEnabled === undefined
+            ? true
+            : Boolean(currentMember?.notificationsEnabled),
+      },
       isMine: currentUserId
         ? (conv.members || []).some((member) => member.userId === currentUserId)
         : false,
     };
+  }
+
+  private getDirectPeerUserId(conversation: Conversation, userId: number) {
+    if (conversation.type === 'group') return null;
+    const peer = ((conversation.members || []) as MemberLike[]).find(
+      (member) => Number(member.userId) !== Number(userId),
+    );
+    return peer ? Number(peer.userId) : null;
+  }
+
+  private async getBlockFlags(viewerId: number, peerUserId: number) {
+    const [blockedByMe, blockedMe] = await Promise.all([
+      this.userBlockRepo.findOne({
+        where: {
+          blockerUserId: Number(viewerId),
+          blockedUserId: Number(peerUserId),
+        },
+      }),
+      this.userBlockRepo.findOne({
+        where: {
+          blockerUserId: Number(peerUserId),
+          blockedUserId: Number(viewerId),
+        },
+      }),
+    ]);
+
+    return {
+      isBlockedByMe: Boolean(blockedByMe),
+      isBlockedMe: Boolean(blockedMe),
+    };
+  }
+
+  private async ensureDirectMessageAllowed(
+    conversation: Conversation,
+    userId: number,
+  ) {
+    const peerUserId = this.getDirectPeerUserId(conversation, userId);
+    if (!peerUserId) return;
+
+    const { isBlockedByMe, isBlockedMe } = await this.getBlockFlags(
+      userId,
+      peerUserId,
+    );
+
+    if (isBlockedByMe || isBlockedMe) {
+      throw new ForbiddenException(
+        'Khong the gui tin nhan vi mot trong hai ben da chan nhau',
+      );
+    }
   }
 
   private toMessageResponse(msg: Message, currentUserId?: number) {
@@ -157,6 +223,13 @@ export class ConversationService {
   async createDirect(userId: number, targetUserId: number) {
     if (Number(userId) === Number(targetUserId)) {
       throw new BadRequestException('Khong the tao hoi thoai voi chinh minh');
+    }
+
+    const blockFlags = await this.getBlockFlags(userId, targetUserId);
+    if (blockFlags.isBlockedByMe || blockFlags.isBlockedMe) {
+      throw new ForbiddenException(
+        'Khong the tao hoi thoai vi mot trong hai ben da chan nhau',
+      );
     }
 
     const [user, targetUser] = await Promise.all([
@@ -287,7 +360,21 @@ export class ConversationService {
 
   async getConversationDetail(conversationId: string, userId: number) {
     const conversation = await this.ensureMembership(conversationId, userId);
-    return { conversation: this.toResponse(conversation, userId) };
+    const response = this.toResponse(conversation, userId) as any;
+    const peerUserId = this.getDirectPeerUserId(conversation, userId);
+
+    if (peerUserId) {
+      const blockFlags = await this.getBlockFlags(userId, peerUserId);
+      response.directPeerId = peerUserId;
+      response.isBlockedByMe = blockFlags.isBlockedByMe;
+      response.isBlockedMe = blockFlags.isBlockedMe;
+    } else {
+      response.directPeerId = null;
+      response.isBlockedByMe = false;
+      response.isBlockedMe = false;
+    }
+
+    return { conversation: response };
   }
 
   async getMessages(conversationId: string, userId: number, limit = 30) {
@@ -322,6 +409,7 @@ export class ConversationService {
     },
   ) {
     const conversation = await this.ensureMembership(conversationId, userId);
+    await this.ensureDirectMessageAllowed(conversation, userId);
     const user = await this.userService.findOne(userId);
     const content =
       data.text || (data.mediaUrl ? `[${data.type || 'message'}]` : '');

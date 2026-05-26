@@ -24,9 +24,11 @@ export class NotificationController {
       notifications: notifications.map((n) => ({
         id: String(n._id),
         userId: n.userId,
+        type: n.type || 'general',
         title: n.title,
         body: n.content,
         link: n.link,
+        meta: n.meta || null,
         isRead: n.isRead,
         is_read: n.isRead,
         createdAt: n.createdAt?.toISOString?.() ?? new Date().toISOString(),

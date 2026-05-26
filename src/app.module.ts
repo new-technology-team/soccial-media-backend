@@ -24,6 +24,7 @@ import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
 import { ChatGateway } from './common/socket/chat.gateway';
+import { UserBlock } from './module/user/user-block.entity';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
@@ -55,7 +56,7 @@ function buildMongoUrl(): string {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, Report, AuthOtp],
+      entities: [User, Friendship, Report, AuthOtp, UserBlock],
       logging: false,
     }),
     TypeOrmModule.forRoot({

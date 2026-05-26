@@ -5,10 +5,12 @@ import { Conversation } from './conversation.entity';
 import { Message } from '../message/message.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '../user/user.module';
+import { UserBlock } from '../user/user-block.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Conversation, Message], 'mongodb'),
+    TypeOrmModule.forFeature([UserBlock], 'mariadb'),
     UserModule,
   ],
   controllers: [ConversationController],

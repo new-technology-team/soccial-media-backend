@@ -14,6 +14,12 @@ export class Notification {
   @Column()
   content: string;
 
+  @Column({ nullable: true })
+  type?: string;
+
+  @Column({ nullable: true })
+  meta?: Record<string, any> | null;
+
   @Column()
   link: string;
 

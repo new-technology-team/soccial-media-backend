@@ -3,12 +3,18 @@ import { User } from './user.entity';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Friendship } from '../friendship/friendship.entity';
+import { UserBlock } from './user-block.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User, 'mariadb')
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Friendship, 'mariadb')
+    private readonly friendshipRepository: Repository<Friendship>,
+    @InjectRepository(UserBlock, 'mariadb')
+    private readonly userBlockRepository: Repository<UserBlock>,
   ) {}
 
   async findOne(userId: number): Promise<User | null> {
@@ -126,5 +132,37 @@ export class UserService {
     }
 
     return this.usersRepository.save(user);
+  }
+
+  async deactivateAccount(userId: number): Promise<void> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const deletedAt = Date.now();
+    const mark = `deleted_${userId}_${deletedAt}`;
+
+    user.username = mark;
+    user.email = `${mark}@zchat.local`;
+    user.phone = `${mark}_phone`;
+    user.fullName = 'Tai khoan da xoa';
+    user.avatarUrl = '';
+    user.status = 'HIDDEN';
+    user.notificationCalls = false;
+    user.notificationMessages = false;
+    user.allowFriendRequests = false;
+
+    await this.usersRepository.save(user);
+
+    await this.friendshipRepository.delete([
+      { userId1: userId } as any,
+      { userId2: userId } as any,
+    ]);
+
+    await this.userBlockRepository.delete([
+      { blockerUserId: userId } as any,
+      { blockedUserId: userId } as any,
+    ]);
   }
 }

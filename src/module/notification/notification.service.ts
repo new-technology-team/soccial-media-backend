@@ -16,12 +16,16 @@ export class NotificationService {
     userId: number;
     title: string;
     content: string;
+    type?: string;
+    meta?: Record<string, any> | null;
     link?: string;
   }) {
     const notif = this.notifRepo.create({
       userId: String(data.userId),
       title: data.title,
       content: data.content,
+      type: data.type || 'general',
+      meta: data.meta || null,
       link: data.link || '',
       createdAt: new Date(),
     });
@@ -30,9 +34,11 @@ export class NotificationService {
     emitToConversation(`user:${data.userId}`, 'notification:new', {
       id: String((saved as any)._id || ''),
       userId: String(data.userId),
+      type: saved.type || 'general',
       title: saved.title,
       body: saved.content,
       link: saved.link,
+      meta: saved.meta || null,
       isRead: Boolean(saved.isRead),
       is_read: Boolean(saved.isRead),
       createdAt: saved.createdAt?.toISOString?.() ?? new Date().toISOString(),
@@ -76,4 +82,3 @@ export class NotificationService {
     return new ObjectId(id);
   }
 }
-

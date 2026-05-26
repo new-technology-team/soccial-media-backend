@@ -77,4 +77,19 @@ export class FriendshipController {
       parseInt(userId, 10),
     );
   }
+
+  @Post('users/:userId/block')
+  @UseGuards(JwtAuthGuard)
+  blockUser(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.blockUser(req.user.sub, parseInt(userId, 10));
+  }
+
+  @Delete('users/:userId/block')
+  @UseGuards(JwtAuthGuard)
+  unblockUser(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.unblockUser(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 }

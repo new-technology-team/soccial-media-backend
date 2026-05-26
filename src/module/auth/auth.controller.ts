@@ -62,6 +62,12 @@ export class AuthController {
     );
   }
 
+  @Post('delete-account')
+  @UseGuards(JwtAuthGuard)
+  deleteAccount(@Req() req: any, @Body() body: { currentPassword: string }) {
+    return this.authService.deleteAccount(req.user.sub, body.currentPassword);
+  }
+
   @Post('avatar-upload-base64')
   @UseGuards(JwtAuthGuard)
   async uploadAvatarBase64(
