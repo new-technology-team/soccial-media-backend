@@ -18,8 +18,8 @@ async function bootstrap() {
   const rawExpress = app.getHttpAdapter().getInstance();
 
   // Base64 upload payload can be larger than default parser limit (~100kb).
-  rawExpress.use(express.json({ limit: '15mb' }));
-  rawExpress.use(express.urlencoded({ extended: true, limit: '15mb' }));
+  rawExpress.use(express.json({ limit: '25mb' }));
+  rawExpress.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
   app.enableCors({
     origin: process.env.CORS_ORIGINS?.split(',') || [
