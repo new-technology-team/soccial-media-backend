@@ -1,11 +1,15 @@
-import { Body, Controller, Get, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Put, Query, UseGuards } from "@nestjs/common";
 import { UserService } from "./user.service";
+import { PostService } from "../post/post.service";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 
 @Controller('social')
 export class UserController {
-    constructor(private userService: UserService) { }
+    constructor(
+        private userService: UserService,
+        private postService: PostService,
+    ) { }
 
     @UseGuards(JwtAuthGuard)
     @Get('settings')
@@ -21,6 +25,66 @@ export class UserController {
                 updatedAt: new Date(),
             },
         };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/search')
+    async searchUsers(@CurrentUser() user: any, @Query('q') q: string) {
+        const users = await this.userService.searchUsers(q || '', user.id);
+        return {
+            users: users.map((u) => ({
+                userId: u.userId,
+                displayName: u.displayName,
+                avatarUrl: u.avatarUrl || null,
+                role: u.role,
+            })),
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/:id')
+    async getUserProfile(@CurrentUser() user: any, @Param('id') id: string) {
+        const profile = await this.userService.findOne(Number(id));
+        if (!profile) {
+            return { user: null };
+        }
+        return {
+            user: {
+                userId: profile.userId,
+                displayName: profile.displayName,
+                avatarUrl: profile.avatarUrl || null,
+                role: profile.role,
+                isVerified: profile.isVerified,
+                lastActiveAt: profile.lastActiveAt || null,
+            },
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Put('users/profile')
+    async updateUserProfile(@CurrentUser() user: any, @Body() body: any) {
+        await this.userService.updateProfile(user.id, {
+            displayName: body?.displayName,
+            avatarUrl: body?.avatarUrl,
+            sex: body?.sex,
+            dateOfBirth: body?.dateOfBirth,
+        });
+        const updated = await this.userService.findOne(user.id);
+        return {
+            message: 'Cập nhật hồ sơ thành công',
+            user: {
+                userId: updated?.userId,
+                displayName: updated?.displayName,
+                avatarUrl: updated?.avatarUrl || null,
+                role: updated?.role,
+            },
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/:id/posts')
+    async getUserPosts(@CurrentUser() user: any, @Param('id') id: string, @Query('limit') limit?: string) {
+        return this.postService.listUserPosts(Number(id), user.id, Number(limit || 20));
     }
 
     @UseGuards(JwtAuthGuard)
