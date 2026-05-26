@@ -8,12 +8,16 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import * as bcryptjs from 'bcryptjs';
+import { PostService } from '../post/post.service';
+import { CommentService } from '../comment/comment.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
+    private postService: PostService,
+    private commentService: CommentService,
   ) {}
 
   async validateUser(identifier: string, password: string) {
@@ -211,6 +215,21 @@ export class AuthService {
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       sex,
     });
+
+    try {
+      await this.postService.syncAuthorProfile(
+        updated.userId,
+        updated.fullName,
+        updated.avatarUrl || '',
+      );
+      await this.commentService.syncAuthorProfile(
+        updated.userId,
+        updated.fullName,
+        updated.avatarUrl || '',
+      );
+    } catch {
+      /* ignore sync errors */
+    }
 
     return {
       id: updated.userId,

@@ -32,6 +32,9 @@ export class Message {
   @Column({ default: false })
   isRecalled: boolean;
 
+  @Column({ nullable: true })
+  removedForUserIds?: number[];
+
   @Column()
   createdAt: Date;
 }

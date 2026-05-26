@@ -162,7 +162,37 @@ export class CommentService {
     await this.commentsRepository.delete({
       _id: this.toObjectId(commentId),
     } as any);
+
+    try {
+      await this.postService.decrementCommentCount(comment.postId);
+    } catch {
+      /* ignore */
+    }
+
     return { message: 'Comment deleted successfully' };
+  }
+
+  async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string) {
+    const comments = await this.commentsRepository.find({});
+    if (!comments.length) return;
+
+    for (const comment of comments) {
+      if (Number(comment.owner?.userId) === Number(userId)) {
+        comment.owner.displayName = fullName;
+        comment.owner.avatarUrl = avatarUrl || '';
+      }
+
+      comment.reacts = (comment.reacts || []).map((react: any) => {
+        if (Number(react?.userId) !== Number(userId)) return react;
+        return {
+          ...react,
+          displayName: fullName,
+          avatarUrl: avatarUrl || '',
+        };
+      });
+    }
+
+    await this.commentsRepository.save(comments);
   }
 
   private toObjectId(id: string): any {
@@ -172,4 +202,3 @@ export class CommentService {
     return new ObjectId(id);
   }
 }
-

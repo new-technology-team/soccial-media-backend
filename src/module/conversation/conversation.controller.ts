@@ -67,6 +67,21 @@ export class ConversationController {
     return this.conversationService.sendMessage(id, req.user.sub, body);
   }
 
+  @Patch('conversations/:id/messages/:messageId/recall')
+  recallMessage(
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+    @Req() req: any,
+    @Body() body: { scope?: 'me' | 'all' },
+  ) {
+    return this.conversationService.recallMessage(
+      id,
+      messageId,
+      req.user.sub,
+      body?.scope === 'all' ? 'all' : 'me',
+    );
+  }
+
   @Patch('conversations/:id/seen')
   seen(@Req() req: any, @Param('id') id: string) {
     return this.conversationService.setSeen(id, req.user.sub);

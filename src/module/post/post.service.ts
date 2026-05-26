@@ -259,10 +259,47 @@ export class PostService {
   }
 
   async incrementCommentCount(id: string) {
-    await this.postsRepository.update(
-      { _id: this.toObjectId(id) } as any,
-      { commentCount: () => 'commentCount + 1' } as any,
-    );
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
+    if (!post) return;
+    post.commentCount = Number(post.commentCount || 0) + 1;
+    await this.postsRepository.save(post);
+  }
+
+  async decrementCommentCount(id: string) {
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
+    if (!post) return;
+    post.commentCount = Math.max(0, Number(post.commentCount || 0) - 1);
+    await this.postsRepository.save(post);
+  }
+
+  async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string) {
+    const posts = await this.postsRepository.find({
+      where: { 'owner.userId': Number(userId) } as any,
+    });
+
+    if (!posts.length) return;
+
+    for (const post of posts) {
+      if (post.owner) {
+        post.owner.displayName = fullName;
+        post.owner.avatarUrl = avatarUrl || '';
+      }
+
+      post.interacts = (post.interacts || []).map((interact: any) => {
+        if (Number(interact?.userId) !== Number(userId)) return interact;
+        return {
+          ...interact,
+          displayName: fullName,
+          avatarUrl: avatarUrl || '',
+        };
+      });
+    }
+
+    await this.postsRepository.save(posts);
   }
 
   private toObjectId(id: string): any {

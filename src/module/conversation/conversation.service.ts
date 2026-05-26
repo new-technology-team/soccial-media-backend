@@ -117,11 +117,16 @@ export class ConversationService {
       senderName: msg.senderName || msg.senderFullName || 'Người dùng',
       senderFullName: msg.senderFullName || msg.senderName || 'Người dùng',
       senderAvatar: msg.senderAvatar,
-      content: msg.content,
-      text: msg.content,
+      content: msg.isRecalled ? 'Tin nhan da duoc thu hoi' : msg.content,
+      text: msg.isRecalled ? 'Tin nhan da duoc thu hoi' : msg.content,
       type: msg.type,
       mediaUrl: msg.mediaUrl,
       isRecalled: msg.isRecalled,
+      isRemovedForMe: Boolean(
+        (msg.removedForUserIds || []).some(
+          (id) => Number(id) === Number(currentUserId),
+        ),
+      ),
       createdAt: msg.createdAt?.toISOString?.() ?? new Date().toISOString(),
       isMine: msg.senderId === currentUserId,
     };
@@ -296,6 +301,12 @@ export class ConversationService {
 
     return {
       messages: messages
+        .filter(
+          (message) =>
+            !(message.removedForUserIds || []).some(
+              (id) => Number(id) === Number(userId),
+            ),
+        )
         .map((message) => this.toMessageResponse(message, userId))
         .reverse(),
     };
@@ -326,6 +337,7 @@ export class ConversationService {
       mediaUrl: data.mediaUrl || '',
       createdAt: new Date(),
       isRecalled: false,
+      removedForUserIds: [],
     });
 
     const saved = await this.messageRepo.save(message);
@@ -346,6 +358,60 @@ export class ConversationService {
     );
 
     return { message: this.toMessageResponse(saved, userId) };
+  }
+
+  async recallMessage(
+    conversationId: string,
+    messageId: string,
+    userId: number,
+    scope: 'me' | 'all',
+  ) {
+    await this.ensureMembership(conversationId, userId);
+
+    const message = await this.messageRepo.findOne({
+      where: {
+        _id: this.toObjectId(messageId),
+        conversationId,
+      } as any,
+    });
+
+    if (!message) {
+      throw new NotFoundException('Khong tim thay tin nhan');
+    }
+
+    if (scope === 'all') {
+      if (Number(message.senderId) !== Number(userId)) {
+        throw new ForbiddenException('Ban chi co the thu hoi tin cua minh');
+      }
+
+      message.isRecalled = true;
+      message.content = 'Tin nhan da duoc thu hoi';
+      message.mediaUrl = '';
+      const saved = await this.messageRepo.save(message);
+
+      emitToConversation(
+        conversationId,
+        'message:updated',
+        this.toMessageResponse(saved, userId),
+      );
+
+      return { message: this.toMessageResponse(saved, userId), removed: false };
+    }
+
+    const removedFor = new Set<number>([
+      ...((message.removedForUserIds || []).map((id) => Number(id)) || []),
+      Number(userId),
+    ]);
+    message.removedForUserIds = Array.from(removedFor);
+    await this.messageRepo.save(message);
+
+    emitToConversation(conversationId, 'message:updated', {
+      id: String(message._id),
+      conversationId,
+      removedForUserId: Number(userId),
+    });
+
+    return { id: String(message._id), removed: true };
   }
 
   async setSeen(conversationId: string, userId: number) {
