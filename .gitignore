@@ -56,3 +56,8 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated
+
+# Runtime uploads and local run artifacts
+/uploads
+backend-run.err
+backend-run.log
