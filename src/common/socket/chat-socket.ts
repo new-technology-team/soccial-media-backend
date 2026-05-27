@@ -91,6 +91,14 @@ const relayCallEvent = (socket: Socket, eventName: string, payload: any) => {
     fromUserId: Number(payload?.fromUserId || 0) || senderUserId || undefined,
   };
 
+  if (targetUserId && conversationId) {
+    socket
+      .to(`user:${targetUserId}`)
+      .to(conversationId)
+      .emit(eventName, normalizedPayload);
+    return;
+  }
+
   if (targetUserId) {
     socket.to(`user:${targetUserId}`).emit(eventName, normalizedPayload);
     return;
