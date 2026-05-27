@@ -131,9 +131,13 @@ export class ConversationService {
           )
         : undefined;
 
-    const isGroup =
-      conv.type === 'group' ||
-      Boolean(String(conv.conversationName || '').trim());
+    const normalizedType = String(conv.type || '').trim().toLowerCase();
+    const inferredType = normalizedType
+      ? normalizedType
+      : Number((conv.members || []).length || 0) > 2
+        ? 'group'
+        : 'direct';
+    const isGroup = inferredType === 'group';
 
     const directPeer = !isGroup
       ? members.find(
@@ -153,7 +157,7 @@ export class ConversationService {
       id: String(conv._id),
       name: displayName,
       avatarUrl: displayAvatar,
-      type: conv.type || (conv.conversationName ? 'group' : 'direct'),
+      type: inferredType,
       isGroup,
       members: members.map((member) => ({
         userId: member.userId,
@@ -186,8 +190,10 @@ export class ConversationService {
   }
 
   private getDirectPeerUserId(conversation: Conversation, userId: number) {
-    if (conversation.type === 'group') return null;
-    const peer = ((conversation.members || []) as MemberLike[]).find(
+    const members = (conversation.members || []) as MemberLike[];
+    const normalizedType = String(conversation.type || '').toLowerCase();
+    if (normalizedType === 'group' || members.length > 2) return null;
+    const peer = members.find(
       (member) => Number(member.userId) !== Number(userId),
     );
     return peer ? Number(peer.userId) : null;
