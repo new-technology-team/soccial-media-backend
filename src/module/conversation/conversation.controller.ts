@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,6 +11,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { promises as fs } from 'fs';
+import { extname, join } from 'path';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 import { ConversationService } from './conversation.service';
 
@@ -30,13 +33,14 @@ export class ConversationController {
 
   @Post('conversations/group')
   createGroup(
-    @Body() body: { name: string; memberIds: number[] },
+    @Body() body: { name: string; memberIds: number[]; avatarUrl?: string },
     @Req() req: any,
   ) {
     return this.conversationService.createGroup(
       req.user.sub,
       body.name,
       body.memberIds || [],
+      body.avatarUrl,
     );
   }
 
@@ -62,9 +66,30 @@ export class ConversationController {
   sendMessage(
     @Param('id') id: string,
     @Req() req: any,
-    @Body() body: { type?: string; text?: string; mediaUrl?: string },
+    @Body()
+    body: {
+      type?: string;
+      text?: string;
+      mediaUrl?: string;
+      fileName?: string;
+      fileSize?: number;
+      meta?: Record<string, any> | null;
+    },
   ) {
     return this.conversationService.sendMessage(id, req.user.sub, body);
+  }
+
+  @Patch('conversations/:id/avatar')
+  updateGroupAvatar(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { avatarUrl?: string },
+  ) {
+    return this.conversationService.updateGroupAvatar(
+      id,
+      req.user.sub,
+      String(body?.avatarUrl || ''),
+    );
   }
 
   @Patch('conversations/:id/messages/:messageId/recall')
@@ -174,5 +199,72 @@ export class ConversationController {
   @Delete('conversations/:id')
   dissolveGroup(@Req() req: any, @Param('id') id: string) {
     return this.conversationService.dissolveGroup(id, req.user.sub);
+  }
+
+  @Post('uploads/base64')
+  async uploadChatMediaBase64(
+    @Req() req: any,
+    @Body()
+    body: {
+      fileName?: string;
+      contentType?: string;
+      base64Data?: string;
+    },
+  ) {
+    const base64Raw = String(body?.base64Data || '').trim();
+    if (!base64Raw) {
+      throw new BadRequestException('Thieu base64Data');
+    }
+
+    const base64Payload = base64Raw.includes(',')
+      ? base64Raw.split(',').pop() || ''
+      : base64Raw;
+    const buffer = Buffer.from(base64Payload, 'base64');
+    if (!buffer.length) {
+      throw new BadRequestException('Du lieu file khong hop le');
+    }
+    if (buffer.length > 15 * 1024 * 1024) {
+      throw new BadRequestException('Kich thuoc file qua lon (toi da 15MB)');
+    }
+
+    const requestedExt = extname(String(body?.fileName || '')).toLowerCase();
+    const contentType = String(body?.contentType || '').toLowerCase();
+    const safeExt =
+      requestedExt ||
+      (contentType.includes('png')
+        ? '.png'
+        : contentType.includes('webp')
+          ? '.webp'
+          : contentType.includes('gif')
+            ? '.gif'
+            : contentType.includes('jpeg') || contentType.includes('jpg')
+              ? '.jpg'
+              : contentType.includes('pdf')
+                ? '.pdf'
+                : contentType.includes('json')
+                  ? '.json'
+                  : contentType.includes('zip')
+                    ? '.zip'
+                    : contentType.includes('mp4')
+                      ? '.mp4'
+                      : '.bin');
+
+    const userId = Number(req?.user?.sub || 0);
+    if (!userId) {
+      throw new BadRequestException('Khong xac dinh duoc user');
+    }
+
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt}`;
+    const relativeDir = join('uploads', 'messages', String(userId));
+    const absoluteDir = join(process.cwd(), relativeDir);
+    await fs.mkdir(absoluteDir, { recursive: true });
+    await fs.writeFile(join(absoluteDir, fileName), buffer);
+
+    return {
+      fileUrl: `/${relativeDir.replace(/\\/g, '/')}/${fileName}`,
+      fileName: String(body?.fileName || fileName),
+      contentType: contentType || 'application/octet-stream',
+      size: buffer.length,
+    };
   }
 }

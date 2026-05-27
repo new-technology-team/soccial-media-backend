@@ -29,6 +29,15 @@ export class Message {
   @Column({ nullable: true })
   mediaUrl: string;
 
+  @Column({ nullable: true })
+  fileName?: string;
+
+  @Column({ nullable: true })
+  fileSize?: number;
+
+  @Column({ nullable: true })
+  meta?: Record<string, any> | null;
+
   @Column({ default: false })
   isRecalled: boolean;
 

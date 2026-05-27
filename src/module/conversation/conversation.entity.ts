@@ -12,6 +12,9 @@ export class Conversation {
   @Column({ nullable: true })
   conversationName: string;
 
+  @Column({ nullable: true })
+  avatarUrl: string;
+
   @Column({ default: 'active' })
   status: string;
 
