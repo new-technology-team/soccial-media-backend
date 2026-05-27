@@ -103,6 +103,10 @@ export class UserService {
         await this.usersRepository.update({ userId }, { isVerified: Boolean(isVerified) });
     }
 
+    async deleteUnverifiedUser(userId: number): Promise<void> {
+        await this.usersRepository.delete({ userId, isVerified: false });
+    }
+
     async checkPassword(user: User, plainPassword: string): Promise<boolean> {
         if (!user?.password) return false;
         return bcrypt.compare(plainPassword, user.password);

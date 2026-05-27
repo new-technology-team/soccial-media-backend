@@ -379,6 +379,33 @@ export class AuthService {
         return this.issueTokens(user);
     }
 
+    async loginWithGoogleIdToken(idToken: string) {
+        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+        if (!clientId) {
+            throw new BadRequestException('ChÆ°a cáº¥u hĂ¬nh GOOGLE_CLIENT_ID.');
+        }
+
+        const tokenResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+        const profile = (await tokenResponse.json().catch(() => ({}))) as {
+            aud?: string;
+            email?: string;
+            name?: string;
+            picture?: string;
+            error_description?: string;
+        };
+
+        if (!tokenResponse.ok || profile.aud !== clientId || !profile.email) {
+            throw new BadRequestException(profile.error_description || 'Google id_token khĂ´ng há»£p lá»‡.');
+        }
+
+        const user = await this.findOrCreateSocialUser({
+            email: profile.email,
+            name: profile.name,
+            avatarUrl: profile.picture,
+        });
+        return this.issueTokens(user);
+    }
+
     async loginWithAppleCode(code: string, userJson?: string) {
         const clientId = String(process.env.APPLE_CLIENT_ID || process.env.APPLE_SERVICE_ID || '').trim();
         const clientSecret = String(process.env.APPLE_CLIENT_SECRET || '').trim();
@@ -422,6 +449,20 @@ export class AuthService {
         const user = await this.findOrCreateSocialUser({
             email: appleProfile.email,
             name: fullName || undefined,
+        });
+        return this.issueTokens(user);
+    }
+
+    async loginWithAppleIdToken(idToken: string) {
+        const appleProfile = this.decodeJwtPayload(idToken) as { email?: string; aud?: string };
+        const clientId = String(process.env.APPLE_CLIENT_ID || process.env.APPLE_SERVICE_ID || '').trim();
+
+        if (!appleProfile.email || (clientId && appleProfile.aud !== clientId)) {
+            throw new BadRequestException('Apple id_token khĂ´ng há»£p lá»‡.');
+        }
+
+        const user = await this.findOrCreateSocialUser({
+            email: appleProfile.email,
         });
         return this.issueTokens(user);
     }
@@ -505,6 +546,8 @@ export class AuthService {
                 };
             }
 
+            await this.otpRepository.delete({ identifier: identifier!, purpose: 'verify' });
+            await this.userService.deleteUnverifiedUser(newUser.userId);
             throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
         }
 

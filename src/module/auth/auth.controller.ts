@@ -28,6 +28,7 @@ export class AuthController {
                 response_type: 'code',
                 scope: 'openid email profile',
                 prompt: 'select_account',
+                state: 'google',
             });
             return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
         }
@@ -41,6 +42,7 @@ export class AuthController {
             response_type: 'code',
             scope: 'name email',
             response_mode: 'query',
+            state: 'apple',
         });
         return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
     }
@@ -62,12 +64,23 @@ export class AuthController {
 
     private redirectWithAuthPayload(response: Response, payload: any) {
         const frontendUrl = String(process.env.FRONTEND_URL || process.env.WEB_PUBLIC_URL || 'http://localhost:8088').replace(/\/$/, '');
-        const hash = new URLSearchParams({
+        const params = new URLSearchParams({
             accessToken: payload.accessToken,
             refreshToken: payload.refreshToken,
             user: JSON.stringify(payload.user),
         });
-        return response.redirect(`${frontendUrl}/auth/social-callback#${hash.toString()}`);
+        return response.redirect(`${frontendUrl}/auth/social-callback?${params.toString()}`);
+    }
+
+    private redirectSocialError(response: Response, provider: 'google' | 'apple', error: unknown) {
+        const frontendUrl = String(process.env.FRONTEND_URL || process.env.WEB_PUBLIC_URL || 'http://localhost:8088').replace(/\/$/, '');
+        const message = error instanceof Error ? error.message : 'callback-failed';
+        const params = new URLSearchParams({
+            socialError: 'callback',
+            socialProvider: provider,
+            socialDetail: message.slice(0, 160),
+        });
+        return response.redirect(`${frontendUrl}/auth/login?${params.toString()}`);
     }
 
     @Post('login')
@@ -87,14 +100,42 @@ export class AuthController {
 
     @Get('google/callback')
     async googleCallback(@Query('code') code: string, @Res() response: Response) {
-        const payload = await this.authService.loginWithGoogleCode(String(code || ''));
-        return this.redirectWithAuthPayload(response, payload);
+        try {
+            const payload = await this.authService.loginWithGoogleCode(String(code || ''));
+            return this.redirectWithAuthPayload(response, payload);
+        } catch (error) {
+            return this.redirectSocialError(response, 'google', error);
+        }
+    }
+
+    @Get('google/id-token')
+    async googleIdTokenCallback(@Query('idToken') idToken: string, @Res() response: Response) {
+        try {
+            const payload = await this.authService.loginWithGoogleIdToken(String(idToken || ''));
+            return this.redirectWithAuthPayload(response, payload);
+        } catch (error) {
+            return this.redirectSocialError(response, 'google', error);
+        }
     }
 
     @Get('apple/callback')
     async appleCallback(@Query('code') code: string, @Query('user') user: string | undefined, @Res() response: Response) {
-        const payload = await this.authService.loginWithAppleCode(String(code || ''), user);
-        return this.redirectWithAuthPayload(response, payload);
+        try {
+            const payload = await this.authService.loginWithAppleCode(String(code || ''), user);
+            return this.redirectWithAuthPayload(response, payload);
+        } catch (error) {
+            return this.redirectSocialError(response, 'apple', error);
+        }
+    }
+
+    @Get('apple/id-token')
+    async appleIdTokenCallback(@Query('idToken') idToken: string, @Res() response: Response) {
+        try {
+            const payload = await this.authService.loginWithAppleIdToken(String(idToken || ''));
+            return this.redirectWithAuthPayload(response, payload);
+        } catch (error) {
+            return this.redirectSocialError(response, 'apple', error);
+        }
     }
 
     @Post('register')
