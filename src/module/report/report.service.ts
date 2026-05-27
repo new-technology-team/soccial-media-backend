@@ -11,8 +11,13 @@ import { Comment } from "../comment/comment.entity";
 import { UserRole } from "../../common/enum/user-role.enum";
 import { UserStatus } from "../../common/enum/user-status.enum";
 import { AuditLog } from "../audit-log/audit-log.entity";
+import { SystemSetting } from "../system-setting/system-setting.entity";
+import { emitSocialEvent, emitToUser } from "../../common/socket/chat-socket";
 
 function toClientUser(user: any) {
+	const permissions = typeof user?.permissions === 'string'
+		? user.permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
+		: Array.isArray(user?.permissions) ? user.permissions : [];
 	return {
 		id: user?.userId,
 		username: user?.username || null,
@@ -26,6 +31,7 @@ function toClientUser(user: any) {
 		lockedUntil: user?.lockedUntil || null,
 		warningCount: Number(user?.warningCount || 0),
 		restrictionReason: user?.restrictionReason || null,
+		permissions,
 	};
 }
 
@@ -41,6 +47,22 @@ function isModerator(actor: any) {
 	return roleOf(actor) === UserRole.MODERATOR;
 }
 
+const DEFAULT_MODERATOR_PERMISSIONS = [
+	'manage_posts',
+	'manage_reports',
+	'manage_comments',
+	'manage_users',
+];
+
+function normalizePermissions(value: any, fallback: string[] = []) {
+	const raw = Array.isArray(value)
+		? value
+		: typeof value === 'string'
+			? value.split(',')
+			: fallback;
+	return Array.from(new Set(raw.map((item: any) => String(item || '').trim()).filter(Boolean)));
+}
+
 @Injectable()
 export class ReportService {
 	constructor(
@@ -54,6 +76,8 @@ export class ReportService {
 		private readonly commentRepository: Repository<Comment>,
 		@InjectRepository(AuditLog, 'mariadb')
 		private readonly auditLogRepository: Repository<AuditLog>,
+		@InjectRepository(SystemSetting, 'mariadb')
+		private readonly systemSettingRepository: Repository<SystemSetting>,
 	) {}
 
 	private assertAdmin(actor: any) {
@@ -62,10 +86,25 @@ export class ReportService {
 		}
 	}
 
-	private assertStaff(actor: any) {
+	private assertStaff(actor: any, permission?: string) {
 		if (!isAdmin(actor) && !isModerator(actor)) {
 			throw new ForbiddenException('Chỉ admin hoặc kiểm duyệt viên mới có quyền truy cập');
 		}
+	}
+
+	private assertPermission(actor: any, permission: string) {
+		if (isAdmin(actor)) return;
+		if (!isModerator(actor)) {
+			throw new ForbiddenException('Only staff can access this resource');
+		}
+		const permissions = normalizePermissions(actor?.permissions, []);
+		if (permissions.length > 0 && !permissions.includes(permission)) {
+			throw new ForbiddenException('Moderator does not have permission for this action');
+		}
+	}
+
+	private revokeUserSession(userId: number, reason: string) {
+		emitToUser(userId, 'auth:revoked', { userId, reason });
 	}
 
 	private async audit(actor: any, action: string, targetType: string, targetId?: string | number | null, description?: string | null) {
@@ -87,6 +126,14 @@ export class ReportService {
 			throw new BadRequestException('Trạng thái báo cáo không hợp lệ');
 		}
 		return raw as ReportStatus;
+	}
+
+	private normalizeReportType(value: string | undefined) {
+		const raw = String(value || 'POST').toUpperCase();
+		if (!Object.values(ReportType).includes(raw as ReportType)) {
+			throw new BadRequestException('Loại báo cáo không hợp lệ');
+		}
+		return raw as ReportType;
 	}
 
 	private normalizeUserStatus(status: string | undefined, fallback = UserStatus.ACTIVE) {
@@ -111,10 +158,11 @@ export class ReportService {
 				assignedTo: null,
 				resolvedBy: null,
 				reason,
-				reportType: String(body?.targetType || 'POST').toUpperCase() as ReportType,
+				reportType: this.normalizeReportType(body?.targetType),
 				userId: actorId,
 			}),
 		);
+		emitSocialEvent('report:created', { report, actorId });
 
 		return {
 			message: 'Đã gửi báo cáo',
@@ -124,6 +172,7 @@ export class ReportService {
 
 	async listReports(actor: any, status?: string, limit = 100) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_reports');
 
 		const rows = await this.reportRepository.find({
 			where: status ? { status: this.normalizeReportStatus(status) } : undefined,
@@ -136,6 +185,7 @@ export class ReportService {
 
 	async getReport(actor: any, reportId: number) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_reports');
 		const report = await this.reportRepository.findOne({ where: { reportId } });
 		if (!report) throw new NotFoundException('Không tìm thấy báo cáo');
 		return { report };
@@ -143,6 +193,7 @@ export class ReportService {
 
 	async reviewReport(actor: any, reportId: number, body: any) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_reports');
 
 		const report = await this.reportRepository.findOne({ where: { reportId } });
 		if (!report) {
@@ -159,11 +210,13 @@ export class ReportService {
 		await this.reportRepository.save(report);
 		await this.audit(actor, 'Cập nhật trạng thái báo cáo', 'REPORT', reportId, report.resolutionNote);
 
+		emitSocialEvent('report:updated', { report, actorId: actor?.id || null });
 		return { message: 'Đã cập nhật trạng thái báo cáo', report };
 	}
 
 	async moderatePost(actor: any, postId: string, body: any) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_posts');
 
 		const post = await this.postRepository.findOne({ where: { _id: new ObjectId(postId) as any } as any });
 		if (!post) {
@@ -173,6 +226,25 @@ export class ReportService {
 		(post as any).status = body?.status || 'hidden';
 		(post as any).updatedAt = new Date();
 		await this.postRepository.save(post);
+		const author = await this.userRepository.findOne({ where: { userId: Number((post as any).authorId || 0) } });
+		emitSocialEvent('post:updated', {
+			post: {
+				id: String((post as any)._id || postId),
+				authorId: (post as any).authorId,
+				authorName: author?.displayName || 'Người dùng',
+				authorAvatar: author?.avatarUrl || null,
+				content: (post as any).content || '',
+				mediaUrl: (post as any).mediaUrl || null,
+				visibility: (post as any).visibility || 'public',
+				status: (post as any).status || 'hidden',
+				reactionCount: ((post as any).reactions || []).length,
+				commentCount: Number((post as any).commentCount || 0),
+				viewerReaction: null,
+				createdAt: (post as any).createdAt,
+				updatedAt: (post as any).updatedAt,
+			},
+			actorId: actor?.id || null,
+		});
 		await this.audit(actor, 'Kiểm duyệt bài viết', 'POST', postId, body?.resolutionNote || `Trạng thái: ${(post as any).status}`);
 
 		return { message: 'Đã cập nhật trạng thái bài viết', post };
@@ -210,6 +282,7 @@ export class ReportService {
 
 	async listUsers(actor: any, keyword = '', limit = 50) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_users');
 
 		const rows = await this.userRepository.find({ take: Math.min(Math.max(Number(limit || 50), 1), 200) });
 		const normalized = String(keyword || '').toLowerCase().trim();
@@ -248,6 +321,9 @@ export class ReportService {
 
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Cập nhật người dùng', 'USER', userId, body?.reason || body?.restrictionReason || null);
+		if ([UserStatus.BLOCKED, UserStatus.DELETED, UserStatus.LOCKED, UserStatus.TEMP_LOCKED].includes(user.status)) {
+			this.revokeUserSession(userId, user.status);
+		}
 		return { message: 'Đã cập nhật người dùng', user: toClientUser(user) };
 	}
 
@@ -263,6 +339,7 @@ export class ReportService {
 
 	async getModeratorDashboard(actor: any) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_reports');
 		const [reports, users] = await Promise.all([
 			this.listReports(actor, undefined, 12),
 			this.listUsers(actor, '', 12),
@@ -306,6 +383,7 @@ export class ReportService {
 			warningCount: 0,
 			restrictionReason: null,
 			lockedUntil: null,
+			permissions: DEFAULT_MODERATOR_PERMISSIONS.join(','),
 		}));
 		await this.audit(actor, 'Tạo kiểm duyệt viên', 'USER', moderator.userId, username);
 		return { message: 'Đã tạo kiểm duyệt viên', moderator: toClientUser(moderator) };
@@ -318,6 +396,7 @@ export class ReportService {
 		user.status = UserStatus.DELETED;
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Xóa tài khoản', 'USER', userId, user.username || user.displayName);
+		this.revokeUserSession(userId, UserStatus.DELETED);
 		return { message: 'Đã xóa tài khoản', user: toClientUser(user) };
 	}
 
@@ -327,6 +406,9 @@ export class ReportService {
 		if (!user) throw new NotFoundException('Không tìm thấy kiểm duyệt viên');
 		user.role = body?.role ? String(body.role).toUpperCase() as UserRole : UserRole.MODERATOR;
 		if (body?.accountStatus) user.status = this.normalizeUserStatus(body.accountStatus);
+		if (body?.permissions !== undefined) {
+			user.permissions = normalizePermissions(body.permissions, DEFAULT_MODERATOR_PERMISSIONS).join(',');
+		}
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Phân quyền kiểm duyệt viên', 'USER', userId, JSON.stringify(body || {}));
 		return { message: 'Đã cập nhật quyền kiểm duyệt viên', moderator: toClientUser(user) };
@@ -341,6 +423,10 @@ export class ReportService {
 		report.updatedAt = new Date();
 		await this.reportRepository.save(report);
 		await this.audit(actor, 'Phân công báo cáo', 'REPORT', reportId, `Giao cho #${report.assignedTo}`);
+		emitSocialEvent('report:updated', { report, actorId: actor?.id || null });
+		if (report.assignedTo) {
+			emitToUser(report.assignedTo, 'report:assigned', { report });
+		}
 		return { message: 'Đã phân công báo cáo', report };
 	}
 
@@ -350,8 +436,56 @@ export class ReportService {
 		return { logs };
 	}
 
+	private defaultSystemSettings(): Record<string, boolean> {
+		return {
+			otp: true,
+			register: true,
+			session: false,
+			auto: true,
+			notify: true,
+			rate: true,
+			device: true,
+			logging: true,
+			maintenance: false,
+		};
+	}
+
+	async getSystemSettings(actor: any) {
+		this.assertAdmin(actor);
+		const row = await this.systemSettingRepository.findOne({ where: { key: 'admin_console' } });
+		const saved = row?.value ? JSON.parse(row.value) : {};
+		return {
+			settings: {
+				...this.defaultSystemSettings(),
+				...saved,
+			},
+			updatedAt: row?.updatedAt || null,
+		};
+	}
+
+	async updateSystemSettings(actor: any, body: any) {
+		this.assertAdmin(actor);
+		const defaults = this.defaultSystemSettings();
+		const next = { ...defaults };
+		for (const key of Object.keys(defaults)) {
+			if (body?.settings?.[key] !== undefined || body?.[key] !== undefined) {
+				next[key] = Boolean(body?.settings?.[key] ?? body?.[key]);
+			}
+		}
+
+		await this.systemSettingRepository.save(
+			this.systemSettingRepository.create({
+				key: 'admin_console',
+				value: JSON.stringify(next),
+			}),
+		);
+		await this.audit(actor, 'Cập nhật cấu hình hệ thống', 'SYSTEM_SETTING', 'admin_console', JSON.stringify(next));
+		return { message: 'Đã cập nhật cấu hình hệ thống', settings: next };
+	}
+
 	async warnUser(actor: any, userId: number, reason?: string) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_users');
 		const user = await this.userRepository.findOne({ where: { userId } });
 		if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 		user.warningCount = Number(user.warningCount || 0) + 1;
@@ -364,6 +498,7 @@ export class ReportService {
 
 	async restrictUser(actor: any, userId: number, reason?: string) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_users');
 		const user = await this.userRepository.findOne({ where: { userId } });
 		if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 		user.status = UserStatus.RESTRICTED;
@@ -375,6 +510,7 @@ export class ReportService {
 
 	async tempLockUser(actor: any, userId: number, reason?: string) {
 		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_users');
 		const user = await this.userRepository.findOne({ where: { userId } });
 		if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 		user.status = UserStatus.TEMP_LOCKED;
@@ -382,6 +518,7 @@ export class ReportService {
 		user.restrictionReason = reason || 'Tạm khóa bởi kiểm duyệt viên';
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Tạm khóa tài khoản', 'USER', userId, user.restrictionReason);
+		this.revokeUserSession(userId, UserStatus.TEMP_LOCKED);
 		return { message: 'Đã tạm khóa tài khoản', user: toClientUser(user) };
 	}
 }  

@@ -74,6 +74,16 @@ export class AdminModeratorController {
     return this.reportService.listAuditLogs(user, Number(limit || 100));
   }
 
+  @Get('admin/settings')
+  getAdminSettings(@CurrentUser() user: any) {
+    return this.reportService.getSystemSettings(user);
+  }
+
+  @Patch('admin/settings')
+  updateAdminSettings(@CurrentUser() user: any, @Body() body: any) {
+    return this.reportService.updateSystemSettings(user, body);
+  }
+
   @Get('moderator/dashboard')
   getModeratorDashboard(@CurrentUser() user: any) {
     return this.reportService.getModeratorDashboard(user);

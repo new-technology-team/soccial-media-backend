@@ -287,7 +287,7 @@ export class MessageService {
 				fileName: body?.fileName || null,
 				mimeType: body?.mimeType || null,
 				fileSize: body?.fileSize || null,
-				meta: body?.sticker ? { sticker: body.sticker } : null,
+				meta: body?.meta || (body?.sticker ? { sticker: body.sticker } : null),
 				links,
 				reactions: [],
 				createdAt: now,

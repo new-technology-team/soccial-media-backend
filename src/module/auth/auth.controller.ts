@@ -14,40 +14,25 @@ export class AuthController {
         return String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '');
     }
 
-    private getSocialAuthUrl(provider: 'google' | 'apple') {
-        const explicitUrl = String(process.env[provider === 'google' ? 'GOOGLE_AUTH_URL' : 'APPLE_AUTH_URL'] || '').trim();
+    private getSocialAuthUrl(provider: 'google') {
+        const explicitUrl = String(process.env.GOOGLE_AUTH_URL || '').trim();
         if (explicitUrl) return explicitUrl;
 
-        if (provider === 'google') {
-            const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-            if (!clientId) return '';
-
-            const params = new URLSearchParams({
-                client_id: clientId,
-                redirect_uri: String(process.env.GOOGLE_CALLBACK_URL || `${this.getApiBaseUrl()}/auth/google/callback`),
-                response_type: 'code',
-                scope: 'openid email profile',
-                prompt: 'select_account',
-                state: 'google',
-            });
-            return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-        }
-
-        const clientId = String(process.env.APPLE_CLIENT_ID || process.env.APPLE_SERVICE_ID || '').trim();
+        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
         if (!clientId) return '';
 
         const params = new URLSearchParams({
             client_id: clientId,
-            redirect_uri: String(process.env.APPLE_CALLBACK_URL || `${this.getApiBaseUrl()}/auth/apple/callback`),
+            redirect_uri: String(process.env.GOOGLE_CALLBACK_URL || `${this.getApiBaseUrl()}/auth/google/callback`),
             response_type: 'code',
-            scope: 'name email',
-            response_mode: 'query',
-            state: 'apple',
+            scope: 'openid email profile',
+            prompt: 'select_account',
+            state: 'google',
         });
-        return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
+        return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     }
 
-    private redirectToSocialProvider(provider: 'google' | 'apple', response: Response, redirectOnError?: string) {
+    private redirectToSocialProvider(provider: 'google', response: Response, redirectOnError?: string) {
         const url = this.getSocialAuthUrl(provider);
         if (!url) {
             if (redirectOnError) {
@@ -55,7 +40,7 @@ export class AuthController {
                 return response.redirect(`${redirectOnError}${separator}socialError=missing-config`);
             }
 
-            const envName = provider === 'google' ? 'GOOGLE_CLIENT_ID hoặc GOOGLE_AUTH_URL' : 'APPLE_CLIENT_ID hoặc APPLE_AUTH_URL';
+            const envName = 'GOOGLE_CLIENT_ID hoặc GOOGLE_AUTH_URL';
             throw new BadRequestException(`Chưa cấu hình ${envName} cho đăng nhập ${provider}`);
         }
 
@@ -72,7 +57,7 @@ export class AuthController {
         return response.redirect(`${frontendUrl}/auth/social-callback?${params.toString()}`);
     }
 
-    private redirectSocialError(response: Response, provider: 'google' | 'apple', error: unknown) {
+    private redirectSocialError(response: Response, provider: 'google', error: unknown) {
         const frontendUrl = String(process.env.FRONTEND_URL || process.env.WEB_PUBLIC_URL || 'http://localhost:8088').replace(/\/$/, '');
         const message = error instanceof Error ? error.message : 'callback-failed';
         const params = new URLSearchParams({
@@ -93,11 +78,6 @@ export class AuthController {
         return this.redirectToSocialProvider('google', response, redirectOnError);
     }
 
-    @Get('apple')
-    loginWithApple(@Res() response: Response, @Query('redirectOnError') redirectOnError?: string) {
-        return this.redirectToSocialProvider('apple', response, redirectOnError);
-    }
-
     @Get('google/callback')
     async googleCallback(@Query('code') code: string, @Res() response: Response) {
         try {
@@ -115,26 +95,6 @@ export class AuthController {
             return this.redirectWithAuthPayload(response, payload);
         } catch (error) {
             return this.redirectSocialError(response, 'google', error);
-        }
-    }
-
-    @Get('apple/callback')
-    async appleCallback(@Query('code') code: string, @Query('user') user: string | undefined, @Res() response: Response) {
-        try {
-            const payload = await this.authService.loginWithAppleCode(String(code || ''), user);
-            return this.redirectWithAuthPayload(response, payload);
-        } catch (error) {
-            return this.redirectSocialError(response, 'apple', error);
-        }
-    }
-
-    @Get('apple/id-token')
-    async appleIdTokenCallback(@Query('idToken') idToken: string, @Res() response: Response) {
-        try {
-            const payload = await this.authService.loginWithAppleIdToken(String(idToken || ''));
-            return this.redirectWithAuthPayload(response, payload);
-        } catch (error) {
-            return this.redirectSocialError(response, 'apple', error);
         }
     }
 

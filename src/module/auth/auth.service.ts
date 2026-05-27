@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { emitSocialEvent } from '../../common/socket/chat-socket';
 
 type PairingState = {
   pairingId: number;
@@ -85,13 +86,6 @@ export class AuthService {
     private createPairingCode(length = 6) {
         const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
-    }
-
-    private decodeJwtPayload(token: string) {
-        const payload = String(token || '').split('.')[1];
-        if (!payload) return {};
-        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(Buffer.from(normalized, 'base64').toString('utf8'));
     }
 
     private addMinutes(minutes: number) {
@@ -274,6 +268,9 @@ export class AuthService {
             accountStatus: user.status,
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
+            permissions: typeof user.permissions === 'string'
+                ? user.permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
+                : [],
         };
 
         const accessToken = await this.jwtService.signAsync(payload, {
@@ -406,67 +403,6 @@ export class AuthService {
         return this.issueTokens(user);
     }
 
-    async loginWithAppleCode(code: string, userJson?: string) {
-        const clientId = String(process.env.APPLE_CLIENT_ID || process.env.APPLE_SERVICE_ID || '').trim();
-        const clientSecret = String(process.env.APPLE_CLIENT_SECRET || '').trim();
-        const redirectUri = String(
-            process.env.APPLE_CALLBACK_URL ||
-            `${String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/apple/callback`,
-        );
-
-        if (!clientId || !clientSecret) {
-            throw new BadRequestException('Chưa cấu hình APPLE_CLIENT_ID hoặc APPLE_CLIENT_SECRET.');
-        }
-
-        const tokenResponse = await fetch('https://appleid.apple.com/auth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                code,
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                grant_type: 'authorization_code',
-            }).toString(),
-        });
-        const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
-            id_token?: string;
-            error_description?: string;
-        };
-
-        if (!tokenResponse.ok || !tokenData.id_token) {
-            throw new BadRequestException(tokenData.error_description || 'Không thể xác thực Apple.');
-        }
-
-        const appleProfile = this.decodeJwtPayload(tokenData.id_token) as { email?: string };
-        const userPayload = userJson ? JSON.parse(userJson) as { name?: { firstName?: string; lastName?: string } } : null;
-        const fullName = [userPayload?.name?.firstName, userPayload?.name?.lastName].filter(Boolean).join(' ');
-
-        if (!appleProfile.email) {
-            throw new BadRequestException('Không lấy được email từ tài khoản Apple.');
-        }
-
-        const user = await this.findOrCreateSocialUser({
-            email: appleProfile.email,
-            name: fullName || undefined,
-        });
-        return this.issueTokens(user);
-    }
-
-    async loginWithAppleIdToken(idToken: string) {
-        const appleProfile = this.decodeJwtPayload(idToken) as { email?: string; aud?: string };
-        const clientId = String(process.env.APPLE_CLIENT_ID || process.env.APPLE_SERVICE_ID || '').trim();
-
-        if (!appleProfile.email || (clientId && appleProfile.aud !== clientId)) {
-            throw new BadRequestException('Apple id_token khĂ´ng há»£p lá»‡.');
-        }
-
-        const user = await this.findOrCreateSocialUser({
-            email: appleProfile.email,
-        });
-        return this.issueTokens(user);
-    }
-
     async login(loginDto: LoginDto): Promise<any> {
         const identifier =
             loginDto.emailOrPhone || loginDto.email || loginDto.phone || loginDto.username;
@@ -482,7 +418,10 @@ export class AuthService {
             throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
         }
 
-        if ([UserStatus.HIDDEN, UserStatus.DELETED].includes(user.status)) {
+        const lockedStatuses = [UserStatus.BLOCKED, UserStatus.HIDDEN, UserStatus.DELETED, UserStatus.LOCKED];
+        const isTempLocked = user.status === UserStatus.TEMP_LOCKED &&
+            (!user.lockedUntil || new Date(user.lockedUntil).getTime() > Date.now());
+        if (lockedStatuses.includes(user.status) || isTempLocked) {
             throw new UnauthorizedException('Tài khoản không còn khả dụng');
         }
 
@@ -782,11 +721,19 @@ export class AuthService {
         const buffer = Buffer.from(base64, 'base64');
         await fs.writeFile(outputPath, buffer);
         const fileUrl = `/uploads/avatars/${actorId}/${outputName}`;
-        await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
+        const user = await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
+        emitSocialEvent('user:avatar-updated', {
+            userId: actorId,
+            avatarUrl: fileUrl,
+            user: user ? this.userService.toProfile(user) : null,
+        });
 
         return {
             message: 'Tải ảnh đại diện thành công',
+            avatarUrl: fileUrl,
+            mediaUrl: fileUrl,
             fileUrl,
+            user: user ? this.userService.toProfile(user) : null,
             contentType: body?.contentType || 'application/octet-stream',
         };
     }

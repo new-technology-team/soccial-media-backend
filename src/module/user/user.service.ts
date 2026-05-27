@@ -162,6 +162,9 @@ export class UserService {
             lockedUntil: user.lockedUntil || null,
             warningCount: Number(user.warningCount || 0),
             restrictionReason: user.restrictionReason || null,
+            permissions: typeof (user as any).permissions === 'string'
+                ? (user as any).permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
+                : [],
         };
     }
 }

@@ -71,6 +71,9 @@ export class User {
     })
     role: UserRole;
 
+    @Column({ type: 'text', nullable: true })
+    permissions: string | null;
+
     @Column({
         type: "enum",
         enum: UserStatus,

@@ -19,6 +19,10 @@ export const emitToUser = (userId: number, eventName: string, payload: any) => {
 	chatSocketServer?.to(`user:${Number(userId)}`).emit(eventName, payload);
 };
 
+export const emitSocialEvent = (eventName: string, payload: any) => {
+	chatSocketServer?.emit(eventName, payload);
+};
+
 export const isChatUserOnline = (userId: number) => Boolean(onlineSocketsByUser.get(Number(userId))?.size);
 
 export const getChatUserLastActiveAt = (userId: number) => lastActiveByUser.get(Number(userId)) || null;

@@ -11,6 +11,9 @@ export class Post {
     @Column({ nullable: true })
     mediaUrl: string | null;
 
+    @Column({ nullable: true })
+    sharedPostId: string | null;
+
     @Column()
     visibility: string;
 

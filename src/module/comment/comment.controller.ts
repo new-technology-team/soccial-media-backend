@@ -33,6 +33,6 @@ export class CommentController {
 	@UseGuards(JwtAuthGuard)
 	@Delete('comments/:commentId')
 	deleteFeedComment(@CurrentUser() user: any, @Param('commentId') commentId: string) {
-		return this.commentService.deleteComment(user.id, commentId);
+		return this.commentService.deleteComment(user, commentId);
 	}
 }

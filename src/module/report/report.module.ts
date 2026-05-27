@@ -8,10 +8,11 @@ import { User } from "../user/user.entity";
 import { Post } from "../post/post.entity";
 import { Comment } from "../comment/comment.entity";
 import { AuditLog } from "../audit-log/audit-log.entity";
+import { SystemSetting } from "../system-setting/system-setting.entity";
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Report, User, AuditLog], 'mariadb'), TypeOrmModule.forFeature([Post, Comment], 'mongodb')],
+    imports: [TypeOrmModule.forFeature([Report, User, AuditLog, SystemSetting], 'mariadb'), TypeOrmModule.forFeature([Post, Comment], 'mongodb')],
     controllers: [ReportController, AdminModeratorController],
     providers: [ReportService],
     exports: [ReportService],

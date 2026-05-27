@@ -6,6 +6,7 @@ import { Comment } from "./comment.entity";
 import { UserService } from "../user/user.service";
 import { PostService } from "../post/post.service";
 import { NotificationService } from "../notification/notification.service";
+import { emitSocialEvent } from "../../common/socket/chat-socket";
 
 @Injectable()
 export class CommentService {
@@ -85,7 +86,14 @@ export class CommentService {
 		}
 
 		const { comments } = await this.listPostComments(postId, actorId);
-		return { comment: comments.find((item: any) => item.id === String((row as any)._id)) };
+		const comment = comments.find((item: any) => item.id === String((row as any)._id));
+		emitSocialEvent('comment:created', {
+			postId,
+			actorId,
+			comment,
+			commentCount: Number(post.commentCount || 0),
+		});
+		return { comment };
 	}
 
 	async reactComment(actorId: number, commentId: string, type: string) {
@@ -97,6 +105,13 @@ export class CommentService {
 		row.reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
 		row.updatedAt = new Date();
 		await this.commentRepository.save(row);
+		emitSocialEvent('comment:reaction', {
+			postId: row.postId,
+			commentId,
+			actorId,
+			reaction: type || 'like',
+			reactionCount: (row.reactions || []).length,
+		});
 		if (Number(row.userId) !== Number(actorId)) {
 			const actor = await this.userService.findOne(actorId);
 			await this.notificationService.createNotification({
@@ -119,18 +134,28 @@ export class CommentService {
 		row.reactions = (row.reactions || []).filter((item: any) => Number(item.userId) !== Number(actorId));
 		row.updatedAt = new Date();
 		await this.commentRepository.save(row);
+		emitSocialEvent('comment:reaction', {
+			postId: row.postId,
+			commentId,
+			actorId,
+			reaction: null,
+			reactionCount: (row.reactions || []).length,
+		});
 		const { comments } = await this.listPostComments(row.postId, actorId);
 		return { message: 'Đã gỡ tương tác bình luận', comment: comments.find((item: any) => item.id === commentId) };
 	}
 
-	async deleteComment(actorId: number, commentId: string) {
+	async deleteComment(actor: any, commentId: string) {
+		const actorId = Number(actor?.id || actor?.userId || actor || 0);
 		const row = await this.commentRepository.findOne({ where: { _id: new ObjectId(commentId) as any } });
 		if (!row || row.status !== 'visible') {
 			throw new NotFoundException('Không tìm thấy bình luận');
 		}
 
 		const post = await this.postService.getPostById(row.postId);
-		if (Number(row.userId) !== Number(actorId) && Number(post.authorId) !== Number(actorId)) {
+		const actorRole = String(actor?.role || '').toLowerCase();
+		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
+		if (Number(row.userId) !== Number(actorId) && Number(post.authorId) !== Number(actorId) && !canModerate) {
 			throw new ForbiddenException('Bạn không có quyền xóa bình luận này');
 		}
 
@@ -138,6 +163,13 @@ export class CommentService {
 		row.updatedAt = new Date();
 		await this.commentRepository.save(row);
 		await this.postService.decreaseCommentCount(row.postId);
+		const updatedPost = await this.postService.getPostById(row.postId);
+		emitSocialEvent('comment:deleted', {
+			postId: row.postId,
+			commentId,
+			actorId,
+			commentCount: Number(updatedPost.commentCount || 0),
+		});
 		return { message: 'Đã xóa bình luận' };
 	}
 }

@@ -25,6 +25,7 @@ import { AuthOtp } from './module/auth/auth-otp.entity';
 import { BlockedUser } from './module/friendship/blocked-user.entity';
 import { DevAdminSeed } from './dev-admin.seed';
 import { AuditLog } from './module/audit-log/audit-log.entity';
+import { SystemSetting } from './module/system-setting/system-setting.entity';
 import * as fs from 'fs';
 
 function buildMariaUrl(): string {
@@ -76,7 +77,7 @@ function buildMariaSsl() {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, BlockedUser, Report, AuthOtp, AuditLog],
+      entities: [User, Friendship, BlockedUser, Report, AuthOtp, AuditLog, SystemSetting],
       ssl: buildMariaSsl(),
     }),
     TypeOrmModule.forRoot({
