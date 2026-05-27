@@ -99,6 +99,11 @@ export class AdminModeratorController {
     return this.reportService.getReport(user, Number(id));
   }
 
+  @Patch('moderator/reports/:id/assign')
+  assignModeratorReport(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    return this.reportService.assignReport(user, Number(id), body);
+  }
+
   @Patch('moderator/reports/:id/status')
   updateModeratorReportStatus(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.reportService.reviewReport(user, Number(id), body);

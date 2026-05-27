@@ -381,6 +381,13 @@ export class PostService {
         row.reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:reactionUpdated', {
+            postId,
+            actorId,
+            reaction: type || 'like',
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
         emitSocialEvent('post:reaction', {
             postId,
             actorId,
@@ -422,6 +429,13 @@ export class PostService {
         row.reactions = (row.reactions || []).filter((item: any) => Number(item.userId) !== Number(actorId));
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:reactionUpdated', {
+            postId,
+            actorId,
+            reaction: null,
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
         emitSocialEvent('post:reaction', {
             postId,
             actorId,

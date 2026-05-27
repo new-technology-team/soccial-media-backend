@@ -14,6 +14,10 @@ export class AuthController {
         return String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '');
     }
 
+    private getGoogleCallbackUrl() {
+        return String(process.env.GOOGLE_CALLBACK_URL || `${this.getApiBaseUrl()}/auth/google/callback`);
+    }
+
     private getSocialAuthUrl(provider: 'google') {
         const explicitUrl = String(process.env.GOOGLE_AUTH_URL || '').trim();
         if (explicitUrl) return explicitUrl;
@@ -23,7 +27,7 @@ export class AuthController {
 
         const params = new URLSearchParams({
             client_id: clientId,
-            redirect_uri: String(process.env.GOOGLE_CALLBACK_URL || `${this.getApiBaseUrl()}/auth/google/callback`),
+            redirect_uri: this.getGoogleCallbackUrl(),
             response_type: 'code',
             scope: 'openid email profile',
             prompt: 'select_account',
@@ -54,7 +58,7 @@ export class AuthController {
             refreshToken: payload.refreshToken,
             user: JSON.stringify(payload.user),
         });
-        return response.redirect(`${frontendUrl}/auth/social-callback?${params.toString()}`);
+        return response.redirect(`${frontendUrl}/auth/social-callback#${params.toString()}`);
     }
 
     private redirectSocialError(response: Response, provider: 'google', error: unknown) {
@@ -88,6 +92,11 @@ export class AuthController {
         }
     }
 
+    @Get('google/exchange')
+    async googleExchange(@Query('code') code: string) {
+        return this.authService.loginWithGoogleCode(String(code || ''));
+    }
+
     @Get('google/id-token')
     async googleIdTokenCallback(@Query('idToken') idToken: string, @Res() response: Response) {
         try {
@@ -96,6 +105,11 @@ export class AuthController {
         } catch (error) {
             return this.redirectSocialError(response, 'google', error);
         }
+    }
+
+    @Get('google/id-token/exchange')
+    async googleIdTokenExchange(@Query('idToken') idToken: string) {
+        return this.authService.loginWithGoogleIdToken(String(idToken || ''));
     }
 
     @Post('register')

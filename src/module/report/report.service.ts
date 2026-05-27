@@ -163,6 +163,7 @@ export class ReportService {
 			}),
 		);
 		emitSocialEvent('report:created', { report, actorId });
+		emitSocialEvent('report:queueUpdated', { report, actorId });
 
 		return {
 			message: 'Đã gửi báo cáo',
@@ -210,6 +211,13 @@ export class ReportService {
 		await this.reportRepository.save(report);
 		await this.audit(actor, 'Cập nhật trạng thái báo cáo', 'REPORT', reportId, report.resolutionNote);
 
+		if (report.status === ReportStatus.IN_REVIEW) {
+			emitSocialEvent('report:reviewing', { report, actorId: actor?.id || null });
+		}
+		if (report.status === ReportStatus.RESOLVED) {
+			emitSocialEvent('report:resolved', { report, actorId: actor?.id || null });
+		}
+		emitSocialEvent('report:queueUpdated', { report, actorId: actor?.id || null });
 		emitSocialEvent('report:updated', { report, actorId: actor?.id || null });
 		return { message: 'Đã cập nhật trạng thái báo cáo', report };
 	}
@@ -423,6 +431,7 @@ export class ReportService {
 		report.updatedAt = new Date();
 		await this.reportRepository.save(report);
 		await this.audit(actor, 'Phân công báo cáo', 'REPORT', reportId, `Giao cho #${report.assignedTo}`);
+		emitSocialEvent('report:queueUpdated', { report, actorId: actor?.id || null });
 		emitSocialEvent('report:updated', { report, actorId: actor?.id || null });
 		if (report.assignedTo) {
 			emitToUser(report.assignedTo, 'report:assigned', { report });

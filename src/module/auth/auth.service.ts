@@ -88,6 +88,10 @@ export class AuthService {
         return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
     }
 
+    private getGoogleCallbackUrl() {
+        return String(process.env.GOOGLE_CALLBACK_URL || `${String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/google/callback`);
+    }
+
     private addMinutes(minutes: number) {
         const d = new Date();
         d.setMinutes(d.getMinutes() + minutes);
@@ -326,10 +330,7 @@ export class AuthService {
     async loginWithGoogleCode(code: string) {
         const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
         const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-        const redirectUri = String(
-            process.env.GOOGLE_CALLBACK_URL ||
-            `${String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/google/callback`,
-        );
+        const redirectUri = this.getGoogleCallbackUrl();
 
         if (!clientId || !clientSecret) {
             throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET.');
@@ -379,7 +380,7 @@ export class AuthService {
     async loginWithGoogleIdToken(idToken: string) {
         const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
         if (!clientId) {
-            throw new BadRequestException('ChÆ°a cáº¥u hĂ¬nh GOOGLE_CLIENT_ID.');
+            throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID.');
         }
 
         const tokenResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
@@ -392,7 +393,7 @@ export class AuthService {
         };
 
         if (!tokenResponse.ok || profile.aud !== clientId || !profile.email) {
-            throw new BadRequestException(profile.error_description || 'Google id_token khĂ´ng há»£p lá»‡.');
+            throw new BadRequestException(profile.error_description || 'Google id_token không hợp lệ.');
         }
 
         const user = await this.findOrCreateSocialUser({

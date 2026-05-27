@@ -497,14 +497,17 @@ export class MessageService {
 		return { message: "Đã chuyển tiếp tin nhắn", chatMessage: payload };
 	}
 
-	async deleteMessage(actorId: number, messageId: string) {
+	async deleteMessage(actor: any, messageId: string) {
+		const actorId = Number(actor?.id || actor?.userId || actor || 0);
 		const message = await this.messageRepository.findOne({ where: { _id: new ObjectId(messageId) as any } });
 		if (!message) {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 
 		await this.conversationService.ensureMembership(message.conversationId, actorId);
-		if (Number(message.senderId) !== Number(actorId)) {
+		const actorRole = String(actor?.role || '').toLowerCase();
+		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
+		if (Number(message.senderId) !== Number(actorId) && !canModerate) {
 			throw new ForbiddenException("Bạn chỉ có thể xóa tin nhắn của mình");
 		}
 
@@ -515,6 +518,12 @@ export class MessageService {
 		message.deletedForUserIds = deletedForUserIds;
 		message.updatedAt = new Date();
 		await this.messageRepository.save(message);
+
+		emitToConversation(message.conversationId, "message:deleted", {
+			conversationId: message.conversationId,
+			messageId: String(message._id),
+			deletedBy: actorId,
+		});
 
 		return { message: "Đã xóa tin nhắn ở phía bạn" };
 	}

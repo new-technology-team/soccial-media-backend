@@ -83,7 +83,7 @@ export class MessageController {
 
 	@Delete('messages/:messageId')
 	deleteMessage(@CurrentUser() user: any, @Param('messageId') messageId: string) {
-		return this.messageService.deleteMessage(user.id, messageId);
+		return this.messageService.deleteMessage(user, messageId);
 	}
 
 	@Patch('messages/:messageId/pin')
