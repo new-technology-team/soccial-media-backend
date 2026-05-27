@@ -3,6 +3,10 @@ import * as jwt from 'jsonwebtoken';
 
 let chatSocketServer: Server | null = null;
 
+const resolveJwtSecret = () =>
+  process.env.JWT_ACCESS_SECRET ||
+  'secretKey';
+
 export const setChatSocketServer = (server: Server) => {
   chatSocketServer = server;
 };
@@ -64,10 +68,11 @@ const resolveSocketUserId = (socket: Socket) => {
   if (!token) return 0;
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_ACCESS_SECRET || 'secretKey',
-    ) as { id?: number | string; sub?: number | string; userId?: number | string };
+    const decoded = jwt.verify(token, resolveJwtSecret()) as {
+      id?: number | string;
+      sub?: number | string;
+      userId?: number | string;
+    };
     return Number(decoded?.id || decoded?.sub || decoded?.userId || 0);
   } catch (_error) {
     const decoded = jwt.decode(token) as

@@ -9,8 +9,16 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { setChatSocketServer, emitToConversation } from './chat-socket';
+import {
+  setChatSocketServer,
+  emitToConversation,
+  registerChatSocketHandlers,
+} from './chat-socket';
 import { JwtService } from '@nestjs/jwt';
+
+const resolveJwtSecret = () =>
+  process.env.JWT_ACCESS_SECRET ||
+  'secretKey';
 
 @WebSocketGateway({
   cors: {
@@ -29,6 +37,7 @@ export class ChatGateway
 
   afterInit(server: Server) {
     setChatSocketServer(server);
+    registerChatSocketHandlers(server);
     void server;
   }
 
@@ -43,11 +52,16 @@ export class ChatGateway
 
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
+        secret: resolveJwtSecret(),
       });
-      client.data.userId = payload.sub;
+      const userId = Number(payload?.sub || payload?.id || payload?.userId || 0);
+      if (!userId) {
+        client.disconnect(true);
+        return;
+      }
+      client.data.userId = userId;
       client.data.username = payload.username;
-      client.join(`user:${payload.sub}`);
+      client.join(`user:${userId}`);
       client.join('global-feed');
     } catch {
       client.disconnect(true);
