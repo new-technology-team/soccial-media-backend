@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
-import { emitToConversation } from '../../common/socket/chat-socket';
+import { emitToConversation, emitToUsers } from '../../common/socket/chat-socket';
 import { Message } from '../message/message.entity';
 import { NotificationService } from '../notification/notification.service';
 import { UserService } from '../user/user.service';
@@ -603,6 +603,11 @@ export class ConversationService {
       'message:new',
       this.toMessageResponse(saved, userId),
     );
+    emitToUsers(
+      this.getConversationMemberIds(conversation),
+      'message:new',
+      this.toMessageResponse(saved, userId),
+    );
 
     return { message: this.toMessageResponse(saved, userId) };
   }
@@ -613,7 +618,7 @@ export class ConversationService {
     userId: number,
     scope: 'me' | 'all',
   ) {
-    await this.ensureMembership(conversationId, userId);
+    const conversation = await this.ensureMembership(conversationId, userId);
 
     const message = await this.messageRepo.findOne({
       where: {
@@ -644,6 +649,11 @@ export class ConversationService {
         'message:updated',
         this.toMessageResponse(saved, userId),
       );
+      emitToUsers(
+        this.getConversationMemberIds(conversation),
+        'message:updated',
+        this.toMessageResponse(saved, userId),
+      );
 
       return { message: this.toMessageResponse(saved, userId), removed: false };
     }
@@ -656,6 +666,11 @@ export class ConversationService {
     await this.messageRepo.save(message);
 
     emitToConversation(conversationId, 'message:updated', {
+      id: String(message._id),
+      conversationId,
+      removedForUserId: Number(userId),
+    });
+    emitToUsers([userId], 'message:updated', {
       id: String(message._id),
       conversationId,
       removedForUserId: Number(userId),

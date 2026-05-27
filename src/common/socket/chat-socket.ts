@@ -19,6 +19,24 @@ export const emitToConversation = (
   }
 };
 
+export const emitToUser = (userId: number, eventName: string, payload: any) => {
+  if (!chatSocketServer) return;
+  const normalizedUserId = Number(userId || 0);
+  if (!normalizedUserId) return;
+  chatSocketServer.to(`user:${normalizedUserId}`).emit(eventName, payload);
+};
+
+export const emitToUsers = (
+  userIds: Array<number | string>,
+  eventName: string,
+  payload: any,
+) => {
+  const uniqueIds = Array.from(
+    new Set((userIds || []).map((value) => Number(value || 0)).filter(Boolean)),
+  );
+  uniqueIds.forEach((userId) => emitToUser(userId, eventName, payload));
+};
+
 export const relayConversationEvent = (
   socket: {
     to: (roomId: string) => { emit: (eventName: string, payload: any) => void };
@@ -49,11 +67,13 @@ const resolveSocketUserId = (socket: Socket) => {
     const decoded = jwt.verify(
       token,
       process.env.JWT_ACCESS_SECRET || 'secretKey',
-    ) as { id?: number | string };
-    return Number(decoded?.id || 0);
+    ) as { id?: number | string; sub?: number | string; userId?: number | string };
+    return Number(decoded?.id || decoded?.sub || decoded?.userId || 0);
   } catch (_error) {
-    const decoded = jwt.decode(token) as { id?: number | string } | null;
-    return Number(decoded?.id || 0);
+    const decoded = jwt.decode(token) as
+      | { id?: number | string; sub?: number | string; userId?: number | string }
+      | null;
+    return Number(decoded?.id || decoded?.sub || decoded?.userId || 0);
   }
 };
 
