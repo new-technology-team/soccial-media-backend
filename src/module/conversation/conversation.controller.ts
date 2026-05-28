@@ -52,6 +52,24 @@ export class ConversationController {
 		return this.conversationService.setMuted(id, user.id, body?.muted !== false, body?.mutedUntil);
 	}
 
+	@Patch('conversations/:id/preferences')
+	updatePreferences(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body()
+		body: {
+			backgroundUrl?: string | null;
+			themeColor?: string | null;
+			autoDeleteAfterSeconds?: number | null;
+			hidden?: boolean;
+			locked?: boolean;
+			hiddenPassword?: string | null;
+			lockedPassword?: string | null;
+		},
+	) {
+		return this.conversationService.updatePreferences(id, user.id, body || {});
+	}
+
 	@Patch('conversations/:id/profile')
 	updateGroupProfile(
 		@CurrentUser() user: any,

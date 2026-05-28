@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { createHash } from "crypto";
 import { ObjectId } from "mongodb";
 import { Repository } from "typeorm";
 import { Conversation } from "./conversation.entity";
@@ -34,6 +35,8 @@ export class ConversationService {
 			mutedUntil: member.mutedUntil || null,
 			isPinned: Boolean(member.isPinned),
 			pinnedAt: member.pinnedAt || null,
+			isLocked: Boolean(member.isLocked),
+			lockedAt: member.lockedAt || null,
 			deletedHistoryAt: member.deletedHistoryAt || null,
 			lastReadAt: member.lastReadAt || null,
 			lastReadMessageId: member.lastReadMessageId || null,
@@ -49,6 +52,10 @@ export class ConversationService {
 			type: conversation.type,
 			name: conversation.name,
 			avatarUrl: conversation.avatarUrl || null,
+			backgroundUrl: conversation.backgroundUrl || null,
+			themeColor: conversation.themeColor || null,
+			defaultEmoji: conversation.defaultEmoji || null,
+			autoDeleteAfterSeconds: conversation.autoDeleteAfterSeconds ?? null,
 			createdBy: conversation.createdBy,
 			createdAt: conversation.createdAt,
 			updatedAt: conversation.updatedAt,
@@ -60,10 +67,40 @@ export class ConversationService {
 			role: this.normalizeRole(viewerMember?.role),
 			isPinned: Boolean(viewerMember?.isPinned),
 			isMuted: this.isMuted(viewerMember),
+			isHidden: (conversation.deletedForUserIds || []).some((item: any) => Number(item) === Number(viewerId)),
 			mutedUntil: viewerMember?.mutedUntil || null,
+			isLocked: Boolean(viewerMember?.isLocked),
+			lockedAt: viewerMember?.lockedAt || null,
 			notificationsEnabled: viewerMember?.notificationsEnabled !== false && !this.isMuted(viewerMember),
 			onlineCount: (conversation.members || []).filter((member: any) => isChatUserOnline(Number(member.userId))).length,
 		};
+	}
+
+	private isExpiredMessage(row: any) {
+		if (!row?.expiresAt) return false;
+		const expiresAt = new Date(row.expiresAt).getTime();
+		return !Number.isNaN(expiresAt) && expiresAt <= Date.now();
+	}
+
+	private getConversationExpirationMillis(conversation: any) {
+		const seconds = Number(conversation?.autoDeleteAfterSeconds || 0);
+		if (!seconds || seconds <= 0) return null;
+		return seconds * 1000;
+	}
+
+	private getMessageExpiresAt(conversation: any, createdAt: Date) {
+		const duration = this.getConversationExpirationMillis(conversation);
+		if (!duration) return null;
+		return new Date(createdAt.getTime() + duration);
+	}
+
+	private hashSecret(value: string) {
+		return createHash('sha256').update(String(value || '').trim()).digest('hex');
+	}
+
+	private verifySecret(value: string, hash?: string | null) {
+		if (!hash) return false;
+		return this.hashSecret(value) === String(hash);
 	}
 
 	private isMuted(member: any) {
@@ -91,6 +128,7 @@ export class ConversationService {
 
 		return rows.filter((item: any) => {
 			if (!item || item.isRecalled) return false;
+			if (this.isExpiredMessage(item)) return false;
 			if ((item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(viewerId))) return false;
 			if (Number(item.senderId) === Number(viewerId)) return false;
 			if (!lastReadAt) return true;
@@ -180,8 +218,7 @@ export class ConversationService {
 			}
 		}
 		const mine = rows.filter((item: any) => (item.members || []).some((m: any) => m.userId === userId));
-		const visible = mine.filter((item: any) => !(item.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(userId)));
-		const sorted = [...visible].sort((a: any, b: any) => {
+		const sorted = [...mine].sort((a: any, b: any) => {
 			const aPinned = Boolean(this.getMemberByUserId(a, userId)?.isPinned);
 			const bPinned = Boolean(this.getMemberByUserId(b, userId)?.isPinned);
 			if (aPinned !== bPinned) return Number(bPinned) - Number(aPinned);
@@ -236,6 +273,7 @@ export class ConversationService {
 					role: 'member',
 					notificationsEnabled: true,
 					isPinned: false,
+					isLocked: false,
 					nickname: null,
 					lastReadAt: now,
 				},
@@ -246,12 +284,17 @@ export class ConversationService {
 					role: 'member',
 					notificationsEnabled: true,
 					isPinned: false,
+					isLocked: false,
 					nickname: null,
 					lastReadAt: null,
 				},
 			],
 			lastMessage: null,
 			pinnedMessageIds: [],
+			autoDeleteAfterSeconds: null,
+			backgroundUrl: null,
+			themeColor: null,
+			defaultEmoji: null,
 		});
 
 		const saved = await this.conversationRepository.save(conversation);
@@ -284,6 +327,7 @@ export class ConversationService {
 				role: 'leader',
 					notificationsEnabled: true,
 					isPinned: false,
+					isLocked: false,
 					nickname: null,
 					lastReadAt: new Date(),
 			},
@@ -301,6 +345,7 @@ export class ConversationService {
 				role: 'member',
 				notificationsEnabled: true,
 				isPinned: false,
+					isLocked: false,
 				nickname: null,
 				lastReadAt: null,
 			});
@@ -318,6 +363,10 @@ export class ConversationService {
 				members,
 				lastMessage: null,
 				pinnedMessageIds: [],
+				autoDeleteAfterSeconds: null,
+				backgroundUrl: null,
+				themeColor: null,
+				defaultEmoji: null,
 			}),
 		);
 
@@ -348,6 +397,91 @@ export class ConversationService {
 	async getConversationDetail(conversationId: string, userId: number) {
 		const conversation = await this.ensureMembership(conversationId, userId);
 		return { conversation: this.mapConversation(conversation, userId) };
+	}
+
+	async updatePreferences(
+		conversationId: string,
+		userId: number,
+		body: {
+			backgroundUrl?: string | null;
+			themeColor?: string | null;
+			defaultEmoji?: string | null;
+			autoDeleteAfterSeconds?: number | null;
+			hidden?: boolean;
+			locked?: boolean;
+				hiddenPassword?: string | null;
+				lockedPassword?: string | null;
+		},
+	) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		const allowedDurations = new Set([3600, 86400, 604800, 2592000]);
+		const now = new Date();
+
+		if (body.backgroundUrl !== undefined) {
+			conversation.backgroundUrl = body.backgroundUrl ? String(body.backgroundUrl).trim().slice(0, 500) : null;
+		}
+		if (body.themeColor !== undefined) {
+			conversation.themeColor = body.themeColor ? String(body.themeColor).trim().slice(0, 64) : null;
+		}
+		if (body.defaultEmoji !== undefined) {
+			conversation.defaultEmoji = body.defaultEmoji ? String(body.defaultEmoji).trim().slice(0, 16) : null;
+		}
+		if (body.autoDeleteAfterSeconds !== undefined) {
+			const nextDuration = body.autoDeleteAfterSeconds === null ? null : Number(body.autoDeleteAfterSeconds) || null;
+			if (nextDuration !== null && !allowedDurations.has(nextDuration)) {
+				throw new BadRequestException('Thời hạn tự động xóa tin nhắn không hợp lệ');
+			}
+			conversation.autoDeleteAfterSeconds = nextDuration;
+		}
+		if (body.hidden !== undefined) {
+			const member = this.getMemberByUserId(conversation, userId);
+			const providedPassword = String(body.hiddenPassword || '').trim();
+			if (body.hidden) {
+				if (!providedPassword) throw new BadRequestException('Cần mật khẩu ẩn để bật trạng thái ẩn');
+				member.hiddenPasswordHash = this.hashSecret(providedPassword);
+				const deletedForUserIds = Array.isArray(conversation.deletedForUserIds) ? [...conversation.deletedForUserIds] : [];
+				if (!deletedForUserIds.some((item: number) => Number(item) === Number(userId))) {
+					deletedForUserIds.push(userId);
+				}
+				conversation.deletedForUserIds = deletedForUserIds;
+			} else {
+				if (member?.hiddenPasswordHash && !this.verifySecret(providedPassword, member.hiddenPasswordHash)) {
+					throw new BadRequestException('Mật khẩu ẩn không đúng');
+				}
+				conversation.deletedForUserIds = (Array.isArray(conversation.deletedForUserIds) ? conversation.deletedForUserIds : []).filter((item: number) => Number(item) !== Number(userId));
+			}
+		}
+		if (body.locked !== undefined) {
+			const member = this.getMemberByUserId(conversation, userId);
+			const providedPassword = String(body.lockedPassword || '').trim();
+			if (body.locked) {
+				if (!providedPassword) throw new BadRequestException('Cần mật khẩu khóa để bật trạng thái khóa');
+				member.lockPasswordHash = this.hashSecret(providedPassword);
+				conversation.members = (conversation.members || []).map((item: any) =>
+					Number(item.userId) === Number(userId)
+						? { ...item, isLocked: true, lockedAt: now, lockPasswordHash: this.hashSecret(providedPassword) }
+						: item,
+				);
+			} else {
+				if (member?.lockPasswordHash && !this.verifySecret(providedPassword, member.lockPasswordHash)) {
+					throw new BadRequestException('Mật khẩu khóa không đúng');
+				}
+				conversation.members = (conversation.members || []).map((item: any) =>
+					Number(item.userId) === Number(userId)
+						? { ...item, isLocked: false, lockedAt: null }
+						: item,
+				);
+			}
+		}
+
+		conversation.updatedAt = now;
+		await this.conversationRepository.save(conversation);
+		const mapped = this.mapConversation(conversation, userId);
+		emitToUser(userId, 'conversation:updated', { conversation: mapped });
+		if (body.hidden !== undefined || body.locked !== undefined) {
+			emitToConversation(conversationId, 'conversation:updated', { conversation: mapped });
+		}
+		return { message: 'Đã cập nhật thiết lập hội thoại', conversation: mapped };
 	}
 
 	async setSeen(conversationId: string, userId: number, lastReadMessageId?: string | null) {

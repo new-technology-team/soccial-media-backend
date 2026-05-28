@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { emitSocialEvent } from '../../common/socket/chat-socket';
 
 type PairingState = {
   pairingId: number;
@@ -56,6 +57,28 @@ export class AuthService {
         throw new BadRequestException('Vui lòng nhập email hoặc số điện thoại hợp lệ');
     }
 
+    private normalizePhoneForSms(raw: string) {
+        const digitsOrPlus = String(raw || '').trim().replace(/[^\d+]/g, '');
+
+        if (/^\+84\d{8,10}$/.test(digitsOrPlus)) {
+            return digitsOrPlus;
+        }
+
+        if (/^84\d{8,10}$/.test(digitsOrPlus)) {
+            return `+${digitsOrPlus}`;
+        }
+
+        if (/^0\d{8,10}$/.test(digitsOrPlus)) {
+            return `+84${digitsOrPlus.slice(1)}`;
+        }
+
+        if (/^\+\d{8,15}$/.test(digitsOrPlus)) {
+            return digitsOrPlus;
+        }
+
+        throw new BadRequestException('Số điện thoại cần đúng định dạng, ví dụ 0901234567 hoặc +84901234567.');
+    }
+
     private createNumericCode(length = 6) {
         return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
     }
@@ -63,6 +86,10 @@ export class AuthService {
     private createPairingCode(length = 6) {
         const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+    }
+
+    private getGoogleCallbackUrl() {
+        return String(process.env.GOOGLE_CALLBACK_URL || `${String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/google/callback`);
     }
 
     private addMinutes(minutes: number) {
@@ -74,26 +101,96 @@ export class AuthService {
     private get authFlags() {
         return {
             requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
-            exposeDebugCodes:
-                process.env.AUTH_EXPOSE_DEBUG_CODES === 'true' ||
+            exposeDebugCodes: process.env.AUTH_EXPOSE_DEBUG_CODES === 'true',
+            exposeOtpErrors:
+                process.env.AUTH_EXPOSE_OTP_ERRORS === 'true' ||
                 (process.env.NODE_ENV || 'development') !== 'production',
         };
     }
 
-    private async sendOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
-        if (!this.isEmail(identifier)) {
+    private buildOtpFailureMessage(delivery: { channel?: string; reason?: string; error?: string }) {
+        const base = 'Không thể gửi OTP thật. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.';
+        if (!this.authFlags.exposeOtpErrors) return base;
+
+        const detail = [delivery.channel, delivery.reason, delivery.error].filter(Boolean).join(' - ');
+        return detail ? `${base} Chi tiết: ${detail}` : base;
+    }
+
+    private async sendSmsOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
+        const accountSid = String(process.env.TWILIO_ACCOUNT_SID || process.env.OTP_SMS_ACCOUNT_SID || '').trim();
+        const authToken = String(process.env.TWILIO_AUTH_TOKEN || process.env.OTP_SMS_AUTH_TOKEN || '').trim();
+        const from = String(process.env.TWILIO_FROM || process.env.OTP_SMS_FROM || '').trim();
+        const to = this.normalizePhoneForSms(identifier);
+
+        if (!accountSid || !authToken || !from) {
             return {
                 sent: false,
                 channel: 'sms',
-                destination: identifier,
-                reason: 'SMS provider chưa được cấu hình trong backend mới',
-                error: 'Missing SMS provider',
+                destination: to,
+                reason: 'SMS provider chưa được cấu hình',
+                error: 'Missing Twilio config',
             };
+        }
+
+        const message =
+            purpose === 'verify'
+                ? `Ma xac thuc ZZChat cua ban la: ${code}. Ma co hieu luc trong 10 phut.`
+                : `Ma dat lai mat khau ZZChat cua ban la: ${code}. Ma co hieu luc trong 10 phut.`;
+
+        try {
+            const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+            const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Basic ${credentials}`,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ To: to, From: from, Body: message }).toString(),
+            });
+            const data = (await response.json().catch(() => ({}))) as { message?: string; sid?: string };
+
+            if (!response.ok) {
+                return {
+                    sent: false,
+                    channel: 'sms',
+                    destination: to,
+                    reason: 'sms-error',
+                    error: data.message || `Twilio HTTP ${response.status}`,
+                };
+            }
+
+            return {
+                sent: true,
+                channel: 'sms',
+                destination: to,
+                reason: data.sid || 'sent',
+                error: undefined,
+            };
+        } catch (error: any) {
+            return {
+                sent: false,
+                channel: 'sms',
+                destination: to,
+                reason: 'sms-error',
+                error: error?.message || 'SMS send failed',
+            };
+        }
+    }
+
+    private async sendOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
+        if (!this.isEmail(identifier)) {
+            return this.sendSmsOtp(identifier, code, purpose);
         }
 
         const smtpHost = String(process.env.OTP_SMTP_HOST || process.env.SMTP_HOST || '').trim();
         const smtpUser = String(process.env.OTP_SMTP_USER || process.env.SMTP_USER || '').trim();
-        const smtpPass = String(process.env.OTP_SMTP_PASS || process.env.SMTP_PASS || '').trim();
+        const smtpPass = String(
+            process.env.OTP_SMTP_PASS ||
+            process.env.SMTP_PASS ||
+            process.env.OTP_SMTP_PASSWORD ||
+            process.env.SMTP_PASSWORD ||
+            '',
+        ).trim();
         const smtpFrom = String(process.env.OTP_SMTP_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
         const smtpPort = Number(process.env.OTP_SMTP_PORT || process.env.SMTP_PORT || 587);
         const smtpSecure = String(process.env.OTP_SMTP_SECURE || process.env.SMTP_SECURE || '') === 'true' || smtpPort === 465;
@@ -175,6 +272,9 @@ export class AuthService {
             accountStatus: user.status,
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
+            permissions: typeof user.permissions === 'string'
+                ? user.permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
+                : [],
         };
 
         const accessToken = await this.jwtService.signAsync(payload, {
@@ -196,6 +296,114 @@ export class AuthService {
         };
     }
 
+    private async findOrCreateSocialUser(profile: { email: string; name?: string; avatarUrl?: string | null }) {
+        const email = profile.email.trim().toLowerCase();
+        if (!email) {
+            throw new BadRequestException('Không lấy được email từ tài khoản mạng xã hội.');
+        }
+
+        const existing = await this.userService.findByEmailOrPhone(email);
+        if (existing) {
+            if (!existing.isVerified) {
+                await this.userService.updateVerificationStatus(existing.userId, true);
+                return this.userService.findOne(existing.userId) || existing;
+            }
+            return existing;
+        }
+
+        return this.userService.create(
+            {
+                emailOrPhone: email,
+                email,
+                password: '',
+                displayName: profile.name || email.split('@')[0],
+                username: `${email.split('@')[0]}_${Date.now()}`,
+                sex: null as any,
+                dateOfBirth: null as any,
+                phone: null as any,
+                avatarUrl: profile.avatarUrl || undefined,
+            },
+            { isVerified: true },
+        );
+    }
+
+    async loginWithGoogleCode(code: string) {
+        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+        const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+        const redirectUri = this.getGoogleCallbackUrl();
+
+        if (!clientId || !clientSecret) {
+            throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET.');
+        }
+
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                code,
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: redirectUri,
+                grant_type: 'authorization_code',
+            }).toString(),
+        });
+        const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
+            access_token?: string;
+            error_description?: string;
+        };
+
+        if (!tokenResponse.ok || !tokenData.access_token) {
+            throw new BadRequestException(tokenData.error_description || 'Không thể xác thực Google.');
+        }
+
+        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        const profile = (await profileResponse.json().catch(() => ({}))) as {
+            email?: string;
+            name?: string;
+            picture?: string;
+        };
+
+        if (!profileResponse.ok || !profile.email) {
+            throw new BadRequestException('Không lấy được thông tin tài khoản Google.');
+        }
+
+        const user = await this.findOrCreateSocialUser({
+            email: profile.email,
+            name: profile.name,
+            avatarUrl: profile.picture,
+        });
+        return this.issueTokens(user);
+    }
+
+    async loginWithGoogleIdToken(idToken: string) {
+        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+        if (!clientId) {
+            throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID.');
+        }
+
+        const tokenResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+        const profile = (await tokenResponse.json().catch(() => ({}))) as {
+            aud?: string;
+            email?: string;
+            name?: string;
+            picture?: string;
+            error_description?: string;
+        };
+
+        if (!tokenResponse.ok || profile.aud !== clientId || !profile.email) {
+            throw new BadRequestException(profile.error_description || 'Google id_token không hợp lệ.');
+        }
+
+        const user = await this.findOrCreateSocialUser({
+            email: profile.email,
+            name: profile.name,
+            avatarUrl: profile.picture,
+        });
+        return this.issueTokens(user);
+    }
+
     async login(loginDto: LoginDto): Promise<any> {
         const identifier =
             loginDto.emailOrPhone || loginDto.email || loginDto.phone || loginDto.username;
@@ -211,7 +419,10 @@ export class AuthService {
             throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
         }
 
-        if ([UserStatus.HIDDEN, UserStatus.DELETED].includes(user.status)) {
+        const lockedStatuses = [UserStatus.BLOCKED, UserStatus.HIDDEN, UserStatus.DELETED, UserStatus.LOCKED];
+        const isTempLocked = user.status === UserStatus.TEMP_LOCKED &&
+            (!user.lockedUntil || new Date(user.lockedUntil).getTime() > Date.now());
+        if (lockedStatuses.includes(user.status) || isTempLocked) {
             throw new UnauthorizedException('Tài khoản không còn khả dụng');
         }
 
@@ -242,6 +453,9 @@ export class AuthService {
             email: isEmail ? normalized.toLowerCase() : registerDto.email,
             phone: isEmail ? registerDto.phone : normalized,
             displayName: registerDto.fullName || registerDto.displayName,
+            sex:
+                registerDto.sex ??
+                ({ male: 1, female: 0, other: 2 } as Record<string, number>)[String(registerDto.gender || '')],
             username: registerDto.username || (isEmail ? normalized.split('@')[0] : `user_${Date.now()}`),
         };
 
@@ -272,7 +486,9 @@ export class AuthService {
                 };
             }
 
-            throw new BadRequestException('Không thể gửi OTP. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.');
+            await this.otpRepository.delete({ identifier: identifier!, purpose: 'verify' });
+            await this.userService.deleteUnverifiedUser(newUser.userId);
+            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
         }
 
         return {
@@ -335,11 +551,11 @@ export class AuthService {
         }
 
         if (!otpDelivery.sent) {
-            throw new BadRequestException('Không thể gửi OTP. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.');
+            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
         }
 
         return {
-            message: 'Mã xác thực mới đã được tạo',
+            message: 'Mã xác thực mới đã được gửi',
             otpSent: true,
             otpChannel: otpDelivery.channel,
             otpDestination: otpDelivery.destination,
@@ -372,7 +588,7 @@ export class AuthService {
         }
 
         if (!otpDelivery.sent) {
-            throw new BadRequestException('Không thể gửi OTP. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.');
+            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
         }
 
         return {
@@ -506,11 +722,19 @@ export class AuthService {
         const buffer = Buffer.from(base64, 'base64');
         await fs.writeFile(outputPath, buffer);
         const fileUrl = `/uploads/avatars/${actorId}/${outputName}`;
-        await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
+        const user = await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
+        emitSocialEvent('user:avatar-updated', {
+            userId: actorId,
+            avatarUrl: fileUrl,
+            user: user ? this.userService.toProfile(user) : null,
+        });
 
         return {
             message: 'Tải ảnh đại diện thành công',
+            avatarUrl: fileUrl,
+            mediaUrl: fileUrl,
             fileUrl,
+            user: user ? this.userService.toProfile(user) : null,
             contentType: body?.contentType || 'application/octet-stream',
         };
     }

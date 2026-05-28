@@ -11,6 +11,7 @@ import { Post } from "./post.entity";
 import { User } from "../user/user.entity";
 import { Comment } from "../comment/comment.entity";
 import { NotificationService } from "../notification/notification.service";
+import { emitSocialEvent } from "../../common/socket/chat-socket";
 
 type AdminPostQuery = {
     q?: string;
@@ -106,6 +107,7 @@ export class PostService {
 
     private async toFeedPost(row: any, viewerUserId?: number) {
         const author = await this.usersRepository.findOne({ where: { userId: row.authorId } });
+        const sharedPost = row.sharedPostId ? await this.toSharedPostPreview(row.sharedPostId) : null;
         return {
             id: String(row._id),
             authorId: row.authorId,
@@ -115,6 +117,8 @@ export class PostService {
             authorAccountStatus: author?.status || 'ACTIVE',
             content: row.content || '',
             mediaUrl: row.mediaUrl || null,
+            sharedPostId: row.sharedPostId || null,
+            sharedPost,
             visibility: row.visibility,
             status: row.status,
             reactionCount: (row.reactions || []).length,
@@ -123,6 +127,30 @@ export class PostService {
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
         };
+    }
+
+    private async toSharedPostPreview(postId: string) {
+        try {
+            const original = await this.postsRepository.findOne({ where: { _id: new ObjectId(postId) as any } as any });
+            if (!original || (original as any).status === 'deleted') {
+                return { id: postId, unavailable: true };
+            }
+            const author = await this.usersRepository.findOne({ where: { userId: (original as any).authorId } });
+            return {
+                id: String((original as any)._id),
+                authorId: (original as any).authorId,
+                authorName: author?.displayName || 'Nguoi dung',
+                authorAvatar: author?.avatarUrl || null,
+                content: (original as any).content || '',
+                mediaUrl: (original as any).mediaUrl || null,
+                reactionCount: ((original as any).reactions || []).length,
+                commentCount: Number((original as any).commentCount || 0),
+                createdAt: (original as any).createdAt,
+                unavailable: (original as any).status !== 'published',
+            };
+        } catch (_error) {
+            return { id: postId, unavailable: true };
+        }
     }
 
     async createPost(createPostDto: CreatePostDto): Promise<Post> {
@@ -176,13 +204,14 @@ export class PostService {
     }
 
     async createFeedPost(actorId: number, body: any) {
-        if (!body?.content && !body?.mediaUrl) {
+        if (!body?.content && !body?.mediaUrl && !body?.sharedPostId) {
             throw new BadRequestException('Bai viet can co noi dung hoac media');
         }
 
         const row = await this.postsRepository.save(this.postsRepository.create({
             content: body?.content || '',
             mediaUrl: body?.mediaUrl || null,
+            sharedPostId: body?.sharedPostId ? String(body.sharedPostId) : null,
             visibility: body?.visibility || 'public',
             status: 'published',
             authorId: actorId,
@@ -192,7 +221,9 @@ export class PostService {
             commentCount: 0,
         }));
 
-        return { post: await this.toFeedPost(row, actorId) };
+        const post = await this.toFeedPost(row, actorId);
+        emitSocialEvent('post:created', { post, actorId });
+        return { post };
     }
 
     async getPostById(postId: string) {
@@ -243,21 +274,8 @@ export class PostService {
         this.assertAdmin(actor);
 
         const row = await this.getPostById(postId);
-        const nextContent = body?.content !== undefined ? String(body.content || '') : row.content || '';
-        const nextMedia = body?.mediaUrl !== undefined ? (body.mediaUrl || null) : row.mediaUrl || null;
         const nextVisibility = body?.visibility ? String(body.visibility) : row.visibility || 'public';
         const nextStatus = body?.status ? String(body.status) : row.status || 'published';
-
-        if (!nextContent.trim() && !nextMedia) {
-            throw new BadRequestException('Bai viet can co noi dung hoac media');
-        }
-
-        if (row.mediaUrl && row.mediaUrl !== nextMedia) {
-            await this.deleteMediaUrl(row.mediaUrl);
-        }
-
-        row.content = nextContent;
-        row.mediaUrl = nextMedia;
         row.visibility = nextVisibility;
         row.status = nextStatus;
         row.updatedAt = new Date();
@@ -273,6 +291,7 @@ export class PostService {
         row.status = 'deleted';
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:deleted', { postId, actorId: actor?.id || null });
 
         return { message: 'Đã xóa bài viết', post: await this.toFeedPost(row, actor?.id) };
     }
@@ -354,7 +373,9 @@ export class PostService {
         row.visibility = body?.visibility || row.visibility || 'public';
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
-        return { message: 'Da cap nhat bai viet', post: await this.toFeedPost(row, actorId) };
+        const post = await this.toFeedPost(row, actorId);
+        emitSocialEvent('post:updated', { post, actorId });
+        return { message: 'Da cap nhat bai viet', post };
     }
 
     async deleteFeedPost(actorId: number, postId: string) {
@@ -363,10 +384,11 @@ export class PostService {
             throw new ForbiddenException('Ban khong co quyen xoa bai viet nay');
         }
 
-        await this.deleteMediaUrl(row.mediaUrl);
-        await this.commentsRepository.delete({ postId } as any);
-        await this.postsRepository.delete({ _id: new ObjectId(postId) } as any);
-        return { message: 'Da xoa bai viet va media lien quan' };
+        row.status = 'deleted';
+        row.updatedAt = new Date();
+        await this.postsRepository.save(row);
+        emitSocialEvent('post:deleted', { postId, actorId });
+        return { message: 'Da xoa bai viet' };
     }
 
     async reactPost(actorId: number, postId: string, type: string) {
@@ -375,6 +397,20 @@ export class PostService {
         row.reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:reactionUpdated', {
+            postId,
+            actorId,
+            reaction: type || 'like',
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
+        emitSocialEvent('post:reaction', {
+            postId,
+            actorId,
+            reaction: type || 'like',
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
         if (Number(row.authorId) !== Number(actorId)) {
             const actor = await this.usersRepository.findOne({ where: { userId: actorId } });
             await this.notificationService.createNotification({
@@ -409,6 +445,20 @@ export class PostService {
         row.reactions = (row.reactions || []).filter((item: any) => Number(item.userId) !== Number(actorId));
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:reactionUpdated', {
+            postId,
+            actorId,
+            reaction: null,
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
+        emitSocialEvent('post:reaction', {
+            postId,
+            actorId,
+            reaction: null,
+            reactionCount: (row.reactions || []).length,
+            post: await this.toFeedPost(row, actorId),
+        });
         return { message: 'Da go tuong tac', post: await this.toFeedPost(row, actorId) };
     }
 
@@ -417,6 +467,7 @@ export class PostService {
         row.status = status;
         row.updatedAt = new Date();
         await this.postsRepository.save(row);
+        emitSocialEvent('post:updated', { post: await this.toFeedPost(row), actorId: null });
         return row;
     }
 }
