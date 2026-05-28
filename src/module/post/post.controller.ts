@@ -24,9 +24,27 @@ export class PostController {
         return this.postService.createFeedPost(user.id, body);
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Get('posts/saved')
+    listSavedPosts(@CurrentUser() user: any) {
+        return this.postService.listSavedPosts(user.id).then((posts) => ({ posts }));
+    }
+
     @Get('posts/:postId')
     getFeedPost(@CurrentUser() user: any, @Param('postId') postId: string) {
         return this.postService.getFeedPost(postId, user?.id);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('posts/:postId/save')
+    savePost(@CurrentUser() user: any, @Param('postId') postId: string) {
+        return this.postService.savePost(user.id, postId).then(() => ({ saved: true }));
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('posts/:postId/save')
+    unsavePost(@CurrentUser() user: any, @Param('postId') postId: string) {
+        return this.postService.unsavePost(user.id, postId).then(() => ({ saved: false }));
     }
 
     @UseGuards(JwtAuthGuard)

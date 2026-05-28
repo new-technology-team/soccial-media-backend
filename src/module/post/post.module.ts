@@ -5,13 +5,14 @@ import { PostService } from "./post.service";
 import { Post } from "./post.entity";
 import { User } from "../user/user.entity";
 import { Comment } from "../comment/comment.entity";
+import { SavedPost } from "./saved-post.entity";
 import { NotificationModule } from "../notification/notification.module";
 
 @Module({
 	imports: [
 		TypeOrmModule.forFeature([Post], 'mongodb'),
 		TypeOrmModule.forFeature([Comment], 'mongodb'),
-		TypeOrmModule.forFeature([User], 'mariadb'),
+		TypeOrmModule.forFeature([User, SavedPost], 'mariadb'),
 		NotificationModule,
 	],
 	controllers: [PostController],
