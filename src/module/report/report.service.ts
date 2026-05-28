@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ObjectId } from "mongodb";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { Report } from "./report.entity";
 import { ReportStatus } from "../../common/enum/report-status.enum";
 import { ReportType } from "../../common/enum/report-type.enum";
@@ -79,6 +79,43 @@ export class ReportService {
 		@InjectRepository(SystemSetting, 'mariadb')
 		private readonly systemSettingRepository: Repository<SystemSetting>,
 	) {}
+
+	private async enrichReports(rows: any[]): Promise<any[]> {
+		const userIds = new Set<number>();
+		rows.forEach((r) => {
+			if (r.userId) userIds.add(Number(r.userId));
+			if (r.reviewerId) userIds.add(Number(r.reviewerId));
+			if (r.assignedTo) userIds.add(Number(r.assignedTo));
+		});
+		const userMap = new Map<number, string>();
+		if (userIds.size > 0) {
+			const users = await this.userRepository.find({ where: { userId: In([...userIds]) } });
+			users.forEach((u) => userMap.set(u.userId, u.displayName || u.username || `#${u.userId}`));
+		}
+		return rows.map((r) => ({
+			...r,
+			reporterName: r.userId ? (userMap.get(Number(r.userId)) || null) : null,
+			reviewerName: r.reviewerId ? (userMap.get(Number(r.reviewerId)) || null) : null,
+			assigneeName: r.assignedTo ? (userMap.get(Number(r.assignedTo)) || null) : null,
+		}));
+	}
+
+	private async fetchTargetContent(reportType: string, targetId: string): Promise<string | null> {
+		try {
+			if (!targetId) return null;
+			if (reportType === 'post') {
+				const post = await this.postRepository.findOne({ where: { _id: new ObjectId(targetId) as any } as any });
+				return post?.content || null;
+			}
+			if (reportType === 'comment') {
+				const comment = await this.commentRepository.findOne({ where: { _id: new ObjectId(targetId) as any } as any });
+				return (comment as any)?.content || (comment as any)?.text || null;
+			}
+		} catch {
+			// targetId may not be a valid ObjectId
+		}
+		return null;
+	}
 
 	private assertAdmin(actor: any) {
 		if (!isAdmin(actor)) {
@@ -181,7 +218,8 @@ export class ReportService {
 			take: Math.min(Math.max(Number(limit || 100), 1), 200),
 		});
 
-		return { reports: rows };
+		const enriched = await this.enrichReports(rows);
+		return { reports: enriched };
 	}
 
 	async getReport(actor: any, reportId: number) {
@@ -189,7 +227,12 @@ export class ReportService {
 		this.assertPermission(actor, 'manage_reports');
 		const report = await this.reportRepository.findOne({ where: { reportId } });
 		if (!report) throw new NotFoundException('Không tìm thấy báo cáo');
-		return { report };
+		const [enriched] = await this.enrichReports([report]);
+		const targetContent = await this.fetchTargetContent(
+			String(report.reportType || ''),
+			String(report.targetId || ''),
+		);
+		return { report: { ...enriched, targetContent } };
 	}
 
 	async reviewReport(actor: any, reportId: number, body: any) {
@@ -431,12 +474,13 @@ export class ReportService {
 		report.updatedAt = new Date();
 		await this.reportRepository.save(report);
 		await this.audit(actor, 'Phân công báo cáo', 'REPORT', reportId, `Giao cho #${report.assignedTo}`);
-		emitSocialEvent('report:queueUpdated', { report, actorId: actor?.id || null });
-		emitSocialEvent('report:updated', { report, actorId: actor?.id || null });
+		const [enriched] = await this.enrichReports([report]);
+		emitSocialEvent('report:queueUpdated', { report: enriched, actorId: actor?.id || null });
+		emitSocialEvent('report:updated', { report: enriched, actorId: actor?.id || null });
 		if (report.assignedTo) {
-			emitToUser(report.assignedTo, 'report:assigned', { report });
+			emitToUser(report.assignedTo, 'report:assigned', { report: enriched });
 		}
-		return { message: 'Đã phân công báo cáo', report };
+		return { message: 'Đã phân công báo cáo', report: enriched };
 	}
 
 	async listAuditLogs(actor: any, limit = 100) {
@@ -529,5 +573,18 @@ export class ReportService {
 		await this.audit(actor, 'Tạm khóa tài khoản', 'USER', userId, user.restrictionReason);
 		this.revokeUserSession(userId, UserStatus.TEMP_LOCKED);
 		return { message: 'Đã tạm khóa tài khoản', user: toClientUser(user) };
+	}
+
+	async restoreUser(actor: any, userId: number) {
+		this.assertStaff(actor);
+		this.assertPermission(actor, 'manage_users');
+		const user = await this.userRepository.findOne({ where: { userId } });
+		if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+		user.status = UserStatus.ACTIVE;
+		user.lockedUntil = null as any;
+		user.restrictionReason = null as any;
+		await this.userRepository.save(user);
+		await this.audit(actor, 'Khôi phục tài khoản', 'USER', userId, 'Khôi phục bởi kiểm duyệt viên');
+		return { message: 'Đã khôi phục tài khoản', user: toClientUser(user) };
 	}
 }  

@@ -133,4 +133,14 @@ export class AdminModeratorController {
   tempLockModeratorUser(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
     return this.reportService.tempLockUser(user, Number(id), body?.reason);
   }
+
+  @Patch('moderator/users/:id/restore')
+  restoreModeratorUser(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.reportService.restoreUser(user, Number(id));
+  }
+
+  @Get('moderator/users')
+  getModeratorUsers(@CurrentUser() user: any, @Query('q') q?: string, @Query('limit') limit?: string) {
+    return this.reportService.listUsers(user, q, Number(limit || 50));
+  }
 }

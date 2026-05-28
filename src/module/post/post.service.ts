@@ -10,6 +10,7 @@ import { CreatePostDto } from "./dto/create-post.dto";
 import { Post } from "./post.entity";
 import { User } from "../user/user.entity";
 import { Comment } from "../comment/comment.entity";
+import { SavedPost } from "./saved-post.entity";
 import { NotificationService } from "../notification/notification.service";
 import { emitSocialEvent } from "../../common/socket/chat-socket";
 
@@ -29,6 +30,8 @@ export class PostService {
         private readonly commentsRepository: Repository<Comment>,
         @InjectRepository(User, 'mariadb')
         private readonly usersRepository: Repository<User>,
+        @InjectRepository(SavedPost, 'mariadb')
+        private readonly savedPostsRepository: Repository<SavedPost>,
         private readonly notificationService: NotificationService,
     ) { }
 
@@ -469,5 +472,38 @@ export class PostService {
         await this.postsRepository.save(row);
         emitSocialEvent('post:updated', { post: await this.toFeedPost(row), actorId: null });
         return row;
+    }
+
+    async savePost(userId: number, postId: string): Promise<void> {
+        await this.savedPostsRepository
+            .createQueryBuilder()
+            .insert()
+            .into(SavedPost)
+            .values({ userId, postId })
+            .orIgnore()
+            .execute();
+    }
+
+    async unsavePost(userId: number, postId: string): Promise<void> {
+        await this.savedPostsRepository.delete({ userId, postId });
+    }
+
+    async listSavedPosts(userId: number): Promise<any[]> {
+        const saved = await this.savedPostsRepository.find({
+            where: { userId },
+            order: { createdAt: 'DESC' },
+        });
+        const posts = await Promise.all(
+            saved.map(async (s) => {
+                try {
+                    const row = await this.postsRepository.findOne({ where: { _id: new ObjectId(s.postId) as any } as any });
+                    if (!row || (row as any).status === 'deleted') return null;
+                    return await this.toFeedPost(row, userId);
+                } catch {
+                    return null;
+                }
+            })
+        );
+        return posts.filter(Boolean);
     }
 }
