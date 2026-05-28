@@ -187,6 +187,22 @@ export class PostService {
         return { posts };
     }
 
+    async listUserPosts(authorId: number, viewerUserId?: number, limit = 20) {
+        const rows = await this.postsRepository.find({
+            where: { authorId } as any,
+            order: { createdAt: 'DESC' },
+            take: Math.min(Math.max(Number(limit || 20), 1), 100),
+        });
+
+        const posts: any[] = [];
+        for (const row of rows as any[]) {
+            if (row.status !== 'published') continue;
+            posts.push(await this.toFeedPost(row, viewerUserId));
+        }
+
+        return { posts };
+    }
+
     async createFeedPost(actorId: number, body: any) {
         if (!body?.content && !body?.mediaUrl && !body?.sharedPostId) {
             throw new BadRequestException('Bai viet can co noi dung hoac media');

@@ -3,28 +3,22 @@
  * Mô tả đầy đủ ứng dụng để AI trả lời đúng context.
  */
 export const ZCHAT_SYSTEM_PROMPT = `
-Bạn là trợ lý AI của ứng dụng nhắn tin và mạng xã hội **ZChat**.
+Bạn là trợ lý AI thông minh của ứng dụng nhắn tin và mạng xã hội **ZChat**.
 Nhiệm vụ của bạn là hỗ trợ người dùng hiểu và sử dụng tốt các tính năng của ZChat.
 
-## Về ZChat
-ZChat là ứng dụng nhắn tin kết hợp mạng xã hội, bao gồm các tính năng:
-- **Nhắn tin**: Chat 1-1 và nhóm, gửi ảnh, video, file, sticker, emoji phản cảm, ghim tin nhắn, thu hồi, chuyển tiếp tin nhắn
-- **Bạn bè**: Gửi lời mời kết bạn, chấp nhận/từ chối, xem danh sách bạn bè
-- **Mạng xã hội (Feed)**: Đăng bài (ảnh, văn bản), like/reaction, bình luận, kiểm soát quyền riêng tư (công khai / chỉ mình tôi)
-- **Thông báo**: Nhận thông báo bạn bè, tin nhắn, bình luận
-- **Tài khoản**: Đăng ký (email/số điện thoại), xác thực OTP, đăng nhập, đổi mật khẩu, cập nhật hồ sơ, ảnh đại diện
-- **Quản trị**: Kiểm duyệt bài đăng, quản lý báo cáo vi phạm, quản lý người dùng (dành cho moderator/admin)
-
 ## Quy tắc trả lời
-1. Chỉ trả lời về ZChat và các chủ đề liên quan (nhắn tin, mạng xã hội, tài khoản, hỗ trợ kỹ thuật)
-2. Nếu được hỏi về chủ đề ngoài phạm vi ZChat, lịch sự từ chối và hướng người dùng về câu hỏi liên quan đến ứng dụng
-3. Trả lời bằng ngôn ngữ mà người dùng đang dùng (tiếng Việt hoặc tiếng Anh)
-4. Câu trả lời ngắn gọn, rõ ràng, có ví dụ thực tế khi cần
-5. Không bịa đặt thông tin về tính năng chưa được liệt kê ở trên
+1. Tự động tham khảo "Dữ liệu nội bộ (Context)" được cung cấp trong prompt để trả lời câu hỏi về tính năng ứng dụng.
+2. Nếu thông tin không có trong Context, xin lỗi và cho biết chưa có đủ thông tin — tuyệt đối KHÔNG tự bịa đặt tính năng không tồn tại.
+3. Nếu người dùng hỏi cách thực hiện một thao tác, hãy trả lời dạng từng bước rõ ràng (bước 1, bước 2...).
+4. Chỉ trả lời về ZChat và các chủ đề liên quan. Nếu bị hỏi ngoài phạm vi ứng dụng, lịch sự từ chối.
+5. Trả lời bằng ngôn ngữ người dùng đang dùng (tiếng Việt hoặc tiếng Anh).
+6. Câu trả lời ngắn gọn, thân thiện, rõ ràng, có ví dụ thực tế khi cần.
 `.trim();
 
 /** Model Gemini sử dụng cho chat support */
-export const GEMINI_MODEL = 'gemini-2.5-flash';
+// export const GEMINI_MODEL = "gemini-flash-lite-latest";
+export const GEMINI_MODEL = "gemini-2.5-flash-lite";
 
-/** Số lượt lịch sử hội thoại tối đa gửi kèm mỗi request (để tiết kiệm token) */
-export const MAX_HISTORY_TURNS = 10;
+// Giảm từ 10 xuống 5 — 10 turns = 20 messages gửi lên mỗi request, tốn token không cần thiết
+// 5 turns là đủ để AI nhớ ngữ cảnh cuộc hội thoại gần nhất
+export const MAX_HISTORY_TURNS = 5;

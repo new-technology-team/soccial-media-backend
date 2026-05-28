@@ -22,6 +22,7 @@ import { Comment } from './module/comment/comment.entity';
 import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
+import { AiMessage } from './module/ai/ai-message.entity';
 import { BlockedUser } from './module/friendship/blocked-user.entity';
 import { DevAdminSeed } from './dev-admin.seed';
 import { AuditLog } from './module/audit-log/audit-log.entity';
@@ -85,7 +86,7 @@ function buildMariaSsl() {
       type: 'mongodb',
       url: buildMongoUrl(),
       synchronize: true,
-      entities: [Comment, Conversation, Message, Notification, Post],
+      entities: [Comment, Conversation, Message, Notification, Post, AiMessage],
     }),
     AuthModule,
     CommentModule,
