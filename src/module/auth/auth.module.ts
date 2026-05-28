@@ -7,15 +7,22 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../common/strategy/jwt.strategy';
 import { PostModule } from '../post/post.module';
 import { CommentModule } from '../comment/comment.module';
+import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthOtp } from './auth-otp.entity';
 
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
-      signOptions: { expiresIn: '2h' },
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_SECRET') || 'secretKey',
+        signOptions: { expiresIn: '2h' },
+      }),
     }),
+    TypeOrmModule.forFeature([AuthOtp], 'mariadb'),
     UserModule,
     PostModule,
     CommentModule,

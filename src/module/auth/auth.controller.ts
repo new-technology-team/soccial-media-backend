@@ -31,6 +31,34 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @Post('verify-registration')
+  verifyRegistration(
+    @Body() body: { emailOrPhone: string; code: string },
+  ) {
+    return this.authService.verifyRegistration(body.emailOrPhone, body.code);
+  }
+
+  @Post('resend-verification')
+  resendVerification(@Body() body: { emailOrPhone: string }) {
+    return this.authService.resendVerificationCode(body.emailOrPhone);
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() body: { emailOrPhone: string }) {
+    return this.authService.forgotPassword(body.emailOrPhone);
+  }
+
+  @Post('reset-password')
+  resetPassword(
+    @Body() body: { emailOrPhone: string; code: string; newPassword: string },
+  ) {
+    return this.authService.resetPassword(
+      body.emailOrPhone,
+      body.code,
+      body.newPassword,
+    );
+  }
+
   @Post('refresh')
   @HttpCode(200)
   refresh(@Body() body: { refreshToken: string }) {
@@ -40,13 +68,16 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   getMe(@Req() req: any) {
-    return this.authService.getMe(req.user.sub);
+    return this.authService.getMe(req.user.sub).then((user) => ({ user }));
   }
 
   @Put('me')
   @UseGuards(JwtAuthGuard)
   updateMe(@Req() req: any, @Body() body: any) {
-    return this.authService.updateMe(req.user.sub, body);
+    return this.authService.updateMe(req.user.sub, body).then((user) => ({
+      message: 'Cap nhat ho so thanh cong',
+      user,
+    }));
   }
 
   @Post('change-password')

@@ -8,6 +8,7 @@ import {
   MessageBody,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import {
   setChatSocketServer,
@@ -15,10 +16,6 @@ import {
   registerChatSocketHandlers,
 } from './chat-socket';
 import { JwtService } from '@nestjs/jwt';
-
-const resolveJwtSecret = () =>
-  process.env.JWT_ACCESS_SECRET ||
-  'secretKey';
 
 @WebSocketGateway({
   cors: {
@@ -30,6 +27,8 @@ const resolveJwtSecret = () =>
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(ChatGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -51,9 +50,7 @@ export class ChatGateway
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: resolveJwtSecret(),
-      });
+      const payload = await this.jwtService.verifyAsync(token);
       const userId = Number(payload?.sub || payload?.id || payload?.userId || 0);
       if (!userId) {
         client.disconnect(true);
@@ -63,7 +60,10 @@ export class ChatGateway
       client.data.username = payload.username;
       client.join(`user:${userId}`);
       client.join('global-feed');
-    } catch {
+    } catch (error) {
+      this.logger.warn(
+        `Socket auth failed: ${(error as Error)?.message || 'Invalid token'}`,
+      );
       client.disconnect(true);
     }
   }

@@ -27,8 +27,15 @@ export class ConversationController {
   }
 
   @Post('conversations/direct')
-  createDirect(@Body() body: { userId: number }, @Req() req: any) {
-    return this.conversationService.createDirect(req.user.sub, body.userId);
+  createDirect(
+    @Body() body: { userId?: number; targetUserId?: number },
+    @Req() req: any,
+  ) {
+    const targetUserId = Number(body?.userId ?? body?.targetUserId ?? 0);
+    if (!targetUserId) {
+      throw new BadRequestException('Thieu userId hoac targetUserId');
+    }
+    return this.conversationService.createDirect(req.user.sub, targetUserId);
   }
 
   @Post('conversations/group')
