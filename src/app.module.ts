@@ -65,18 +65,25 @@ function buildMongoUrl(): string {
 function buildMariaSsl() {
   const caPath = process.env.DB_SSL_CA_PATH || 'global-bundle.pem';
   const shouldUseSsl = process.env.DB_SSL === 'true' || fs.existsSync(caPath);
+  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
 
   if (!shouldUseSsl) {
     return undefined;
   }
 
-  if (!fs.existsSync(caPath)) {
+  if (fs.existsSync(caPath)) {
+    return {
+      ca: fs.readFileSync(caPath),
+      rejectUnauthorized,
+    };
+  }
+
+  if (rejectUnauthorized) {
     throw new Error(`MariaDB SSL CA file not found: ${caPath}`);
   }
 
   return {
-    ca: fs.readFileSync(caPath),
-    rejectUnauthorized: true,
+    rejectUnauthorized: false,
   };
 }
 
