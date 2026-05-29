@@ -32,6 +32,7 @@ import * as fs from 'fs';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
+    assertNotLocalDatabaseInProduction(process.env.DATABASE_URL_MARIA, 'DATABASE_URL_MARIA');
     return process.env.DATABASE_URL_MARIA;
   }
 
@@ -40,7 +41,18 @@ function buildMariaUrl(): string {
   const user = process.env.DB_USER || 'root';
   const pass = process.env.DB_PASSWORD || 'root';
   const db = process.env.DB_NAME || 'zalo_app';
+  assertNotLocalDatabaseInProduction(host, 'DB_HOST');
   return `mariadb://${user}:${pass}@${host}:${port}/${db}`;
+}
+
+function assertNotLocalDatabaseInProduction(value: string, key: string) {
+  if (process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
+  if (/localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(value)) {
+    throw new Error(`${key} is pointing to a local database while NODE_ENV=production. Configure AWS RDS before deploying.`);
+  }
 }
 
 function buildMongoUrl(): string {
