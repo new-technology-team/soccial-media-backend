@@ -8,28 +8,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var ChatAnalysisService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatAnalysisService = void 0;
 const common_1 = require("@nestjs/common");
+const ai_provider_1 = require("./ai.provider");
 const config_1 = require("@nestjs/config");
 const google_genai_1 = require("@langchain/google-genai");
 const prompts_1 = require("@langchain/core/prompts");
 const output_parsers_1 = require("@langchain/core/output_parsers");
-const ai_constants_1 = require("./ai.constants");
 let ChatAnalysisService = ChatAnalysisService_1 = class ChatAnalysisService {
-    constructor(config) {
+    constructor(config, chatModel, stableModel) {
         this.config = config;
+        this.chatModel = chatModel;
+        this.stableModel = stableModel;
         this.logger = new common_1.Logger(ChatAnalysisService_1.name);
-        const apiKey = this.config.get("GEMINI_API_KEY") || "";
-        if (!apiKey) {
-            this.logger.warn("GEMINI_API_KEY chưa được cấu hình – ChatAnalysisService sẽ không hoạt động.");
-        }
-        this.chatModel = new google_genai_1.ChatGoogleGenerativeAI({
-            apiKey: apiKey,
-            model: ai_constants_1.GEMINI_MODEL, // Sử dụng Gemini (VD: gemini-1.5-pro chuẩn hóa ở ai.constants.ts)
-            temperature: 0.2, // Giảm temperature để tóm tắt chính xác và ít bịa đặt
-        });
     }
     /**
      * Feature 2: Tóm tắt tin nhắn lịch sử
@@ -74,10 +70,251 @@ TÓM TẮT CỦA BẠN:
             throw new common_1.InternalServerErrorException("Đã xảy ra lỗi trong quá trình phân tích và tóm tắt tin nhắn.");
         }
     }
+    /**
+     * Feature 3: Smart Reply — Gợi ý 3 câu trả lời nhanh
+     * Dựa vào lịch sử hội thoại gần nhất, gợi ý các câu trả lời
+     * phù hợp ngữ cảnh cho người dùng hiện tại.
+     */
+    async suggestReplies(messages, currentUserName) {
+        if (!messages || messages.length === 0) {
+            return { suggestions: [] };
+        }
+        try {
+            const promptTemplate = prompts_1.PromptTemplate.fromTemplate(`
+Bạn là trợ lý gợi ý tin nhắn thông minh trong ứng dụng chat ZChat.
+
+Dưới đây là đoạn hội thoại gần nhất. Hãy gợi ý đúng 3 câu trả lời ngắn gọn,
+tự nhiên bằng tiếng Việt cho người dùng tên "{currentUser}".
+
+Yêu cầu:
+- Mỗi gợi ý trên 1 dòng riêng biệt.
+- Không đánh số, không thêm dấu gạch đầu dòng, không giải thích thêm.
+- Gợi ý phải đa dạng: 1 đồng ý/tích cực, 1 hỏi thêm, 1 trung lập hoặc hài hước.
+- Độ dài mỗi gợi ý từ 3 đến 15 từ, phù hợp văn phong chat.
+- Chỉ trả về đúng 3 dòng, không thêm bất cứ thứ gì khác.
+
+HỘI THOẠI GẦN NHẤT:
+{chatHistory}
+
+3 GỢI Ý CHO {currentUser}:
+    `);
+            // Chỉ lấy 10 tin nhắn gần nhất để tránh prompt quá dài
+            const recentMessages = messages.slice(-10);
+            const formattedHistory = recentMessages
+                .map((m) => `${m.sender}: ${m.content}`)
+                .join("\n");
+            const chain = promptTemplate
+                .pipe(this.chatModel)
+                .pipe(new output_parsers_1.StringOutputParser());
+            const result = await chain.invoke({
+                chatHistory: formattedHistory,
+                currentUser: currentUserName,
+            });
+            // Parse kết quả — mỗi dòng là 1 gợi ý
+            const suggestions = result
+                .split("\n")
+                .map((s) => s.trim())
+                // Lọc dòng trống và dòng có vẻ là giải thích (quá dài)
+                .filter((s) => s.length > 0 && s.length <= 100)
+                .slice(0, 3);
+            // Đảm bảo luôn trả về đủ 3 gợi ý, fallback nếu Gemini trả thiếu
+            const fallbacks = [
+                "Được bạn ơi!",
+                "Cho mình hỏi thêm nhé?",
+                "Mình hiểu rồi 👍",
+            ];
+            while (suggestions.length < 3) {
+                suggestions.push(fallbacks[suggestions.length]);
+            }
+            return { suggestions };
+        }
+        catch (error) {
+            this.logger.error("Lỗi khi gợi ý câu trả lời (SmartReply):", error instanceof Error ? error.stack : error);
+            throw new common_1.InternalServerErrorException("Đã xảy ra lỗi khi tạo gợi ý câu trả lời.");
+        }
+    }
+    /**
+     * Feature 4: Sentiment Analysis — Phân tích cảm xúc hội thoại
+     * Phân tích cảm xúc tổng thể của đoạn hội thoại và trả về JSON có cấu trúc.
+     */
+    async analyzeSentiment(messages) {
+        if (!messages || messages.length === 0) {
+            return {
+                sentiment: "neutral",
+                score: 0.5,
+                detail: "Không có tin nhắn để phân tích.",
+                emotions: [],
+            };
+        }
+        try {
+            const promptTemplate = prompts_1.PromptTemplate.fromTemplate(`
+Bạn là chuyên gia phân tích cảm xúc hội thoại. Phân tích đoạn chat dưới đây và trả về JSON.
+
+Trả về JSON với đúng cấu trúc sau, KHÔNG giải thích thêm, KHÔNG markdown, KHÔNG code block:
+{{
+  "sentiment": "positive" | "neutral" | "negative",
+  "score": <số thực từ 0.0 đến 1.0, 0=rất tiêu cực, 0.5=trung lập, 1=rất tích cực>,
+  "detail": "<mô tả ngắn gọn bằng tiếng Việt, tối đa 20 từ>",
+  "emotions": ["<cảm xúc 1>", "<cảm xúc 2>"]
+}}
+
+Các cảm xúc hợp lệ cho mảng emotions:
+vui vẻ, hào hứng, yêu thương, hài lòng, bình thường,
+lo lắng, buồn bã, tức giận, thất vọng, căng thẳng
+
+HỘI THOẠI:
+{chatHistory}
+    `);
+            const recentMessages = messages.slice(-20);
+            const formattedHistory = recentMessages
+                .map((m) => {
+                const time = m.timestamp
+                    ? `[${new Date(m.timestamp).toLocaleTimeString("vi-VN")}] `
+                    : "";
+                return `${time}${m.sender}: ${m.content}`;
+            })
+                .join("\n");
+            const chain = promptTemplate.pipe(this.stableModel).pipe(new output_parsers_1.StringOutputParser());
+            const raw = await chain.invoke({ chatHistory: formattedHistory });
+            return this.parseSentimentJson(raw);
+        }
+        catch (error) {
+            this.logger.error("Lỗi khi phân tích sentiment:", error instanceof Error ? error.stack : error);
+            throw new common_1.InternalServerErrorException("Đã xảy ra lỗi khi phân tích cảm xúc hội thoại.");
+        }
+    }
+    /**
+     * Parse JSON từ Gemini — xử lý các trường hợp Gemini trả về không chuẩn
+     */
+    parseSentimentJson(raw) {
+        try {
+            // Gemini đôi khi bọc trong ```json ... ``` dù đã dặn không làm vậy
+            const cleaned = raw
+                .replace(/```json\s*/gi, "")
+                .replace(/```\s*/gi, "")
+                .trim();
+            const parsed = JSON.parse(cleaned);
+            // Validate và normalize từng field — tránh LLM trả sai kiểu
+            const sentiment = ["positive", "neutral", "negative"].includes(parsed.sentiment)
+                ? parsed.sentiment
+                : "neutral";
+            const score = typeof parsed.score === "number"
+                ? Math.min(1, Math.max(0, parsed.score)) // clamp 0–1
+                : 0.5;
+            const detail = typeof parsed.detail === "string"
+                ? parsed.detail
+                : "Không xác định được cảm xúc.";
+            const emotions = Array.isArray(parsed.emotions)
+                ? parsed.emotions.filter((e) => typeof e === "string").slice(0, 3)
+                : [];
+            return { sentiment, score, detail, emotions };
+        }
+        catch {
+            this.logger.warn(`Không parse được JSON sentiment, raw: ${raw}`);
+            // Fallback an toàn thay vì throw
+            return {
+                sentiment: "neutral",
+                score: 0.5,
+                detail: "Không phân tích được cảm xúc.",
+                emotions: [],
+            };
+        }
+    }
+    /**
+     * Feature 5: Translate — Dịch tin nhắn sang ngôn ngữ khác
+     * Dịch nội dung tin nhắn, tự động nhận diện ngôn ngữ gốc,
+     * giữ nguyên emoji, tên riêng và format đặc biệt.
+     */
+    async translateMessage(text, targetLanguage) {
+        if (!text || text.trim().length === 0) {
+            return {
+                translatedText: "",
+                detectedLanguage: "unknown",
+                detectedLanguageName: "Không xác định",
+                targetLanguage,
+                isSameLanguage: false,
+            };
+        }
+        try {
+            const promptTemplate = prompts_1.PromptTemplate.fromTemplate(`
+Bạn là chuyên gia dịch thuật. Dịch tin nhắn sau sang {targetLanguage}.
+
+Quy tắc bắt buộc:
+- Giữ nguyên emoji, tên riêng, số điện thoại, link URL.
+- Giữ nguyên format (xuống dòng, khoảng cách).
+- Dịch tự nhiên như người bản ngữ, KHÔNG dịch từng từ máy móc.
+- Nếu tin nhắn đã là {targetLanguage} rồi, vẫn trả về JSON nhưng đánh dấu isSameLanguage: true.
+- KHÔNG giải thích, KHÔNG markdown, KHÔNG code block.
+
+Trả về đúng JSON sau:
+{{
+  "translatedText": "<bản dịch>",
+  "detectedLanguage": "<mã ngôn ngữ gốc, ví dụ: vi, en, ja, ko, zh>",
+  "detectedLanguageName": "<tên ngôn ngữ gốc bằng tiếng Việt, ví dụ: Tiếng Việt>",
+  "isSameLanguage": <true nếu ngôn ngữ gốc = ngôn ngữ đích, ngược lại false>
+}}
+
+TIN NHẮN CẦN DỊCH:
+{text}
+    `);
+            const chain = promptTemplate.pipe(this.stableModel).pipe(new output_parsers_1.StringOutputParser());
+            const raw = await chain.invoke({
+                text,
+                targetLanguage,
+            });
+            return this.parseTranslateJson(raw, targetLanguage);
+        }
+        catch (error) {
+            this.logger.error("Lỗi khi dịch tin nhắn:", error instanceof Error ? error.stack : error);
+            throw new common_1.InternalServerErrorException("Đã xảy ra lỗi trong quá trình dịch tin nhắn.");
+        }
+    }
+    /**
+     * Parse JSON từ Gemini — xử lý các trường hợp format không chuẩn
+     */
+    parseTranslateJson(raw, targetLanguage) {
+        try {
+            const cleaned = raw
+                .replace(/```json\s*/gi, "")
+                .replace(/```\s*/gi, "")
+                .trim();
+            const parsed = JSON.parse(cleaned);
+            return {
+                translatedText: typeof parsed.translatedText === "string"
+                    ? parsed.translatedText
+                    : raw.trim(),
+                detectedLanguage: typeof parsed.detectedLanguage === "string"
+                    ? parsed.detectedLanguage
+                    : "unknown",
+                detectedLanguageName: typeof parsed.detectedLanguageName === "string"
+                    ? parsed.detectedLanguageName
+                    : "Không xác định",
+                targetLanguage,
+                isSameLanguage: typeof parsed.isSameLanguage === "boolean"
+                    ? parsed.isSameLanguage
+                    : false,
+            };
+        }
+        catch {
+            this.logger.warn(`Không parse được JSON translate, raw: ${raw}`);
+            // Fallback — trả về raw text luôn thay vì throw
+            return {
+                translatedText: raw.trim(),
+                detectedLanguage: "unknown",
+                detectedLanguageName: "Không xác định",
+                targetLanguage,
+                isSameLanguage: false,
+            };
+        }
+    }
 };
 exports.ChatAnalysisService = ChatAnalysisService;
 exports.ChatAnalysisService = ChatAnalysisService = ChatAnalysisService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __param(1, (0, common_1.Inject)(ai_provider_1.GEMINI_CHAT_MODEL)),
+    __param(2, (0, common_1.Inject)(ai_provider_1.GEMINI_STABLE_MODEL)),
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        google_genai_1.ChatGoogleGenerativeAI,
+        google_genai_1.ChatGoogleGenerativeAI])
 ], ChatAnalysisService);
 //# sourceMappingURL=chat-analysis.service.js.map
