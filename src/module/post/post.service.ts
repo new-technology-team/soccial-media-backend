@@ -358,7 +358,7 @@ export class PostService {
     async updateFeedPost(actorId: number, postId: string, body: any) {
         const row = await this.getPostById(postId);
         if (Number(row.authorId) !== Number(actorId)) {
-            throw new ForbiddenException('Ban khong co quyen sua bai viet nay');
+            throw new ForbiddenException('Bạn không có quyền sửa bài viết này');
         }
 
         const nextContent = body?.content !== undefined ? String(body.content || '') : row.content || '';
@@ -378,13 +378,13 @@ export class PostService {
         await this.postsRepository.save(row);
         const post = await this.toFeedPost(row, actorId);
         emitSocialEvent('post:updated', { post, actorId });
-        return { message: 'Da cap nhat bai viet', post };
+        return { message: 'Đã cập nhật bài viết', post };
     }
 
     async deleteFeedPost(actorId: number, postId: string) {
         const row = await this.getPostById(postId);
         if (Number(row.authorId) !== Number(actorId)) {
-            throw new ForbiddenException('Ban khong co quyen xoa bai viet nay');
+            throw new ForbiddenException('Bạn không có quyền xóa bài viết này');
         }
 
         row.status = 'deleted';

@@ -19,7 +19,7 @@ export class CommentService {
 		private readonly userService: UserService,
 		private readonly postService: PostService,
 		private readonly notificationService: NotificationService,
-	) {}
+	) { }
 
 	private isValidObjectId(value: string) {
 		return ObjectId.isValid(String(value || ''));
@@ -263,7 +263,7 @@ export class CommentService {
 
 		const post = await this.postService.getPostById(row.postId);
 		if (Number(row.userId) !== Number(actorId) && Number(post.authorId) !== Number(actorId) && !canModerate) {
-			throw new ForbiddenException('Ban khong co quyen xoa binh luan nay');
+			throw new ForbiddenException('Bạn không có quyền xóa bình luận này');
 		}
 
 		row.status = 'deleted';
@@ -277,6 +277,6 @@ export class CommentService {
 			actorId,
 			commentCount: Number(updatedPost.commentCount || 0),
 		});
-		return { message: 'Da xoa binh luan' };
+		return { message: 'Đã xóa bình luận' };
 	}
 }
