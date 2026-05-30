@@ -92,6 +92,7 @@ function buildMariaSsl() {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
     }),
     TypeOrmModule.forRoot({
       name: 'mariadb',

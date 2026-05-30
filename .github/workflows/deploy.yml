@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - name: Deploy to EC2
@@ -16,14 +17,15 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          command_timeout: 30m
+          command_timeout: 1800s
           script: |
             cd ~/soccial-media-backend
 
-            git fetch
+            git fetch origin
             git reset --hard origin/tongquockhanh2510
 
             npm install
             npm run build
 
             pm2 restart social-backend
+            pm2 save
