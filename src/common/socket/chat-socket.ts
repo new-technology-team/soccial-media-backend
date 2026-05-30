@@ -41,6 +41,22 @@ const relayConversationEvent = (socket: Socket, eventName: string, payload: any)
 	socket.to(conversationId).emit(eventName, payload);
 };
 
+const relayTypingEvent = (socket: Socket, payload: any, isTyping: boolean) => {
+	const conversationId = String(payload?.conversationId || '').trim();
+	const fromUserId = resolveSocketUserId(socket);
+	if (conversationId && fromUserId) {
+		socket.to(conversationId).emit('message:typing', {
+			conversationId,
+			fromUserId,
+			isTyping,
+		});
+		socket.to(conversationId).emit(isTyping ? 'typing' : 'stopTyping', {
+			conversationId,
+			fromUserId,
+		});
+	}
+};
+
 const resolveSocketUserId = (socket: Socket) => {
 	const authUserId = Number(socket.handshake?.auth?.userId || 0);
 	if (authUserId > 0) return authUserId;
@@ -108,17 +124,9 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('message:new', (payload) => relayConversationEvent(socket, 'message:new', payload));
 		socket.on('message:reaction', (payload) => relayConversationEvent(socket, 'message:reaction', payload));
 		socket.on('message:updated', (payload) => relayConversationEvent(socket, 'message:updated', payload));
-		socket.on('message:typing', (payload) => {
-			const conversationId = String(payload?.conversationId || '').trim();
-			const fromUserId = resolveSocketUserId(socket);
-			if (conversationId && fromUserId) {
-				socket.to(conversationId).emit('message:typing', {
-					conversationId,
-					fromUserId,
-					isTyping: Boolean(payload?.isTyping),
-				});
-			}
-		});
+		socket.on('message:typing', (payload) => relayTypingEvent(socket, payload, Boolean(payload?.isTyping)));
+		socket.on('typing', (payload) => relayTypingEvent(socket, payload, true));
+		socket.on('stopTyping', (payload) => relayTypingEvent(socket, payload, false));
 		socket.on('notification:new', (payload) => relayConversationEvent(socket, 'notification:new', payload));
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
@@ -132,6 +140,15 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('call:join', (payload) => relayCallEvent(socket, 'call:join', payload));
 		socket.on('call:leave', (payload) => relayCallEvent(socket, 'call:leave', payload));
 		socket.on('call:end', (payload) => relayCallEvent(socket, 'call:end', payload));
+		socket.on('call_started', (payload) => relayCallEvent(socket, 'call_started', payload));
+		socket.on('call_joined', (payload) => relayCallEvent(socket, 'call_joined', payload));
+		socket.on('call_ended', (payload) => relayCallEvent(socket, 'call_ended', payload));
+		socket.on('group_call_started', (payload) => relayCallEvent(socket, 'group_call_started', payload));
+		socket.on('group_call_joined', (payload) => relayCallEvent(socket, 'group_call_joined', payload));
+		socket.on('group_call_left', (payload) => relayCallEvent(socket, 'group_call_left', payload));
+		socket.on('group_call_ended', (payload) => relayCallEvent(socket, 'group_call_ended', payload));
+		socket.on('participant_updated', (payload) => relayCallEvent(socket, 'participant_updated', payload));
+		socket.on('participant_speaking', (payload) => relayCallEvent(socket, 'participant_speaking', payload));
 		socket.on('call:participants', (payload) => {
 			const conversationId = String(payload?.conversationId || '').trim();
 			if (conversationId) {

@@ -17,6 +17,9 @@ export class Comment {
     @Column({ nullable: true })
     file: string | null;
 
+    @Column({ nullable: true })
+    parentCommentId: string | null;
+
     @Column()
     status: string;
 

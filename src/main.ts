@@ -8,7 +8,11 @@ import { registerChatSocketHandlers, setChatSocketServer } from './common/socket
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
-  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:8088,http://localhost:19006')
+  const allowedOrigins = (
+    process.env.CORS_ORIGINS ||
+    process.env.FRONTEND_URL ||
+    'http://localhost:5173,http://localhost:5174,http://localhost:8088,http://localhost:19006'
+  )
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -27,6 +31,8 @@ async function bootstrap() {
       origin: allowedOrigins,
       credentials: true,
     },
+    transports: ['polling', 'websocket'],
+    path: process.env.SOCKET_IO_PATH || '/socket.io',
   });
   setChatSocketServer(io);
   registerChatSocketHandlers(io);
