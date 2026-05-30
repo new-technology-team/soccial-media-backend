@@ -1,6 +1,11 @@
 import { Body, Controller, Get, Param, Put, Query, UseGuards } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import { UserService } from "./user.service";
 import { PostService } from "../post/post.service";
+import { Friendship } from "../friendship/friendship.entity";
+import { BlockedUser } from "../friendship/blocked-user.entity";
+import { FriendshipStatus } from "../../common/enum/friendship-status.enum";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
 import { CurrentUser } from "../../common/auth/current-user.decorator";
 
@@ -9,6 +14,10 @@ export class UserController {
     constructor(
         private userService: UserService,
         private postService: PostService,
+        @InjectRepository(Friendship, 'mariadb')
+        private readonly friendshipRepo: Repository<Friendship>,
+        @InjectRepository(BlockedUser, 'mariadb')
+        private readonly blockedUserRepo: Repository<BlockedUser>,
     ) { }
 
     @UseGuards(JwtAuthGuard)
@@ -38,6 +47,54 @@ export class UserController {
                 avatarUrl: u.avatarUrl || null,
                 role: u.role,
             })),
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/:id/profile')
+    async getUserPublicProfile(@CurrentUser() user: any, @Param('id') id: string) {
+        const targetId = Number(id);
+        const currentId = Number(user.id);
+
+        const profile = await this.userService.findOne(targetId);
+        if (!profile) {
+            return { user: null, relationship: { status: 'none', friendshipId: null, requestedByMe: false, isBlockedByMe: false, isBlockedMe: false } };
+        }
+
+        const userDto = {
+            userId: profile.userId,
+            displayName: profile.displayName,
+            avatarUrl: profile.avatarUrl || null,
+            role: profile.role,
+            isVerified: profile.isVerified,
+            lastActiveAt: profile.lastActiveAt || null,
+        };
+
+        if (targetId === currentId) {
+            return { user: userDto, relationship: { status: 'self', friendshipId: null, requestedByMe: false, isBlockedByMe: false, isBlockedMe: false } };
+        }
+
+        const [a, b] = currentId < targetId ? [currentId, targetId] : [targetId, currentId];
+        const friendship = await this.friendshipRepo.findOne({ where: { userId1: a, userId2: b } });
+        const blockedByMe = await this.blockedUserRepo.findOne({ where: { blockerId: currentId, blockedUserId: targetId } });
+        const blockedMe = await this.blockedUserRepo.findOne({ where: { blockerId: targetId, blockedUserId: currentId } });
+
+        let status = 'none';
+        if (friendship?.status === FriendshipStatus.ACCEPTED) {
+            status = 'friends';
+        } else if (friendship?.status === FriendshipStatus.PENDING) {
+            status = friendship.requesterId === currentId ? 'pending_sent' : 'pending_received';
+        }
+
+        return {
+            user: userDto,
+            relationship: {
+                status,
+                friendshipId: friendship?.id ?? null,
+                requestedByMe: friendship?.requesterId === currentId,
+                isBlockedByMe: Boolean(blockedByMe),
+                isBlockedMe: Boolean(blockedMe),
+            },
         };
     }
 
