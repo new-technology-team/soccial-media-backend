@@ -26,11 +26,22 @@ export class MessageService {
 		private readonly friendshipService: FriendshipService,
 	) {}
 
+	private async hydrateMemberAvatars(conversation: any) {
+		const members = conversation?.members || [];
+		if (!members.length) return;
+		const avatarMap = await this.userService.getAvatarMap(members.map((m: any) => Number(m.userId)));
+		for (const member of members) {
+			if (avatarMap.has(Number(member.userId))) {
+				member.avatarUrl = avatarMap.get(Number(member.userId)) || null;
+			}
+		}
+	}
+
 	private mapMessage(row: any, viewerUserId?: number, conversation?: any) {
 		const senderId = Number(row.senderId || 0);
 		const senderMember = (conversation?.members || []).find((item: any) => Number(item.userId) === senderId);
 		const senderName = senderMember?.nickname || row.senderName || row.meta?.senderName || senderMember?.fullName || `Người dùng #${senderId}`;
-		const senderAvatar = row.senderAvatar || row.meta?.senderAvatar || senderMember?.avatarUrl || null;
+		const senderAvatar = senderMember?.avatarUrl || row.senderAvatar || row.meta?.senderAvatar || null;
 		const reactions = (row.reactions || []).map((item: any) => ({
 			userId: Number(item.userId),
 			reaction: String(item.type || item.reaction || "like"),
@@ -240,6 +251,7 @@ export class MessageService {
 		filters?: { senderId?: number; type?: string; sentDate?: string; q?: string },
 	) {
 		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
+		await this.hydrateMemberAvatars(conversation);
 		const rows = await this.messageRepository.find({
 			where: { conversationId } as any,
 			order: { createdAt: "DESC" },

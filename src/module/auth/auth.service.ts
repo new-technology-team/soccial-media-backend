@@ -11,6 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { emitSocialEvent } from '../../common/socket/chat-socket';
 
 type PairingState = {
@@ -700,6 +701,26 @@ export class AuthService {
             .slice(0, 120);
     }
 
+    private getS3Config() {
+        const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || '';
+        const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1';
+        return { bucket, region };
+    }
+
+    private getS3Client() {
+        const { region } = this.getS3Config();
+        return new S3Client({
+            region,
+            credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+                ? {
+                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                    sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
+                }
+                : undefined,
+        });
+    }
+
     async getAvatarUploadUrl(actorId: number, body: { fileName: string; contentType: string }) {
         const safeName = this.sanitizeFileName(body?.fileName || `avatar-${Date.now()}.bin`);
         const relative = `/uploads/avatars/${actorId}/${Date.now()}-${safeName}`;
@@ -714,14 +735,35 @@ export class AuthService {
 
     async uploadAvatarBase64(actorId: number, body: { fileName: string; contentType: string; base64Data: string }) {
         const safeName = this.sanitizeFileName(body?.fileName || `avatar-${Date.now()}.bin`);
-        const outputDir = path.join(process.cwd(), 'uploads', 'avatars', String(actorId));
-        await fs.mkdir(outputDir, { recursive: true });
         const outputName = `${Date.now()}-${safeName}`;
-        const outputPath = path.join(outputDir, outputName);
         const base64 = String(body?.base64Data || '').replace(/^data:[^;]+;base64,/, '');
         const buffer = Buffer.from(base64, 'base64');
-        await fs.writeFile(outputPath, buffer);
-        const fileUrl = `/uploads/avatars/${actorId}/${outputName}`;
+        const contentType = body?.contentType || 'application/octet-stream';
+        const { bucket, region } = this.getS3Config();
+
+        let fileUrl: string;
+        if (bucket) {
+            const key = `uploads/avatars/${actorId}/${outputName}`;
+            try {
+                await this.getS3Client().send(new PutObjectCommand({
+                    Bucket: bucket,
+                    Key: key,
+                    Body: buffer,
+                    ContentType: contentType,
+                }));
+                fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+            } catch (error) {
+                const detail = error instanceof Error ? error.message : 'Lỗi S3 không xác định';
+                console.error('S3 avatar upload failed:', detail);
+                throw new BadRequestException(`Không thể tải ảnh đại diện lên S3: ${detail}`);
+            }
+        } else {
+            const outputDir = path.join(process.cwd(), 'uploads', 'avatars', String(actorId));
+            await fs.mkdir(outputDir, { recursive: true });
+            await fs.writeFile(path.join(outputDir, outputName), buffer);
+            fileUrl = `/uploads/avatars/${actorId}/${outputName}`;
+        }
+
         const user = await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
         emitSocialEvent('user:avatar-updated', {
             userId: actorId,

@@ -20,6 +20,24 @@ export class ConversationService {
 		private readonly friendshipService: FriendshipService,
 	) {}
 
+	private async hydrateMemberAvatars(conversations: any[]) {
+		const userIds: number[] = [];
+		for (const conversation of conversations) {
+			for (const member of conversation?.members || []) {
+				userIds.push(Number(member.userId));
+			}
+		}
+		if (!userIds.length) return;
+		const avatarMap = await this.userService.getAvatarMap(userIds);
+		for (const conversation of conversations) {
+			for (const member of conversation?.members || []) {
+				if (avatarMap.has(Number(member.userId))) {
+					member.avatarUrl = avatarMap.get(Number(member.userId)) || null;
+				}
+			}
+		}
+	}
+
 	private mapMember(member: any) {
 		const online = isChatUserOnline(Number(member.userId));
 		const lastActiveAt = getChatUserLastActiveAt(Number(member.userId));
@@ -218,6 +236,7 @@ export class ConversationService {
 			}
 		}
 		const mine = rows.filter((item: any) => (item.members || []).some((m: any) => m.userId === userId));
+		await this.hydrateMemberAvatars(mine);
 		const sorted = [...mine].sort((a: any, b: any) => {
 			const aPinned = Boolean(this.getMemberByUserId(a, userId)?.isPinned);
 			const bPinned = Boolean(this.getMemberByUserId(b, userId)?.isPinned);
@@ -396,6 +415,7 @@ export class ConversationService {
 
 	async getConversationDetail(conversationId: string, userId: number) {
 		const conversation = await this.ensureMembership(conversationId, userId);
+		await this.hydrateMemberAvatars([conversation]);
 		return { conversation: this.mapConversation(conversation, userId) };
 	}
 
