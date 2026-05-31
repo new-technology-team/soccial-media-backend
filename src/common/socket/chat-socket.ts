@@ -52,6 +52,12 @@ const broadcastPresence = (userId: number, online: boolean) => {
 	});
 };
 
+const getPresencePayload = (userId: number) => ({
+	userId,
+	online: isChatUserOnline(userId),
+	lastActiveAt: (getChatUserLastActiveAt(userId) || new Date()).toISOString(),
+});
+
 const relayConversationEvent = (socket: Socket, eventName: string, payload: any) => {
 	const conversationId = String(payload?.conversationId || '').trim();
 	if (!conversationId) return;
@@ -240,6 +246,12 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('typing', (payload) => relayTypingEvent(socket, payload, true));
 		socket.on('stopTyping', (payload) => relayTypingEvent(socket, payload, false));
 		socket.on('notification:new', (payload) => relayConversationEvent(socket, 'notification:new', payload));
+			socket.on('presence:check', (payload, ack) => {
+				const targetUserId = Number(payload?.userId || 0);
+				if (typeof ack === 'function') {
+					ack(targetUserId ? getPresencePayload(targetUserId) : { userId: 0, online: false, lastActiveAt: new Date().toISOString() });
+				}
+			});
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
 			// Luôn dùng thời gian của server để tính thời lượng cuộc gọi chính xác.
@@ -260,10 +272,12 @@ export const registerChatSocketHandlers = (server: Server) => {
 				if (room) socket.to(room.conversationId).emit('call:participants', serializeCallRoom(room));
 			}
 			relayCallEvent(socket, 'call:leave', payload);
+				relayCallEvent(socket, 'call:left', payload);
 		});
 		socket.on('call:end', (payload) => {
 			if (userId) clearCallParticipation(userId);
 			relayCallEvent(socket, 'call:end', payload);
+				relayCallEvent(socket, 'call:ended', payload);
 		});
 		socket.on('call_started', (payload) => {
 			if (userId) joinActiveCallRoom(socket, { ...payload, mode: 'private' });
@@ -288,12 +302,14 @@ export const registerChatSocketHandlers = (server: Server) => {
 				if (room) socket.to(room.conversationId).emit('call:participants', serializeCallRoom(room));
 			}
 			relayCallEvent(socket, 'group_call_left', payload);
+				relayCallEvent(socket, 'call:left', payload);
 		});
 		socket.on('group_call_ended', (payload) => {
 			const conversationId = String(payload?.conversationId || '').trim();
 			if (conversationId) activeCallRooms.delete(conversationId);
 			if (userId) clearCallParticipation(userId, false);
 			relayCallEvent(socket, 'group_call_ended', payload);
+				relayCallEvent(socket, 'call:ended', payload);
 		});
 		socket.on('participant_updated', (payload) => {
 			const conversationId = String(payload?.conversationId || '').trim();
@@ -377,10 +393,13 @@ export const registerChatSocketHandlers = (server: Server) => {
 					if (call.mode === 'group') {
 						const room = leaveActiveCallRoom(userId, call.conversationId);
 						emitToConversation(call.conversationId, 'group_call_left', payload);
+						emitToConversation(call.conversationId, 'call:left', payload);
 						if (room) emitToConversation(call.conversationId, 'call:participants', serializeCallRoom(room));
 					} else {
 						emitToConversation(call.conversationId, 'call:end', payload);
+						emitToConversation(call.conversationId, 'call:ended', payload);
 						call.peerIds.forEach((peerId) => emitToUser(peerId, 'call:end', payload));
+						call.peerIds.forEach((peerId) => emitToUser(peerId, 'call:ended', payload));
 						leaveActiveCallRoom(userId, call.conversationId);
 					}
 					clearCallParticipation(userId);

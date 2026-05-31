@@ -812,6 +812,12 @@ export class ConversationService {
 		conversation.lastMessage = payload;
 		conversation.updatedAt = new Date();
 		await this.conversationRepository.save(conversation);
+		for (const member of conversation.members || []) {
+			const userId = Number(member.userId || 0);
+			if (userId > 0) {
+				emitToUser(userId, 'conversation:updated', { conversation: this.mapConversation(conversation, userId) });
+			}
+		}
 	}
 
 	async pinMessage(conversationId: string, userId: number, messageId: string) {
