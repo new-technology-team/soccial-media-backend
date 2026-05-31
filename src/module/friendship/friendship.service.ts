@@ -97,6 +97,36 @@ export class FriendshipService {
 		return { friends };
 	}
 
+	// Lời mời kết bạn đến (người khác gửi cho mình, đang chờ duyệt).
+	async listIncomingRequests(userId: number) {
+		const rows = await this.friendshipRepository.find({
+			where: [
+				{ userId1: userId },
+				{ userId2: userId },
+			],
+		});
+
+		const requests: any[] = [];
+		for (const row of rows) {
+			if (row.status === FriendshipStatus.ACCEPTED) continue;
+			// Chỉ lấy lời mời do người khác gửi (mình không phải người gửi).
+			if (Number(row.requesterId || 0) === Number(userId)) continue;
+			const requesterId = row.userId1 === userId ? row.userId2 : row.userId1;
+			const user = await this.userService.findOne(requesterId);
+			if (!user) continue;
+			requests.push({
+				id: user.userId,
+				fullName: user.displayName,
+				avatarUrl: user.avatarUrl,
+				email: user.email,
+				phone: user.phone,
+				createdAt: row.createdAt,
+			});
+		}
+
+		return { requests };
+	}
+
 	async requestFriend(actorId: number, targetUserId: number, actorName: string) {
 		if (actorId === targetUserId) {
 			throw new BadRequestException('Không thể kết bạn với chính mình');

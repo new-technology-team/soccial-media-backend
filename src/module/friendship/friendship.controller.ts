@@ -17,6 +17,11 @@ export class FriendshipController {
 		return this.friendshipService.listFriends(user.id);
 	}
 
+	@Get('friends/requests')
+	listIncomingRequests(@CurrentUser() user: any) {
+		return this.friendshipService.listIncomingRequests(user.id);
+	}
+
 	@Get('users/search')
 	async findUsers(@CurrentUser() user: any, @Query('q') q: string) {
 		const rows = await this.userService.searchUsers(String(q || '').trim(), user.id);
