@@ -3,11 +3,15 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CallLog, CallMode, CallStatus, CallType } from "./call-log.entity";
 import { NotificationService } from "../notification/notification.service";
+import { Message } from "../message/message.entity";
+import { ConversationService } from "../conversation/conversation.service";
+import { emitToConversation } from "../../common/socket/chat-socket";
 
 export type RecordCallInput = {
 	conversationId: string;
 	initiatorId: number;
 	participantIds: number[];
+	callSessionId?: string;
 	callType: CallType;
 	mode: CallMode;
 	status: CallStatus;
@@ -36,8 +40,105 @@ export class CallService {
 	constructor(
 		@InjectRepository(CallLog, 'mongodb')
 		private readonly callRepository: Repository<CallLog>,
+		@InjectRepository(Message, 'mongodb')
+		private readonly messageRepository: Repository<Message>,
 		private readonly notificationService: NotificationService,
+		private readonly conversationService: ConversationService,
 	) {}
+
+	private buildCallHistoryText(input: RecordCallInput, durationSec: number) {
+		const kind = input.callType === 'video' ? 'video' : 'thoại';
+		const scope = input.mode === 'group' ? 'nhóm' : '';
+		const callLabel = `Cuộc gọi ${kind}${scope ? ` ${scope}` : ''}`;
+		const minutes = Math.floor(durationSec / 60);
+		const seconds = durationSec % 60;
+		const duration = minutes ? `${minutes} phút ${seconds}s` : `${seconds}s`;
+		if (input.status === 'completed') {
+			return `${callLabel} đã kết thúc • ${duration}`;
+		}
+		if (input.status === 'missed' || input.status === 'no_answer') return `${callLabel} nhỡ • Đổ chuông ${duration}`;
+		if (input.status === 'rejected') return `${callLabel} đã bị từ chối • ${duration}`;
+		if (input.status === 'cancelled') return `${callLabel} đã bị hủy • ${duration}`;
+		return `${callLabel} thất bại`;
+	}
+
+	private async createCallHistoryMessage(input: RecordCallInput, logId: string, durationSec: number, createdAt: Date) {
+		const conversationId = String(input.conversationId || '').trim();
+		if (!conversationId) return;
+		const text = this.buildCallHistoryText(input, durationSec);
+		const message = await this.messageRepository.save(
+			this.messageRepository.create({
+				conversationId,
+				senderId: Number(input.initiatorId || 0),
+				type: 'call-history',
+				text,
+				mediaUrl: null,
+				fileName: null,
+				mimeType: null,
+				fileSize: null,
+				meta: {
+					system: true,
+					callHistory: true,
+					callLogId: logId,
+					callSessionId: input.callSessionId || null,
+					callType: input.callType === 'video' ? 'video' : 'voice',
+					mode: input.mode === 'group' ? 'group' : 'private',
+					status: input.status,
+					participantIds: input.participantIds || [],
+					durationSec,
+					startedAt: input.startedAt || null,
+					answeredAt: input.answeredAt || null,
+					endedAt: input.endedAt || null,
+				},
+				reactions: [],
+				links: [],
+				createdAt,
+				updatedAt: createdAt,
+				expiresAt: null,
+				isRecalled: false,
+				deletedForUserIds: [],
+				deliveredTo: [],
+				readBy: [],
+			}),
+		);
+		const payload = {
+			id: String((message as any)._id),
+			conversationId,
+			senderId: Number(input.initiatorId || 0),
+			senderName: 'Cuộc gọi',
+			senderAvatar: null,
+			type: 'call-history',
+			text,
+			mediaUrl: null,
+			fileName: null,
+			mimeType: null,
+			fileSize: null,
+			meta: (message as any).meta,
+			links: [],
+			status: 'sent',
+			readBy: [],
+			deliveredTo: [],
+			reactionCount: 0,
+			viewerReaction: null,
+			reactions: [],
+			createdAt,
+			updatedAt: createdAt,
+			expiresAt: null,
+			isDeleted: false,
+		};
+		await this.conversationService.touchLastMessage(conversationId, {
+			id: payload.id,
+			senderId: payload.senderId,
+			senderName: payload.senderName,
+			senderAvatar: null,
+			type: payload.type,
+			text: payload.text,
+			mediaUrl: null,
+			createdAt,
+			expiresAt: null,
+		});
+		emitToConversation(conversationId, 'message:new', payload);
+	}
 
 	async recordCall(reporterId: number, input: RecordCallInput) {
 		try {
@@ -63,6 +164,8 @@ export class CallService {
 					role: userId === Number(input.initiatorId || reporterId) ? 'caller' : (input.mode === 'group' ? 'member' : 'receiver') as 'caller' | 'receiver' | 'member',
 				}));
 
+			const durationSec = Math.max(0, Number(input.durationSec || 0));
+			const createdAt = new Date();
 			const log = await this.callRepository.save(
 				this.callRepository.create({
 					conversationId: String(input.conversationId || ''),
@@ -75,10 +178,11 @@ export class CallService {
 					startedAt,
 					answeredAt,
 					endedAt,
-					durationSec: Math.max(0, Number(input.durationSec || 0)),
-					createdAt: new Date(),
+					durationSec,
+					createdAt,
 				}),
 			);
+			await this.createCallHistoryMessage(input, String((log as any)._id), durationSec, createdAt);
 
 			// Cuộc gọi nhỡ / không phản hồi → tạo thông báo cho người được gọi (không phải người gọi).
 			if ((input.status === 'missed' || input.status === 'no_answer') && input.initiatorId) {
