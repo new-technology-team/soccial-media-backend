@@ -424,9 +424,18 @@ export class MessageService {
 		const saved = await this.messageRepository.save(message);
 		await this.deleteMediaUrl(recalledMediaUrl, String(saved._id));
 		const payload = this.mapMessage(saved, actorId, conversation);
+
+		// Auto-unpin nếu tin nhắn đang được ghim
+		const pinnedIds = (conversation.pinnedMessageIds || []).map(String);
+		const wasPinned = pinnedIds.includes(String(saved._id));
+		if (wasPinned) {
+			await this.conversationService.unpinMessage(message.conversationId, actorId, String(saved._id));
+		}
+
 		emitToConversation(message.conversationId, "message:updated", {
 			conversationId: message.conversationId,
 			message: payload,
+			unpinnedMessageId: wasPinned ? String(saved._id) : undefined,
 		});
 		return { message: "Đã thu hồi tin nhắn", chatMessage: payload };
 	}
@@ -504,7 +513,7 @@ export class MessageService {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 
-		await this.conversationService.ensureMembership(message.conversationId, actorId);
+		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
 		const actorRole = String(actor?.role || '').toLowerCase();
 		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
 		if (Number(message.senderId) !== Number(actorId) && !canModerate) {
@@ -519,10 +528,18 @@ export class MessageService {
 		message.updatedAt = new Date();
 		await this.messageRepository.save(message);
 
+		// Auto-unpin nếu tin nhắn đang được ghim
+		const pinnedIds = (conversation.pinnedMessageIds || []).map(String);
+		const wasPinned = pinnedIds.includes(String(message._id));
+		if (wasPinned) {
+			await this.conversationService.unpinMessage(message.conversationId, actorId, String(message._id));
+		}
+
 		emitToConversation(message.conversationId, "message:deleted", {
 			conversationId: message.conversationId,
 			messageId: String(message._id),
 			deletedBy: actorId,
+			unpinnedMessageId: wasPinned ? String(message._id) : undefined,
 		});
 
 		return { message: "Đã xóa tin nhắn ở phía bạn" };
