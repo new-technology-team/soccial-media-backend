@@ -15,6 +15,13 @@ export type RecordCallInput = {
 	answeredAt?: string | number | Date | null;
 	endedAt?: string | number | Date | null;
 	durationSec?: number;
+	participantStatuses?: Array<{
+		userId: number;
+		joinedAt?: string | number | Date | null;
+		leftAt?: string | number | Date | null;
+		durationSec?: number;
+		role?: 'caller' | 'receiver' | 'member';
+	}>;
 	withName?: string;
 };
 
@@ -40,12 +47,28 @@ export class CallService {
 			const participantIds = Array.isArray(input.participantIds)
 				? Array.from(new Set(input.participantIds.map((id) => Number(id)).filter((id) => id > 0)))
 				: [];
+			const participantStatuses = Array.isArray(input.participantStatuses) && input.participantStatuses.length
+				? input.participantStatuses.map((item) => ({
+					userId: Number(item.userId || 0),
+					joinedAt: toDate(item.joinedAt),
+					leftAt: toDate(item.leftAt),
+					durationSec: Math.max(0, Number(item.durationSec || 0)),
+					role: item.role || (Number(item.userId) === Number(input.initiatorId || reporterId) ? 'caller' : 'member'),
+				})).filter((item) => item.userId > 0)
+				: participantIds.map((userId) => ({
+					userId,
+					joinedAt: answeredAt,
+					leftAt: endedAt,
+					durationSec: Math.max(0, Number(input.durationSec || 0)),
+					role: userId === Number(input.initiatorId || reporterId) ? 'caller' : (input.mode === 'group' ? 'member' : 'receiver') as 'caller' | 'receiver' | 'member',
+				}));
 
 			const log = await this.callRepository.save(
 				this.callRepository.create({
 					conversationId: String(input.conversationId || ''),
 					initiatorId: Number(input.initiatorId || reporterId),
 					participantIds,
+					participantStatuses,
 					callType: input.callType === 'video' ? 'video' : 'voice',
 					mode: input.mode === 'group' ? 'group' : 'private',
 					status: input.status,
@@ -91,6 +114,7 @@ export class CallService {
 			conversationId: item.conversationId,
 			initiatorId: item.initiatorId,
 			participantIds: item.participantIds || [],
+			participantStatuses: item.participantStatuses || [],
 			callType: item.callType,
 			mode: item.mode,
 			status: item.status,

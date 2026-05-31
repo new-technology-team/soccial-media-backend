@@ -18,6 +18,11 @@ export class NotificationController {
 		return this.notificationService.markRead(user.id, id);
 	}
 
+	@Patch('notifications/:id/unread')
+	unreadNotification(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.notificationService.markUnread(user.id, id);
+	}
+
 	@Patch('notifications/read-all')
 	readAll(@CurrentUser() user: any) {
 		return this.notificationService.markAllRead(user.id);

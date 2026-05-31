@@ -85,6 +85,19 @@ export class NotificationService {
 		return { message: 'Đã đánh dấu đã đọc' };
 	}
 
+	async markUnread(userId: number, id: string) {
+		try {
+			const row = await this.notificationRepository.findOne({ where: { _id: new ObjectId(id) as any } });
+			if (row && Number(row.userId) === Number(userId)) {
+				row.isRead = false;
+				await this.notificationRepository.save(row);
+			}
+		} catch {
+			// non-critical: ignore DB errors for read marking
+		}
+		return { message: 'Đã đánh dấu chưa đọc' };
+	}
+
 	async markAllRead(userId: number) {
 		try {
 			const rows = await this.notificationRepository.find({ where: { userId: Number(userId) } as any });

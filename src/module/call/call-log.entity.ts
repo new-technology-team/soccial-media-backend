@@ -4,6 +4,14 @@ export type CallType = 'voice' | 'video';
 export type CallMode = 'private' | 'group';
 export type CallStatus = 'completed' | 'missed' | 'rejected' | 'no_answer' | 'cancelled' | 'failed';
 
+export type CallParticipantStatus = {
+  userId: number;
+  joinedAt: Date | null;
+  leftAt: Date | null;
+  durationSec: number;
+  role: 'caller' | 'receiver' | 'member';
+};
+
 @Entity()
 export class CallLog {
   @ObjectIdColumn()
@@ -17,6 +25,9 @@ export class CallLog {
 
   @Column()
   participantIds: number[];
+
+  @Column({ nullable: true })
+  participantStatuses?: CallParticipantStatus[];
 
   @Column()
   callType: CallType;
