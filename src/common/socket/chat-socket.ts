@@ -5,6 +5,13 @@ let chatSocketServer: Server | null = null;
 const onlineSocketsByUser = new Map<number, Set<string>>();
 const lastActiveByUser = new Map<number, Date>();
 
+type ActiveCallInfo = {
+	conversationId: string;
+	mode: 'private' | 'group';
+	peerIds: Set<number>;
+};
+const activeCallByUser = new Map<number, ActiveCallInfo>();
+
 export const setChatSocketServer = (server: Server) => {
 	chatSocketServer = server;
 };
@@ -71,9 +78,25 @@ const resolveSocketUserId = (socket: Socket) => {
 		const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'secretKey') as { id?: number | string };
 		return Number(decoded?.id || 0);
 	} catch (_error) {
-		const decoded = jwt.decode(token) as { id?: number | string } | null;
-		return Number(decoded?.id || 0);
+		return 0;
 	}
+};
+
+const trackCallParticipation = (userId: number, payload: any) => {
+	const conversationId = String(payload?.conversationId || '').trim();
+	if (!userId || !conversationId) return;
+	const mode: 'private' | 'group' = payload?.mode === 'group' ? 'group' : 'private';
+	const existing = activeCallByUser.get(userId);
+	const peerIds = existing?.peerIds || new Set<number>();
+	const targetUserId = Number(payload?.targetUserId || 0);
+	if (targetUserId) peerIds.add(targetUserId);
+	const fromUserId = Number(payload?.fromUserId || 0);
+	if (fromUserId) peerIds.add(fromUserId);
+	activeCallByUser.set(userId, { conversationId, mode: existing?.mode || mode, peerIds });
+};
+
+const clearCallParticipation = (userId: number) => {
+	activeCallByUser.delete(userId);
 };
 
 const relayCallEvent = (socket: Socket, eventName: string, payload: any) => {
@@ -86,11 +109,22 @@ const relayCallEvent = (socket: Socket, eventName: string, payload: any) => {
 	};
 
 	if (targetUserId) {
+		// Khi bắt đầu cuộc gọi tới người offline → báo lại cho người gọi thay vì gửi vào hư không.
+		if (eventName === 'call:offer' && !isChatUserOnline(targetUserId)) {
+			socket.emit('call:unavailable', {
+				targetUserId,
+				conversationId,
+				reason: 'offline',
+			});
+			return;
+		}
 		socket.to(`user:${targetUserId}`).emit(eventName, normalizedPayload);
 		return;
 	}
 
 	if (conversationId) {
+		// Membership guard nhẹ: chỉ relay nếu người gửi đang ở trong room hội thoại.
+		if (!socket.rooms.has(conversationId)) return;
 		socket.to(conversationId).emit(eventName, normalizedPayload);
 	}
 };
@@ -130,23 +164,45 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('notification:new', (payload) => relayConversationEvent(socket, 'notification:new', payload));
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
-			const answeredAt = Number(payload?.answeredAt || 0) || Date.now();
+			// Luôn dùng thời gian của server để tính thời lượng cuộc gọi chính xác.
 			relayCallEvent(socket, 'call:answer', {
 				...(payload || {}),
-				answeredAt,
+				answeredAt: Date.now(),
 			});
 		});
 		socket.on('call:ice-candidate', (payload) => relayCallEvent(socket, 'call:ice-candidate', payload));
-		socket.on('call:join', (payload) => relayCallEvent(socket, 'call:join', payload));
-		socket.on('call:leave', (payload) => relayCallEvent(socket, 'call:leave', payload));
-		socket.on('call:end', (payload) => relayCallEvent(socket, 'call:end', payload));
+		socket.on('call:reject', (payload) => relayCallEvent(socket, 'call:reject', payload));
+		socket.on('call:join', (payload) => {
+			if (userId) trackCallParticipation(userId, payload);
+			relayCallEvent(socket, 'call:join', payload);
+		});
+		socket.on('call:leave', (payload) => {
+			if (userId) clearCallParticipation(userId);
+			relayCallEvent(socket, 'call:leave', payload);
+		});
+		socket.on('call:end', (payload) => {
+			if (userId) clearCallParticipation(userId);
+			relayCallEvent(socket, 'call:end', payload);
+		});
 		socket.on('call_started', (payload) => relayCallEvent(socket, 'call_started', payload));
 		socket.on('call_joined', (payload) => relayCallEvent(socket, 'call_joined', payload));
 		socket.on('call_ended', (payload) => relayCallEvent(socket, 'call_ended', payload));
-		socket.on('group_call_started', (payload) => relayCallEvent(socket, 'group_call_started', payload));
-		socket.on('group_call_joined', (payload) => relayCallEvent(socket, 'group_call_joined', payload));
-		socket.on('group_call_left', (payload) => relayCallEvent(socket, 'group_call_left', payload));
-		socket.on('group_call_ended', (payload) => relayCallEvent(socket, 'group_call_ended', payload));
+		socket.on('group_call_started', (payload) => {
+			if (userId) trackCallParticipation(userId, { ...payload, mode: 'group' });
+			relayCallEvent(socket, 'group_call_started', payload);
+		});
+		socket.on('group_call_joined', (payload) => {
+			if (userId) trackCallParticipation(userId, { ...payload, mode: 'group' });
+			relayCallEvent(socket, 'group_call_joined', payload);
+		});
+		socket.on('group_call_left', (payload) => {
+			if (userId) clearCallParticipation(userId);
+			relayCallEvent(socket, 'group_call_left', payload);
+		});
+		socket.on('group_call_ended', (payload) => {
+			if (userId) clearCallParticipation(userId);
+			relayCallEvent(socket, 'group_call_ended', payload);
+		});
 		socket.on('participant_updated', (payload) => relayCallEvent(socket, 'participant_updated', payload));
 		socket.on('participant_speaking', (payload) => relayCallEvent(socket, 'participant_speaking', payload));
 		socket.on('call:participants', (payload) => {
@@ -168,6 +224,23 @@ export const registerChatSocketHandlers = (server: Server) => {
 			if (!sockets?.size) {
 				onlineSocketsByUser.delete(userId);
 				broadcastPresence(userId, false);
+				// Nếu user đang trong cuộc gọi và rớt kết nối hẳn → báo cho các bên còn lại để tránh kẹt.
+				const call = activeCallByUser.get(userId);
+				if (call) {
+					const payload = {
+						conversationId: call.conversationId,
+						fromUserId: userId,
+						userId,
+						reason: 'disconnected',
+					};
+					if (call.mode === 'group') {
+						emitToConversation(call.conversationId, 'group_call_left', payload);
+					} else {
+						emitToConversation(call.conversationId, 'call:end', payload);
+						call.peerIds.forEach((peerId) => emitToUser(peerId, 'call:end', payload));
+					}
+					clearCallParticipation(userId);
+				}
 			}
 		});
 	});

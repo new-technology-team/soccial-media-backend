@@ -14,6 +14,8 @@ import { MessageModule } from './module/message/message.module';
 import { NotificationModule } from './module/notification/notification.module';
 import { ReportModule } from './module/report/report.module';
 import { AiModule } from './module/ai/ai.module';
+import { CallModule } from './module/call/call.module';
+import { CallLog } from './module/call/call-log.entity';
 import { Message } from './module/message/message.entity';
 import { Conversation } from './module/conversation/conversation.entity';
 import { Friendship } from './module/friendship/friendship.entity';
@@ -107,7 +109,7 @@ function buildMariaSsl() {
       type: 'mongodb',
       url: buildMongoUrl(),
       synchronize: true,
-      entities: [Comment, Conversation, Message, Notification, Post, AiMessage],
+      entities: [Comment, Conversation, Message, Notification, Post, AiMessage, CallLog],
     }),
     AuthModule,
     CommentModule,
@@ -119,6 +121,7 @@ function buildMariaSsl() {
     ReportModule,
     UserModule,
     AiModule,
+    CallModule,
   ],
   controllers: [AppController],
   providers: [AppService, DevAdminSeed],
