@@ -8,30 +8,46 @@ export class Report {
     @PrimaryGeneratedColumn()
     reportId: number;
 
-    @Column()
+    @Column({
+        type: "enum",
+        enum: ReportStatus,
+        default: ReportStatus.PENDING,
+    })
     status: ReportStatus;
 
-    @Column()
+    @Column({ type: "datetime" })
     createAt: Date;
 
-    @Column({ nullable: true })
+    @Column({ type: "datetime", nullable: true })
     updatedAt: Date | null;
 
-    @Column()
+    @Column({ type: "text" })
     description: string;
 
-    @Column()
+    @Column({ type: "varchar", length: 64 })
     targetId: string;
 
-    @Column({ nullable: true })
+    @Column({ type: "text", nullable: true })
     resolutionNote: string | null;
 
-    @Column({ nullable: true })
+    @Column({ type: "int", nullable: true })
     reviewerId: number | null;
 
-    @Column()
+    @Column({ type: "int", nullable: true })
+    assignedTo: number | null;
+
+    @Column({ type: "int", nullable: true })
+    resolvedBy: number | null;
+
+    @Column({ type: "varchar", length: 120, nullable: true })
+    reason: string | null;
+
+    @Column({
+        type: "enum",
+        enum: ReportType,
+    })
     reportType: ReportType;
 
-    @Column()
+    @Column({ type: "int" })
     userId: number;
 }

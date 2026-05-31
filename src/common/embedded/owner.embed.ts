@@ -1,10 +1,15 @@
+import { Column } from 'typeorm';
+
 export class Owner {
-    userId: number;
-    displayName: string;
-    avatarUrl: string;
-    constructor(userId: number, displayName: string, avatarUrl: string) {
-        this.userId = userId;
-        this.displayName = displayName;
-        this.avatarUrl = avatarUrl;
-    }
+  @Column()
+  userId: number;
+
+  @Column()
+  username: string;
+
+  @Column()
+  displayName: string;
+
+  @Column({ nullable: true })
+  avatar?: string;
 }

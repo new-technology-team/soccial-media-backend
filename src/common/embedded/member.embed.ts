@@ -1,20 +1,15 @@
-import { ConversationRole } from "../enum/conversation-role.enum";
+import { Column } from 'typeorm';
 
 export class Member {
-    userId: number;
-    displayName: string;
-    avatarUrl: string;
-    roleInConversation: ConversationRole;
+  @Column()
+  userId: number;
 
-    constructor(
-        userId: number,
-        displayName: string,
-        avatarUrl: string,
-        roleInConversation: ConversationRole
-    ) {
-        this.userId = userId;
-        this.displayName = displayName;
-        this.avatarUrl = avatarUrl;
-        this.roleInConversation = roleInConversation;
-    }
+  @Column()
+  username: string;
+
+  @Column()
+  displayName: string;
+
+  @Column({ nullable: true })
+  avatar?: string;
 }

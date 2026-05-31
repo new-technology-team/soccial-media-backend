@@ -29,8 +29,64 @@ export class ConversationController {
 	}
 
 	@Patch('conversations/:id/seen')
-	seen(@CurrentUser() user: any, @Param('id') id: string) {
-		return this.conversationService.setSeen(id, user.id);
+	seen(@CurrentUser() user: any, @Param('id') id: string, @Body() body?: { lastReadMessageId?: string }) {
+		return this.conversationService.setSeen(id, user.id, body?.lastReadMessageId || null);
+	}
+
+	@Patch('conversations/:id/pin')
+	pin(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.setPinned(id, user.id, true);
+	}
+
+	@Delete('conversations/:id/pin')
+	unpin(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.setPinned(id, user.id, false);
+	}
+
+	@Patch('conversations/:id/mute')
+	mute(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { muted?: boolean; mutedUntil?: string | null },
+	) {
+		return this.conversationService.setMuted(id, user.id, body?.muted !== false, body?.mutedUntil);
+	}
+
+	@Patch('conversations/:id/preferences')
+	updatePreferences(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body()
+		body: {
+			backgroundUrl?: string | null;
+			themeColor?: string | null;
+			autoDeleteAfterSeconds?: number | null;
+			hidden?: boolean;
+			locked?: boolean;
+			hiddenPassword?: string | null;
+			lockedPassword?: string | null;
+		},
+	) {
+		return this.conversationService.updatePreferences(id, user.id, body || {});
+	}
+
+	@Patch('conversations/:id/profile')
+	updateGroupProfile(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { name?: string; avatarUrl?: string | null },
+	) {
+		return this.conversationService.renameGroup(id, user.id, body?.name || '', body?.avatarUrl);
+	}
+
+	@Patch('conversations/:id/members/:userId/nickname')
+	updateNickname(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Param('userId') userId: string,
+		@Body() body: { nickname?: string | null },
+	) {
+		return this.conversationService.updateNickname(id, user.id, Number(userId), body?.nickname);
 	}
 
 	@Patch('conversations/:id/notifications')
@@ -52,6 +108,11 @@ export class ConversationController {
 		return this.conversationService.removeMember(id, user.id, Number(userId));
 	}
 
+	@Delete('conversations/:id/leave')
+	leaveGroup(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.leaveGroup(id, user.id);
+	}
+
 	@Patch('conversations/:id/admins')
 	updateAdmin(
 		@CurrentUser() user: any,
@@ -59,5 +120,29 @@ export class ConversationController {
 		@Body() body: { userId: number; isAdmin: boolean },
 	) {
 		return this.conversationService.updateAdmin(id, user.id, Number(body.userId), Boolean(body.isAdmin));
+	}
+
+	@Patch('conversations/:id/leader')
+	transferLeader(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { userId: number },
+	) {
+		return this.conversationService.transferLeader(id, user.id, Number(body.userId));
+	}
+
+	@Patch('conversations/:id/deputy')
+	setDeputy(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { userId?: number | null },
+	) {
+		const value = body?.userId === null || body?.userId === undefined ? null : Number(body.userId);
+		return this.conversationService.setDeputy(id, user.id, value);
+	}
+
+	@Delete('conversations/:id')
+	dissolveGroup(@CurrentUser() user: any, @Param('id') id: string) {
+		return this.conversationService.dissolveGroup(id, user.id);
 	}
 }

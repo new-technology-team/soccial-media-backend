@@ -1,4 +1,4 @@
 export enum ConversationRole {
-  OWNER = "OWNER",
-  MEMBER = "MEMBER"
+  ADMIN = 'ADMIN',
+  MEMBER = 'MEMBER',
 }

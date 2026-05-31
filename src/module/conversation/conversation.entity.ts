@@ -14,6 +14,18 @@ export class Conversation {
     @Column({ nullable: true })
     avatarUrl: string | null;
 
+    @Column({ nullable: true })
+    backgroundUrl: string | null;
+
+    @Column({ nullable: true })
+    themeColor: string | null;
+
+    @Column({ nullable: true })
+    defaultEmoji: string | null;
+
+    @Column({ nullable: true })
+    autoDeleteAfterSeconds: number | null;
+
     @Column()
     createdBy: number;
 
@@ -28,4 +40,10 @@ export class Conversation {
 
     @Column({ nullable: true })
     lastMessage: any;
+
+    @Column({ nullable: true })
+    pinnedMessageIds: string[];
+
+    @Column({ nullable: true })
+    deletedForUserIds: number[];
 }

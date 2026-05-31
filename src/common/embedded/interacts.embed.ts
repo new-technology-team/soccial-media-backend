@@ -1,22 +1,21 @@
-import { InteractType } from "../../common/enum/interact-type.enum";
+import { Column } from 'typeorm';
 
 export class Interacts {
-    userId: number;
-    displayName: string;
-    avatarUrl: string;
-    interactType: InteractType;
-    createdAt: Date;
-    constructor(
-        userId: number,
-        displayName: string,
-        avatarUrl: string,
-        interactType: InteractType,
-        createdAt: Date
-    ) {
-        this.userId = userId;
-        this.displayName = displayName;
-        this.avatarUrl = avatarUrl;
-        this.interactType = interactType;
-        this.createdAt = createdAt;
-    }
+  @Column()
+  type: string;
+
+  @Column()
+  userId: number;
+
+  @Column()
+  username: string;
+
+  @Column()
+  displayName: string;
+
+  @Column({ nullable: true })
+  avatar?: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
 }

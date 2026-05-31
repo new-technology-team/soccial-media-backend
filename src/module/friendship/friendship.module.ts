@@ -5,9 +5,10 @@ import { Friendship } from "./friendship.entity";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { UserModule } from "../user/user.module";
 import { NotificationModule } from "../notification/notification.module";
+import { BlockedUser } from "./blocked-user.entity";
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Friendship], 'mariadb'), UserModule, NotificationModule],
+    imports: [TypeOrmModule.forFeature([Friendship, BlockedUser], 'mariadb'), UserModule, NotificationModule],
     controllers: [FriendshipController],
     providers: [FriendshipService],
     exports: [FriendshipService, TypeOrmModule],

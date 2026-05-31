@@ -2,10 +2,10 @@ import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/
 import { User } from "./user.entity";
 import { RegisterDto } from "../auth/dto/register.dto";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ILike, Repository } from "typeorm";
+import { ILike, In, Repository } from "typeorm";
 import { UserStatus } from "../../common/enum/user-status.enum";
 import { UserRole } from "../../common/enum/user-role.enum";
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UserService {
@@ -16,6 +16,20 @@ export class UserService {
 
     async findOne(userId: number): Promise<User | null> {
         return this.usersRepository.findOne({ where: { userId } });
+    }
+
+    async getAvatarMap(userIds: number[]): Promise<Map<number, string | null>> {
+        const ids = Array.from(new Set((userIds || []).map((id) => Number(id)).filter((id) => id > 0)));
+        const map = new Map<number, string | null>();
+        if (!ids.length) return map;
+        const rows = await this.usersRepository.find({
+            where: { userId: In(ids) },
+            select: ['userId', 'avatarUrl'],
+        });
+        for (const row of rows) {
+            map.set(Number(row.userId), row.avatarUrl || null);
+        }
+        return map;
     }
 
     async findOneByUsername(username: string): Promise<User | null> {
@@ -81,6 +95,11 @@ export class UserService {
         return this.findOne(userId);
     }
 
+    async touchActivity(userId: number): Promise<void> {
+        if (!userId) return;
+        await this.usersRepository.update({ userId }, { lastActiveAt: new Date() });
+    }
+
     async updatePassword(userId: number, plainPassword: string): Promise<void> {
         const hashed = await bcrypt.hash(plainPassword, 10);
         await this.usersRepository.update({ userId }, { password: hashed });
@@ -96,6 +115,10 @@ export class UserService {
 
     async updateVerificationStatus(userId: number, isVerified: boolean): Promise<void> {
         await this.usersRepository.update({ userId }, { isVerified: Boolean(isVerified) });
+    }
+
+    async deleteUnverifiedUser(userId: number): Promise<void> {
+        await this.usersRepository.delete({ userId, isVerified: false });
     }
 
     async checkPassword(user: User, plainPassword: string): Promise<boolean> {
@@ -146,10 +169,16 @@ export class UserService {
             fullName: user.displayName,
             dateOfBirth: user.dateOfBirth || null,
             gender: user.sex ?? null,
-            role: user.role,
-            accountStatus: user.status,
+            role: String(user.role || '').toLowerCase(),
+            accountStatus: String(user.status || '').toLowerCase(),
             avatarUrl: user.avatarUrl || null,
             isVerified: Boolean(user.isVerified),
+            lockedUntil: user.lockedUntil || null,
+            warningCount: Number(user.warningCount || 0),
+            restrictionReason: user.restrictionReason || null,
+            permissions: typeof (user as any).permissions === 'string'
+                ? (user as any).permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
+                : [],
         };
     }
 }

@@ -1,4 +1,3 @@
-
 export class RegisterDto {
     emailOrPhone?: string;
     username: string;

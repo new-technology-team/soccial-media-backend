@@ -7,34 +7,34 @@ export class User {
     @PrimaryGeneratedColumn()
     userId: number;
 
-    @Column({ unique: true, nullable: true })
+    @Column({ type: 'varchar', length: 50, unique: true, nullable: true })
     username: string | null;
 
-    @Column()
+    @Column({ type: 'varchar', length: 100 })
     displayName: string;
 
-    @Column({ nullable: true })
+    @Column({ type: 'tinyint', nullable: true })
     sex: number | null;
 
-    @Column({ unique: true, nullable: true })
+    @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
     email: string | null;
 
     @Column({ type: "date", nullable: true })
     dateOfBirth: Date | null;
 
-    @Column({ nullable: true })
+    @Column({ type: 'varchar', length: 20, nullable: true })
     phone: string | null;
 
-    @Column({ nullable: true })
+    @Column({ type: 'varchar', length: 255, nullable: true })
     password: string | null;
 
-    @Column({ nullable: true })
+    @Column({ type: 'varchar', length: 500, nullable: true })
     avatarUrl: string | null;
 
     @Column({ default: false })
     isVerified: boolean;
 
-    @Column({ nullable: true })
+    @Column({ type: 'text', nullable: true })
     refreshToken: string | null;
 
     @Column({ default: true })
@@ -52,12 +52,27 @@ export class User {
     @Column({ default: true })
     notificationCalls: boolean;
 
+    @Column({ type: 'datetime', nullable: true })
+    lastActiveAt: Date | null;
+
+    @Column({ type: 'datetime', nullable: true })
+    lockedUntil: Date | null;
+
+    @Column({ type: 'int', default: 0 })
+    warningCount: number;
+
+    @Column({ type: 'text', nullable: true })
+    restrictionReason: string | null;
+
     @Column({
         type: "enum",
         enum: UserRole,
         default: UserRole.USER
     })
     role: UserRole;
+
+    @Column({ type: 'text', nullable: true })
+    permissions: string | null;
 
     @Column({
         type: "enum",

@@ -1,7 +1,7 @@
 export class CreatePostDto {
-    title: string;
-    content: string;
-    ownerId: number;
+    title!: string;
+    content!: string;
+    ownerId!: number;
 
     constructor(title: string, content: string, ownerId: number) {
         this.title = title;

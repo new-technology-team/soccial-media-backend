@@ -1,4 +1,5 @@
 export enum ConversationStatus {
-  ACTIVE = "ACTIVE",
-  CLOSED = "CLOSED"
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  BLOCKED = 'BLOCKED',
 }

@@ -41,6 +41,21 @@ export class Message {
     @Column()
     updatedAt: Date;
 
+    @Column({ nullable: true })
+    expiresAt: Date | null;
+
     @Column()
     isRecalled: boolean;
+
+    @Column({ nullable: true })
+    deletedForUserIds: number[];
+
+    @Column({ nullable: true })
+    deliveredTo: any[];
+
+    @Column({ nullable: true })
+    readBy: any[];
+
+    @Column({ nullable: true })
+    links: string[];
 }
