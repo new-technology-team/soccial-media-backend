@@ -13,6 +13,7 @@ type ActiveCallInfo = {
 const activeCallByUser = new Map<number, ActiveCallInfo>();
 type ActiveCallRoom = {
 	conversationId: string;
+	roomId: string;
 	mode: 'private' | 'group';
 	callType: 'voice' | 'video';
 	initiatorId?: number;
@@ -21,6 +22,14 @@ type ActiveCallRoom = {
 	updatedAt: number;
 };
 const activeCallRooms = new Map<string, ActiveCallRoom>();
+
+// Tên phòng Jitsi an toàn (chỉ ký tự hợp lệ).
+const sanitizeRoomName = (input: string): string =>
+	String(input || '')
+		.trim()
+		.replace(/[^a-zA-Z0-9_-]+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-+|-+$/g, '') || `zchat-${Date.now()}`;
 
 export const setChatSocketServer = (server: Server) => {
 	chatSocketServer = server;
@@ -125,6 +134,8 @@ const getOrCreateCallRoom = (conversationId: string, payload: any, userId?: numb
 	}
 	const room: ActiveCallRoom = {
 		conversationId,
+		// Phòng Jitsi của phiên gọi hiện tại — tái dùng cho mọi người tới khi cuộc gọi kết thúc.
+		roomId: sanitizeRoomName(`zchat-${conversationId}-${Date.now()}`),
 		mode,
 		callType,
 		initiatorId: Number(payload?.initiatorId || payload?.fromUserId || userId || 0) || undefined,
@@ -155,6 +166,7 @@ const endActiveCallRoom = (conversationId: string, payload: any) => {
 
 const serializeCallRoom = (room: ActiveCallRoom) => ({
 	conversationId: room.conversationId,
+	roomId: room.roomId,
 	mode: room.mode,
 	callType: room.callType,
 	initiatorId: room.initiatorId,
@@ -290,6 +302,29 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('webrtc:offer', (payload) => relayCallEvent(socket, 'webrtc:offer', payload));
 		socket.on('webrtc:answer', (payload) => relayCallEvent(socket, 'webrtc:answer', payload));
 		socket.on('webrtc:ice-candidate', (payload) => relayCallEvent(socket, 'webrtc:ice-candidate', payload));
+		// Cấp phát phòng Jitsi cho hội thoại: tái dùng phòng của phiên đang diễn ra, nếu chưa có thì tạo mới.
+		socket.on('call:room:acquire', (payload, ack) => {
+			const conversationId = String(payload?.conversationId || '').trim();
+			if (!conversationId) {
+				if (typeof ack === 'function') ack({ conversationId: '', roomId: '' });
+				return;
+			}
+			const room = getOrCreateCallRoom(conversationId, payload, userId);
+			if (userId) {
+				// Giữ chỗ người gọi để phòng được dọn đúng qua leave/end/disconnect (kể cả khi chưa join hẳn).
+				if (!room.participants.has(userId)) {
+					room.participants.set(userId, {
+						userId,
+						joinedAt: Date.now(),
+						micMuted: false,
+						cameraOff: payload?.callType !== 'video',
+					});
+				}
+				room.updatedAt = Date.now();
+				trackCallParticipation(userId, { ...payload, conversationId, mode: room.mode });
+			}
+			if (typeof ack === 'function') ack({ conversationId, roomId: room.roomId });
+		});
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
 			// Luôn dùng thời gian của server để tính thời lượng cuộc gọi chính xác.
