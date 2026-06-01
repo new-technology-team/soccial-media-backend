@@ -528,9 +528,6 @@ export class MessageService {
 		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
 		const actorRole = String(actor?.role || '').toLowerCase();
 		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
-		if (Number(message.senderId) !== Number(actorId) && !canModerate) {
-			throw new ForbiddenException("Bạn chỉ có thể xóa tin nhắn của mình");
-		}
 
 		const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
 		if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
@@ -547,12 +544,14 @@ export class MessageService {
 			await this.conversationService.unpinMessage(message.conversationId, actorId, String(message._id));
 		}
 
-		emitToConversation(message.conversationId, "message:deleted", {
-			conversationId: message.conversationId,
-			messageId: String(message._id),
-			deletedBy: actorId,
-			unpinnedMessageId: wasPinned ? String(message._id) : undefined,
-		});
+		if (Number(message.senderId) === Number(actorId) || canModerate) {
+			emitToConversation(message.conversationId, "message:deleted", {
+				conversationId: message.conversationId,
+				messageId: String(message._id),
+				deletedBy: actorId,
+				unpinnedMessageId: wasPinned ? String(message._id) : undefined,
+			});
+		}
 
 		return { message: "Đã xóa tin nhắn ở phía bạn" };
 	}
