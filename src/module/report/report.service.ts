@@ -269,6 +269,10 @@ export class ReportService {
 		this.assertStaff(actor);
 		this.assertPermission(actor, 'manage_posts');
 
+		if (!ObjectId.isValid(postId)) {
+			throw new BadRequestException('ID bài viết không hợp lệ');
+		}
+
 		const post = await this.postRepository.findOne({ where: { _id: new ObjectId(postId) as any } as any });
 		if (!post) {
 			throw new NotFoundException('Không tìm thấy bài viết');
