@@ -36,6 +36,11 @@ export class CommentController {
 		return this.commentService.reactComment(user.id, commentId, body?.type || 'like');
 	}
 
+	@Get('comments/:commentId/reactions')
+	listFeedCommentReactions(@Param('commentId') commentId: string) {
+		return this.commentService.listCommentReactions(commentId);
+	}
+
 	@UseGuards(JwtAuthGuard)
 	@Delete('comments/:commentId/reaction')
 	removeFeedCommentReaction(@CurrentUser() user: any, @Param('commentId') commentId: string) {

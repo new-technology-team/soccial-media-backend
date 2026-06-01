@@ -228,6 +228,25 @@ export class CommentService {
 		return { message: 'Da cap nhat tuong tac binh luan', comment: await this.mapComment(row, actorId) };
 	}
 
+	async listCommentReactions(commentId: string) {
+		const row = await this.findCommentById(commentId);
+		if (!row || row.status !== 'visible') {
+			throw new NotFoundException('Khong tim thay binh luan');
+		}
+		const reactions: any[] = [];
+		for (const reaction of row.reactions || []) {
+			const actor = await this.userService.findOne(Number(reaction.userId));
+			reactions.push({
+				userId: Number(reaction.userId),
+				fullName: actor?.displayName || `Người dùng #${reaction.userId}`,
+				avatarUrl: actor?.avatarUrl || null,
+				reaction: reaction.type || 'like',
+				createdAt: reaction.createdAt || null,
+			});
+		}
+		return { reactions };
+	}
+
 	async removeCommentReaction(actorId: number, commentId: string) {
 		const row = await this.findCommentById(commentId);
 		if (!row || row.status !== 'visible') {
