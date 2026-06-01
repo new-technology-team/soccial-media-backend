@@ -12,6 +12,7 @@ import { UserRole } from "../../common/enum/user-role.enum";
 import { UserStatus } from "../../common/enum/user-status.enum";
 import { AuditLog } from "../audit-log/audit-log.entity";
 import { SystemSetting } from "../system-setting/system-setting.entity";
+import { Notification } from "../notification/notification.entity";
 import { emitSocialEvent, emitToUser } from "../../common/socket/chat-socket";
 
 function toClientUser(user: any) {
@@ -78,7 +79,46 @@ export class ReportService {
 		private readonly auditLogRepository: Repository<AuditLog>,
 		@InjectRepository(SystemSetting, 'mariadb')
 		private readonly systemSettingRepository: Repository<SystemSetting>,
+		@InjectRepository(Notification, 'mongodb')
+		private readonly notificationRepository: Repository<Notification>,
 	) {}
+
+	private async notifyModerationAction(userId: number, title: string, body: string, meta: any = {}) {
+		const notification = await this.notificationRepository.save(
+			this.notificationRepository.create({
+				userId: Number(userId),
+				type: 'moderation',
+				title,
+				body,
+				meta,
+				isRead: false,
+				createdAt: new Date(),
+			}),
+		);
+		emitToUser(Number(userId), 'notification:new', {
+			id: String((notification as any)._id),
+			userId: Number(userId),
+			type: 'moderation',
+			title,
+			body,
+			meta,
+			isRead: false,
+			createdAt: (notification as any).createdAt,
+		});
+	}
+
+	private emitUserChanged(user: any, actor: any, action = 'updated') {
+		const payload = {
+			user: toClientUser(user),
+			userId: Number(user?.userId || user?.id || 0),
+			actorId: actor?.id || null,
+			action,
+			updatedAt: new Date().toISOString(),
+		};
+		emitSocialEvent('user:updated', payload);
+		emitSocialEvent('user:moderation-updated', payload);
+		if (payload.userId) emitToUser(payload.userId, 'user:updated', payload);
+	}
 
 	private async enrichReports(rows: any[]): Promise<any[]> {
 		const userIds = new Set<number>();
@@ -376,6 +416,7 @@ export class ReportService {
 
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Cập nhật người dùng', 'USER', userId, body?.reason || body?.restrictionReason || null);
+		this.emitUserChanged(user, actor, 'updated');
 		if ([UserStatus.BLOCKED, UserStatus.DELETED, UserStatus.LOCKED, UserStatus.TEMP_LOCKED].includes(user.status)) {
 			this.revokeUserSession(userId, user.status);
 		}
@@ -451,6 +492,7 @@ export class ReportService {
 		user.status = UserStatus.DELETED;
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Xóa tài khoản', 'USER', userId, user.username || user.displayName);
+		this.emitUserChanged(user, actor, 'deleted');
 		this.revokeUserSession(userId, UserStatus.DELETED);
 		return { message: 'Đã xóa tài khoản', user: toClientUser(user) };
 	}
@@ -550,6 +592,8 @@ export class ReportService {
 		user.restrictionReason = reason || 'Cảnh cáo bởi kiểm duyệt viên';
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Cảnh cáo người dùng', 'USER', userId, user.restrictionReason);
+		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã bị cảnh cáo', user.restrictionReason, { action: 'warn' });
+		this.emitUserChanged(user, actor, 'warn');
 		return { message: 'Đã cảnh cáo người dùng', user: toClientUser(user) };
 	}
 
@@ -562,6 +606,8 @@ export class ReportService {
 		user.restrictionReason = reason || 'Hạn chế bởi kiểm duyệt viên';
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Hạn chế tài khoản', 'USER', userId, user.restrictionReason);
+		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã bị hạn chế', user.restrictionReason, { action: 'restrict' });
+		this.emitUserChanged(user, actor, 'restrict');
 		return { message: 'Đã hạn chế tài khoản', user: toClientUser(user) };
 	}
 
@@ -575,6 +621,8 @@ export class ReportService {
 		user.restrictionReason = reason || 'Tạm khóa bởi kiểm duyệt viên';
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Tạm khóa tài khoản', 'USER', userId, user.restrictionReason);
+		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã bị tạm khóa', `${user.restrictionReason}. Thời hạn khóa đến ${user.lockedUntil.toLocaleString('vi-VN')}.`, { action: 'temp_lock', lockedUntil: user.lockedUntil });
+		this.emitUserChanged(user, actor, 'temp_lock');
 		this.revokeUserSession(userId, UserStatus.TEMP_LOCKED);
 		return { message: 'Đã tạm khóa tài khoản', user: toClientUser(user) };
 	}
@@ -589,6 +637,8 @@ export class ReportService {
 		user.restrictionReason = null as any;
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Khôi phục tài khoản', 'USER', userId, 'Khôi phục bởi kiểm duyệt viên');
+		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã được khôi phục', 'Tài khoản đã trở lại trạng thái hoạt động bình thường.', { action: 'restore' });
+		this.emitUserChanged(user, actor, 'restore');
 		return { message: 'Đã khôi phục tài khoản', user: toClientUser(user) };
 	}
 }  

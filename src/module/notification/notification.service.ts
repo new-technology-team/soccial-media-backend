@@ -12,6 +12,21 @@ export class NotificationService {
 		private readonly notificationRepository: Repository<Notification>,
 	) {}
 
+	private toSocketPayload(notification: Notification) {
+		return {
+			id: String((notification as any)._id),
+			userId: Number(notification.userId),
+			type: notification.type,
+			title: notification.title,
+			body: notification.body,
+			meta: notification.meta || null,
+			isRead: Boolean(notification.isRead),
+			is_read: notification.isRead ? 1 : 0,
+			createdAt: notification.createdAt,
+			created_at: notification.createdAt instanceof Date ? notification.createdAt.toISOString() : String(notification.createdAt),
+		};
+	}
+
 	async createNotification(payload: {
 		userId: number;
 		type: string;
@@ -31,14 +46,7 @@ export class NotificationService {
 			}),
 		);
 		emitToUser(Number(payload.userId), 'notification:new', {
-			id: String((notification as any)._id),
-			userId: Number(payload.userId),
-			type: payload.type,
-			title: payload.title,
-			body: payload.body,
-			meta: payload.meta || null,
-			isRead: false,
-			createdAt: (notification as any).createdAt,
+			...this.toSocketPayload(notification),
 		});
 		return notification;
 	}
@@ -78,6 +86,7 @@ export class NotificationService {
 			if (row && Number(row.userId) === Number(userId)) {
 				row.isRead = true;
 				await this.notificationRepository.save(row);
+				emitToUser(Number(userId), 'notification:updated', this.toSocketPayload(row));
 			}
 		} catch {
 			// non-critical: ignore DB errors for read marking
@@ -91,6 +100,7 @@ export class NotificationService {
 			if (row && Number(row.userId) === Number(userId)) {
 				row.isRead = false;
 				await this.notificationRepository.save(row);
+				emitToUser(Number(userId), 'notification:updated', this.toSocketPayload(row));
 			}
 		} catch {
 			// non-critical: ignore DB errors for read marking
@@ -105,6 +115,7 @@ export class NotificationService {
 				row.isRead = true;
 				await this.notificationRepository.save(row);
 			}
+			emitToUser(Number(userId), 'notification:all-read', { userId: Number(userId) });
 		} catch {
 			// non-critical: ignore DB errors for bulk read marking
 		}
@@ -116,6 +127,7 @@ export class NotificationService {
 			const row = await this.notificationRepository.findOne({ where: { _id: new ObjectId(id) as any } });
 			if (row && Number(row.userId) === Number(userId)) {
 				await this.notificationRepository.remove(row);
+				emitToUser(Number(userId), 'notification:deleted', { id: String((row as any)._id), userId: Number(userId) });
 			}
 		} catch {
 			// non-critical: ignore DB errors for deletion
