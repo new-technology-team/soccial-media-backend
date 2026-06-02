@@ -329,10 +329,9 @@ export const registerChatSocketHandlers = (server: Server) => {
 			const conversationId = String(payload?.conversationId || '').trim();
 			const callSessionId = String(payload?.callSessionId || payload?.roomId || '').trim();
 			const room = conversationId ? activeCallRooms.get(conversationId) : null;
-			const matchesSession = !callSessionId || room?.roomId === callSessionId;
 			if (typeof ack === 'function') {
-				ack(room && matchesSession
-					? { ...serializeCallRoom(room), active: true }
+				ack(room
+					? { ...serializeCallRoom(room), active: true, requestedRoomId: callSessionId }
 					: { conversationId, roomId: callSessionId, active: false, participantCount: 0, participantIds: [] });
 			}
 		});
