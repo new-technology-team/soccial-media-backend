@@ -353,9 +353,7 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('call:leave', (payload) => {
 			if (userId) {
 				const room = leaveActiveCallRoom(userId, String(payload?.conversationId || '').trim());
-				if (room && room.mode === 'group' && room.participants.size <= 1) {
-					endActiveCallRoom(room.conversationId, { ...(payload || {}), fromUserId: userId, reason: 'last_participant' });
-				} else if (room) {
+				if (room) {
 					emitToConversation(room.conversationId, 'call:participants', serializeCallRoom(room));
 				}
 			}
@@ -390,9 +388,7 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('group_call_left', (payload) => {
 			if (userId) {
 				const room = leaveActiveCallRoom(userId, String(payload?.conversationId || '').trim());
-				if (room && room.participants.size <= 1) {
-					endActiveCallRoom(room.conversationId, { ...(payload || {}), fromUserId: userId, reason: 'last_participant' });
-				} else if (room) {
+				if (room) {
 					emitToConversation(room.conversationId, 'call:participants', serializeCallRoom(room));
 				}
 			}
@@ -488,9 +484,7 @@ export const registerChatSocketHandlers = (server: Server) => {
 						const room = leaveActiveCallRoom(userId, call.conversationId);
 						emitToConversation(call.conversationId, 'group_call_left', payload);
 						emitToConversation(call.conversationId, 'call:left', payload);
-						if (room && room.participants.size <= 1) {
-							endActiveCallRoom(call.conversationId, { ...payload, reason: 'last_participant' });
-						} else if (room) {
+						if (room) {
 							emitToConversation(call.conversationId, 'call:participants', serializeCallRoom(room));
 						}
 					} else {
