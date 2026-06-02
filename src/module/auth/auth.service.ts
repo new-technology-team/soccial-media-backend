@@ -4,9 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserStatus } from '../../common/enum/user-status.enum';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AuthOtp } from './auth-otp.entity';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -25,16 +22,20 @@ type PairingState = {
   refreshToken?: string;
 };
 
+type OtpCacheEntry = {
+    codeHash: string;
+    expiresAt: number;
+};
+
 @Injectable()
 export class AuthService {
     private static pairingMap = new Map<number, PairingState>();
     private static pairingCounter = 1;
+    private static otpCache = new Map<string, OtpCacheEntry>();
 
     constructor(
         private userService: UserService,
         private jwtService: JwtService,
-        @InjectRepository(AuthOtp, 'mariadb')
-        private readonly otpRepository: Repository<AuthOtp>,
     ) { }
 
     private isEmail(input: string) {
@@ -239,28 +240,46 @@ export class AuthService {
         }
     }
 
+    private getOtpCacheKey(identifier: string, purpose: 'verify' | 'reset') {
+        return `${purpose}:${identifier}`;
+    }
+
+    private hashOtp(identifier: string, purpose: 'verify' | 'reset', code: string) {
+        const secret = process.env.OTP_CACHE_SECRET || process.env.JWT_ACCESS_SECRET || 'secretKey';
+        return crypto
+            .createHmac('sha256', secret)
+            .update(`${purpose}:${identifier}:${code}`)
+            .digest('hex');
+    }
+
+    private pruneExpiredOtp() {
+        const now = Date.now();
+        for (const [key, value] of AuthService.otpCache.entries()) {
+            if (value.expiresAt <= now) AuthService.otpCache.delete(key);
+        }
+    }
+
     private async saveOtp(identifier: string, code: string, purpose: 'verify' | 'reset', expiresAt: Date) {
-        await this.otpRepository.delete({ identifier, purpose });
-        await this.otpRepository.save(
-            this.otpRepository.create({
-                identifier,
-                purpose,
-                code,
-                expiresAt,
-                usedAt: null,
-                createdAt: new Date(),
-            }),
-        );
+        this.pruneExpiredOtp();
+        AuthService.otpCache.set(this.getOtpCacheKey(identifier, purpose), {
+            codeHash: this.hashOtp(identifier, purpose, code),
+            expiresAt: expiresAt.getTime(),
+        });
     }
 
     private async consumeOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
-        const row = await this.otpRepository.findOne({ where: { identifier, purpose, code } });
+        const key = this.getOtpCacheKey(identifier, purpose);
+        const row = AuthService.otpCache.get(key);
         if (!row) return false;
-        if (row.usedAt) return false;
-        if (new Date(row.expiresAt).getTime() <= Date.now()) return false;
-        row.usedAt = new Date();
-        await this.otpRepository.save(row);
-        return true;
+        AuthService.otpCache.delete(key);
+        if (row.expiresAt <= Date.now()) return false;
+        const expected = Buffer.from(row.codeHash, 'hex');
+        const actual = Buffer.from(this.hashOtp(identifier, purpose, code), 'hex');
+        return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    }
+
+    private async deleteOtp(identifier: string, purpose: 'verify' | 'reset') {
+        AuthService.otpCache.delete(this.getOtpCacheKey(identifier, purpose));
     }
 
     private async issueTokens(user: any) {
@@ -487,7 +506,7 @@ export class AuthService {
                 };
             }
 
-            await this.otpRepository.delete({ identifier: identifier!, purpose: 'verify' });
+            await this.deleteOtp(identifier!, 'verify');
             await this.userService.deleteUnverifiedUser(newUser.userId);
             throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
         }

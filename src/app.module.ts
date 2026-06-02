@@ -24,7 +24,6 @@ import { Comment } from './module/comment/comment.entity';
 import { Notification } from './module/notification/notification.entity';
 import { Post } from './module/post/post.entity';
 import { SavedPost } from './module/post/saved-post.entity';
-import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
 import { BlockedUser } from './module/friendship/blocked-user.entity';
 import { DevAdminSeed } from './dev-admin.seed';
@@ -101,7 +100,7 @@ function buildMariaSsl() {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, BlockedUser, Report, AuthOtp, AuditLog, SystemSetting, SavedPost],
+      entities: [User, Friendship, BlockedUser, Report, AuditLog, SystemSetting, SavedPost],
       ssl: buildMariaSsl(),
     }),
     TypeOrmModule.forRoot({
