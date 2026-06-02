@@ -235,6 +235,36 @@ const relayCallEvent = (socket: Socket, eventName: string, payload: any) => {
 	}
 };
 
+const notifyCallAnsweredOnOtherDevices = (
+	socket: Socket,
+	payload: any,
+	answeredAt: number,
+) => {
+	const answeredByUserId =
+		Number(payload?.fromUserId || 0) || resolveSocketUserId(socket);
+	if (!answeredByUserId) return;
+
+	socket.to(`user:${answeredByUserId}`).emit('call:answered', {
+		...(payload || {}),
+		fromUserId: answeredByUserId,
+		answeredByUserId,
+		answeredAt,
+	});
+};
+
+const notifyCallClosedOnOtherDevices = (
+	socket: Socket,
+	eventName: 'call:reject' | 'call:ended',
+	payload: any,
+) => {
+	const fromUserId = Number(payload?.fromUserId || 0) || resolveSocketUserId(socket);
+	if (!fromUserId) return;
+	socket.to(`user:${fromUserId}`).emit(eventName, {
+		...(payload || {}),
+		fromUserId,
+	});
+};
+
 export const registerChatSocketHandlers = (server: Server) => {
 	server.on('connection', (socket) => {
 		const userId = resolveSocketUserId(socket);
@@ -293,10 +323,13 @@ export const registerChatSocketHandlers = (server: Server) => {
 		socket.on('call:initiate', (payload) => relayCallEvent(socket, 'call:incoming', payload));
 		socket.on('call:incoming', (payload) => relayCallEvent(socket, 'call:incoming', payload));
 		socket.on('call:accept', (payload) => {
-			relayCallEvent(socket, 'call:accepted', {
+			const answeredAt = Date.now();
+			const answerPayload = {
 				...(payload || {}),
-				answeredAt: Date.now(),
-			});
+				answeredAt,
+			};
+			relayCallEvent(socket, 'call:accepted', answerPayload);
+			notifyCallAnsweredOnOtherDevices(socket, answerPayload, answeredAt);
 		});
 		socket.on('call:accepted', (payload) => relayCallEvent(socket, 'call:accepted', payload));
 		socket.on('webrtc:offer', (payload) => relayCallEvent(socket, 'webrtc:offer', payload));
@@ -327,14 +360,19 @@ export const registerChatSocketHandlers = (server: Server) => {
 		});
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
+			const answeredAt = Date.now();
 			// Luôn dùng thời gian của server để tính thời lượng cuộc gọi chính xác.
 			relayCallEvent(socket, 'call:answer', {
 				...(payload || {}),
-				answeredAt: Date.now(),
+				answeredAt,
 			});
+			notifyCallAnsweredOnOtherDevices(socket, { ...(payload || {}), answeredAt }, answeredAt);
 		});
 		socket.on('call:ice-candidate', (payload) => relayCallEvent(socket, 'call:ice-candidate', payload));
-		socket.on('call:reject', (payload) => relayCallEvent(socket, 'call:reject', payload));
+		socket.on('call:reject', (payload) => {
+			relayCallEvent(socket, 'call:reject', payload);
+			notifyCallClosedOnOtherDevices(socket, 'call:reject', payload);
+		});
 		socket.on('call:join', (payload) => {
 			if (userId) joinActiveCallRoom(socket, payload);
 			relayCallEvent(socket, 'call:join', payload);
@@ -353,11 +391,16 @@ export const registerChatSocketHandlers = (server: Server) => {
 		});
 		socket.on('call:end', (payload) => {
 			const conversationId = String(payload?.conversationId || '').trim() || activeCallByUser.get(userId)?.conversationId || '';
+			const endPayload = {
+				...(payload || {}),
+				fromUserId: Number(payload?.fromUserId || 0) || userId || undefined,
+			};
 			if (conversationId) {
-				endActiveCallRoom(conversationId, { ...(payload || {}), fromUserId: Number(payload?.fromUserId || 0) || userId || undefined });
+				endActiveCallRoom(conversationId, endPayload);
 			} else {
-				relayCallEvent(socket, 'call:ended', payload);
+				relayCallEvent(socket, 'call:ended', endPayload);
 			}
+			notifyCallClosedOnOtherDevices(socket, 'call:ended', endPayload);
 		});
 		socket.on('call_started', (payload) => {
 			if (userId) joinActiveCallRoom(socket, { ...payload, mode: 'private' });
