@@ -325,8 +325,20 @@ export const registerChatSocketHandlers = (server: Server) => {
 			}
 			if (typeof ack === 'function') ack({ conversationId, roomId: room.roomId });
 		});
+		socket.on('call:room:status', (payload, ack) => {
+			const conversationId = String(payload?.conversationId || '').trim();
+			const callSessionId = String(payload?.callSessionId || payload?.roomId || '').trim();
+			const room = conversationId ? activeCallRooms.get(conversationId) : null;
+			const matchesSession = !callSessionId || room?.roomId === callSessionId;
+			if (typeof ack === 'function') {
+				ack(room && matchesSession
+					? { ...serializeCallRoom(room), active: true }
+					: { conversationId, roomId: callSessionId, active: false, participantCount: 0, participantIds: [] });
+			}
+		});
 		socket.on('call:offer', (payload) => relayCallEvent(socket, 'call:offer', payload));
 		socket.on('call:answer', (payload) => {
+			if (userId && payload?.useJitsi) joinActiveCallRoom(socket, payload);
 			// Luôn dùng thời gian của server để tính thời lượng cuộc gọi chính xác.
 			relayCallEvent(socket, 'call:answer', {
 				...(payload || {}),
