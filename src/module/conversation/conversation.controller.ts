@@ -70,6 +70,15 @@ export class ConversationController {
 		return this.conversationService.updatePreferences(id, user.id, body || {});
 	}
 
+	@Post('conversations/:id/hidden/verify')
+	verifyHiddenAccess(
+		@CurrentUser() user: any,
+		@Param('id') id: string,
+		@Body() body: { hiddenPassword?: string | null },
+	) {
+		return this.conversationService.verifyHiddenAccess(id, user.id, body?.hiddenPassword || '');
+	}
+
 	@Patch('conversations/:id/profile')
 	updateGroupProfile(
 		@CurrentUser() user: any,

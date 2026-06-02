@@ -504,6 +504,19 @@ export class ConversationService {
 		return { message: 'Đã cập nhật thiết lập hội thoại', conversation: mapped };
 	}
 
+	async verifyHiddenAccess(conversationId: string, userId: number, hiddenPassword: string) {
+		const conversation = await this.ensureMembership(conversationId, userId);
+		const member = this.getMemberByUserId(conversation, userId);
+		const isHidden = (conversation.deletedForUserIds || []).some((item: any) => Number(item) === Number(userId));
+		if (!isHidden) {
+			return { ok: true, conversation: this.mapConversation(conversation, userId) };
+		}
+		if (!member?.hiddenPasswordHash || !this.verifySecret(hiddenPassword, member.hiddenPasswordHash)) {
+			throw new BadRequestException('Mật khẩu ẩn không đúng');
+		}
+		return { ok: true, conversation: this.mapConversation(conversation, userId) };
+	}
+
 	async setSeen(conversationId: string, userId: number, lastReadMessageId?: string | null) {
 		const conversation = await this.ensureMembership(conversationId, userId);
 		conversation.members = (conversation.members || []).map((item: any) =>
