@@ -94,6 +94,55 @@ export class ConversationService {
 		};
 	}
 
+	private mapPinnedMessagePreview(row: any, conversation: any) {
+		const senderId = Number(row.senderId || 0);
+		const senderMember = (conversation?.members || []).find((item: any) => Number(item.userId) === senderId);
+		return {
+			id: String(row._id),
+			conversationId: row.conversationId,
+			senderId,
+			senderName: senderMember?.nickname || row.senderName || row.meta?.senderName || senderMember?.fullName || `Người dùng #${senderId}`,
+			senderAvatar: senderMember?.avatarUrl || row.senderAvatar || row.meta?.senderAvatar || null,
+			type: row.type,
+			text: row.isRecalled ? 'Tin nhắn đã được thu hồi' : row.text || null,
+			mediaUrl: row.isRecalled ? null : row.mediaUrl || null,
+			fileName: row.fileName || null,
+			mimeType: row.mimeType || null,
+			fileSize: row.fileSize || null,
+			meta: row.meta || null,
+			links: Array.isArray(row.links) ? row.links : [],
+			status: 'sent',
+			readBy: [],
+			deliveredTo: [],
+			reactionCount: Array.isArray(row.reactions) ? row.reactions.length : 0,
+			viewerReaction: null,
+			reactions: [],
+			createdAt: row.createdAt,
+			updatedAt: row.updatedAt,
+			expiresAt: row.expiresAt || null,
+			isDeleted: Boolean(row.isRecalled),
+		};
+	}
+
+	private async getPinnedMessagePreviews(conversation: any, viewerId: number) {
+		const ids = Array.isArray(conversation.pinnedMessageIds) ? conversation.pinnedMessageIds.map((item: any) => String(item)) : [];
+		if (!ids.length) return [];
+
+		const rows = await Promise.all(
+			ids.map((id: string) => (
+				ObjectId.isValid(id)
+					? this.messageRepository.findOne({ where: { _id: new ObjectId(id) as any } }).catch(() => null)
+					: Promise.resolve(null)
+			)),
+		);
+
+		return rows
+			.filter((row: any) => row && String(row.conversationId) === String(conversation._id))
+			.filter((row: any) => !this.isExpiredMessage(row))
+			.filter((row: any) => !(row.deletedForUserIds || []).some((uid: number) => Number(uid) === Number(viewerId)))
+			.map((row: any) => this.mapPinnedMessagePreview(row, conversation));
+	}
+
 	private isExpiredMessage(row: any) {
 		if (!row?.expiresAt) return false;
 		const expiresAt = new Date(row.expiresAt).getTime();
@@ -246,6 +295,7 @@ export class ConversationService {
 		const conversations = await Promise.all(
 			sorted.map(async (item) => ({
 				...this.mapConversation(item, userId),
+				pinnedMessages: await this.getPinnedMessagePreviews(item, userId),
 				unreadCount: await this.countUnreadMessages(item, userId),
 			})),
 		);
