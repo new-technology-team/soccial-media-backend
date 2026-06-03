@@ -548,5 +548,501 @@
       "đề xuất",
       "phản hồi nhanh"
     ]
+  },
+  {
+    "id": "msg-007",
+    "category": "Nhắn tin",
+    "feature": "Thả cảm xúc lên tin nhắn (Reaction)",
+    "description": "Người dùng có thể bày tỏ cảm xúc với một tin nhắn cụ thể bằng cách thả emoji (tim, thích, haha, buồn...) trực tiếp lên tin nhắn đó thay vì phải trả lời.",
+    "howTo": "Nhấn giữ (long press) hoặc rê chuột vào tin nhắn muốn bày tỏ cảm xúc → bảng emoji hiện ra → chọn biểu tượng cảm xúc. Nhấn lại vào cảm xúc đã chọn để gỡ bỏ.",
+    "faq": [
+      "Có thể đổi cảm xúc đã thả không?",
+      "Người khác có thấy mình thả cảm xúc không?",
+      "Một tin nhắn được thả bao nhiêu loại cảm xúc?"
+    ],
+    "keywords": [
+      "reaction tin nhắn",
+      "thả cảm xúc",
+      "thả tim tin nhắn",
+      "biểu tượng tin nhắn",
+      "react message",
+      "emoji tin nhắn",
+      "bày tỏ cảm xúc"
+    ]
+  },
+  {
+    "id": "msg-008",
+    "category": "Nhắn tin",
+    "feature": "Tìm kiếm tin nhắn",
+    "description": "Người dùng có thể tìm lại tin nhắn cũ trong một cuộc hội thoại bằng cách nhập từ khóa. Kết quả hiển thị các tin nhắn chứa từ khóa và cho phép nhảy đến vị trí tin nhắn.",
+    "howTo": "Mở cuộc hội thoại → nhấn biểu tượng kính lúp (🔍) trong khung chat hoặc phần thông tin hội thoại → nhập từ khóa cần tìm → chọn tin nhắn trong kết quả để xem.",
+    "faq": [
+      "Tìm được tin nhắn trong nhóm không?",
+      "Có tìm được file hoặc ảnh đã gửi không?",
+      "Tìm kiếm có phân biệt hoa thường không?"
+    ],
+    "keywords": [
+      "tìm kiếm tin nhắn",
+      "tìm tin nhắn",
+      "search message",
+      "tìm lại tin nhắn",
+      "kính lúp",
+      "tìm từ khóa",
+      "tra cứu tin nhắn"
+    ]
+  },
+  {
+    "id": "msg-009",
+    "category": "Nhắn tin",
+    "feature": "Cài đặt cuộc trò chuyện",
+    "description": "Mỗi cuộc hội thoại có nhiều tùy chọn cá nhân hóa: ghim hội thoại lên đầu danh sách, tắt thông báo (mute), ẩn hội thoại, khóa bằng mật khẩu, tự động xóa tin nhắn sau một khoảng thời gian, đổi hình nền và màu chủ đề, đặt biệt danh cho thành viên.",
+    "howTo": "Mở cuộc hội thoại → nhấn vào tên hoặc biểu tượng thông tin (ⓘ) ở phía trên để mở bảng cài đặt → chọn tùy chọn mong muốn: Ghim, Tắt thông báo, Ẩn, Khóa, Tự động xóa tin nhắn, Đổi nền/màu, hoặc Đặt biệt danh.",
+    "faq": [
+      "Khóa hội thoại bằng mật khẩu hoạt động ra sao?",
+      "Tự động xóa tin nhắn có khôi phục được không?",
+      "Ẩn hội thoại khác gì xóa hội thoại?",
+      "Tắt thông báo có làm mất tin nhắn không?"
+    ],
+    "keywords": [
+      "cài đặt hội thoại",
+      "ghim hội thoại",
+      "tắt thông báo",
+      "mute",
+      "ẩn hội thoại",
+      "khóa hội thoại",
+      "tự động xóa tin nhắn",
+      "đổi nền chat",
+      "biệt danh",
+      "màu chủ đề"
+    ]
+  },
+  {
+    "id": "call-003",
+    "category": "Nhắn tin",
+    "feature": "Gọi nhóm và chia sẻ màn hình",
+    "description": "ZChat hỗ trợ gọi thoại và gọi video trong nhóm (tối đa 6 người cùng lúc). Trong cuộc gọi, người dùng có thể chia sẻ màn hình của mình và mời thêm thành viên tham gia.",
+    "howTo": "Mở cuộc hội thoại nhóm → nhấn biểu tượng Điện thoại (☎️) hoặc Camera (📹) ở góc trên để bắt đầu gọi nhóm. Trong cuộc gọi, nhấn nút Chia sẻ màn hình để chia sẻ, hoặc nút Thêm người để mời thành viên.",
+    "faq": [
+      "Gọi nhóm tối đa bao nhiêu người?",
+      "Làm sao chia sẻ màn hình khi đang gọi?",
+      "Có thể mời thêm người giữa cuộc gọi không?"
+    ],
+    "keywords": [
+      "gọi nhóm",
+      "group call",
+      "gọi video nhóm",
+      "chia sẻ màn hình",
+      "screen share",
+      "trình chiếu",
+      "mời vào cuộc gọi"
+    ]
+  },
+  {
+    "id": "call-004",
+    "category": "Nhắn tin",
+    "feature": "Lịch sử cuộc gọi và cuộc gọi nhỡ",
+    "description": "ZChat lưu lại lịch sử các cuộc gọi (thời lượng, người tham gia) và thông báo khi có cuộc gọi nhỡ. Người dùng có thể xem lại và gọi lại nhanh từ lịch sử.",
+    "howTo": "Mở cuộc hội thoại để xem các cuộc gọi gần đây ngay trong khung chat, hoặc xem thông báo cuộc gọi nhỡ trong mục Thông báo. Nhấn nút Gọi lại để khởi tạo lại cuộc gọi.",
+    "faq": [
+      "Cuộc gọi nhỡ hiển thị ở đâu?",
+      "Lịch sử cuộc gọi có lưu thời lượng không?",
+      "Làm sao gọi lại người vừa gọi nhỡ?"
+    ],
+    "keywords": [
+      "lịch sử cuộc gọi",
+      "cuộc gọi nhỡ",
+      "missed call",
+      "call history",
+      "gọi lại",
+      "nhật ký cuộc gọi",
+      "thời lượng cuộc gọi"
+    ]
+  },
+  {
+    "id": "group-003",
+    "category": "Nhắn tin",
+    "feature": "Đổi tên và ảnh đại diện nhóm",
+    "description": "Trưởng nhóm và phó nhóm có thể đổi tên nhóm cũng như ảnh đại diện của nhóm để dễ nhận biết.",
+    "howTo": "Mở nhóm → nhấn vào tên nhóm để mở Cài đặt nhóm → nhấn vào tên để sửa rồi Lưu, hoặc nhấn vào ảnh đại diện nhóm để tải ảnh mới lên.",
+    "faq": [
+      "Ai được quyền đổi tên nhóm?",
+      "Đổi tên nhóm có thông báo cho thành viên không?",
+      "Ảnh đại diện nhóm hỗ trợ định dạng gì?"
+    ],
+    "keywords": [
+      "đổi tên nhóm",
+      "ảnh đại diện nhóm",
+      "rename group",
+      "avatar nhóm",
+      "đổi ảnh nhóm",
+      "tên nhóm"
+    ]
+  },
+  {
+    "id": "group-004",
+    "category": "Nhắn tin",
+    "feature": "Phân quyền trong nhóm",
+    "description": "Nhóm có các vai trò: trưởng nhóm (quyền cao nhất), phó nhóm (deputy - hỗ trợ quản lý) và thành viên. Trưởng nhóm có thể đặt phó nhóm hoặc chuyển quyền trưởng nhóm cho người khác.",
+    "howTo": "Mở Cài đặt nhóm → chọn 'Thành viên' → nhấn vào một thành viên → chọn 'Đặt làm phó nhóm' hoặc 'Chuyển quyền trưởng nhóm' (chỉ trưởng nhóm thấy tùy chọn này).",
+    "faq": [
+      "Phó nhóm có những quyền gì?",
+      "Chuyển quyền trưởng nhóm có hoàn tác được không?",
+      "Một nhóm có bao nhiêu phó nhóm?"
+    ],
+    "keywords": [
+      "phân quyền nhóm",
+      "trưởng nhóm",
+      "phó nhóm",
+      "deputy",
+      "chuyển quyền trưởng nhóm",
+      "transfer leader",
+      "quản trị nhóm",
+      "vai trò nhóm"
+    ]
+  },
+  {
+    "id": "group-005",
+    "category": "Nhắn tin",
+    "feature": "Rời nhóm và giải tán nhóm",
+    "description": "Thành viên có thể tự rời khỏi nhóm bất cứ lúc nào. Riêng trưởng nhóm có thể giải tán toàn bộ nhóm, xóa nhóm khỏi danh sách của tất cả thành viên.",
+    "howTo": "Mở Cài đặt nhóm → cuộn xuống dưới cùng → chọn 'Rời nhóm' (mọi thành viên), hoặc 'Giải tán nhóm' (chỉ trưởng nhóm thấy) → xác nhận trong hộp thoại.",
+    "faq": [
+      "Trưởng nhóm rời nhóm thì ai làm trưởng?",
+      "Giải tán nhóm có khôi phục được không?",
+      "Rời nhóm rồi vào lại được không?"
+    ],
+    "keywords": [
+      "rời nhóm",
+      "leave group",
+      "giải tán nhóm",
+      "xóa nhóm",
+      "dissolve group",
+      "thoát nhóm"
+    ]
+  },
+  {
+    "id": "feed-004",
+    "category": "Mạng xã hội",
+    "feature": "Sửa và xóa bài viết",
+    "description": "Người dùng có thể chỉnh sửa lại nội dung bài viết đã đăng hoặc xóa hẳn bài viết khỏi bảng tin của mình.",
+    "howTo": "Trên bài đăng của bạn, nhấn biểu tượng ba chấm (⋯) ở góc bài viết → chọn 'Chỉnh sửa' để sửa nội dung rồi Lưu, hoặc chọn 'Xóa' rồi xác nhận để gỡ bài.",
+    "faq": [
+      "Sửa bài có hiển thị 'đã chỉnh sửa' không?",
+      "Xóa bài có xóa luôn bình luận không?",
+      "Khôi phục được bài đã xóa không?"
+    ],
+    "keywords": [
+      "sửa bài viết",
+      "chỉnh sửa bài",
+      "xóa bài viết",
+      "edit post",
+      "delete post",
+      "gỡ bài đăng"
+    ]
+  },
+  {
+    "id": "feed-005",
+    "category": "Mạng xã hội",
+    "feature": "Chia sẻ bài viết",
+    "description": "Người dùng có thể chia sẻ lại một bài viết để lan tỏa nội dung tới bạn bè trên bảng tin của mình.",
+    "howTo": "Trên bài đăng, nhấn vào nút Chia sẻ (biểu tượng mũi tên) → thêm lời nhắn nếu muốn → nhấn Chia sẻ để đăng lại lên trang của bạn.",
+    "faq": [
+      "Chia sẻ có giữ tên người đăng gốc không?",
+      "Người đăng gốc có biết mình chia sẻ không?",
+      "Chia sẻ bài 'Chỉ mình tôi' được không?"
+    ],
+    "keywords": [
+      "chia sẻ bài viết",
+      "share post",
+      "đăng lại",
+      "chia sẻ bài đăng",
+      "lan tỏa",
+      "repost"
+    ]
+  },
+  {
+    "id": "feed-006",
+    "category": "Mạng xã hội",
+    "feature": "Lưu bài viết",
+    "description": "Người dùng có thể lưu lại những bài viết hay để xem lại sau này. Các bài đã lưu được tập hợp trong một danh sách riêng.",
+    "howTo": "Trên bài đăng, nhấn biểu tượng ba chấm (⋯) → chọn 'Lưu bài viết'. Để xem lại, vào mục 'Bài đã lưu'. Bấm lại 'Bỏ lưu' để gỡ bài khỏi danh sách.",
+    "faq": [
+      "Người đăng có biết mình lưu bài không?",
+      "Xem danh sách bài đã lưu ở đâu?",
+      "Bài bị xóa thì còn trong mục đã lưu không?"
+    ],
+    "keywords": [
+      "lưu bài viết",
+      "save post",
+      "bài đã lưu",
+      "bookmark",
+      "lưu lại",
+      "đánh dấu bài viết"
+    ]
+  },
+  {
+    "id": "feed-007",
+    "category": "Mạng xã hội",
+    "feature": "Báo cáo bài viết",
+    "description": "Khi gặp nội dung không phù hợp hoặc vi phạm, người dùng có thể báo cáo bài viết để đội ngũ kiểm duyệt xem xét và xử lý.",
+    "howTo": "Trên bài đăng, nhấn biểu tượng ba chấm (⋯) → chọn 'Báo cáo bài viết' → chọn lý do → gửi. Sau khi gửi, nút sẽ hiển thị 'Đã báo cáo'.",
+    "faq": [
+      "Người bị báo cáo có biết ai báo cáo không?",
+      "Báo cáo rồi thì điều gì xảy ra?",
+      "Có thể báo cáo bình luận không?"
+    ],
+    "keywords": [
+      "báo cáo bài viết",
+      "report post",
+      "tố cáo",
+      "nội dung vi phạm",
+      "báo xấu",
+      "kiểm duyệt"
+    ]
+  },
+  {
+    "id": "feed-008",
+    "category": "Mạng xã hội",
+    "feature": "Hashtag",
+    "description": "Người dùng có thể thêm hashtag (thẻ #) vào bài viết để gắn chủ đề. Bấm vào hashtag sẽ chuyển đến trang tìm kiếm các bài viết liên quan đến thẻ đó.",
+    "howTo": "Khi viết bài, gõ dấu # liền với từ khóa (ví dụ #dulich). Trên bài đã đăng, bấm vào hashtag màu xanh để xem các bài viết khác cùng thẻ.",
+    "faq": [
+      "Hashtag có dấu tiếng Việt được không?",
+      "Bấm hashtag dẫn đến đâu?",
+      "Hashtag có giới hạn số lượng không?"
+    ],
+    "keywords": [
+      "hashtag",
+      "thẻ",
+      "#",
+      "chủ đề",
+      "thẻ bài viết",
+      "tag",
+      "tìm theo thẻ"
+    ]
+  },
+  {
+    "id": "feed-009",
+    "category": "Mạng xã hội",
+    "feature": "Trả lời và thả cảm xúc bình luận",
+    "description": "Trong phần bình luận, người dùng có thể trả lời (reply) một bình luận khác, thả cảm xúc lên bình luận, và xóa bình luận của chính mình.",
+    "howTo": "Dưới mỗi bình luận, nhấn 'Trả lời' để viết phản hồi, nhấn biểu tượng tim để thả cảm xúc, hoặc nhấn vào bình luận của mình → 'Xóa' để gỡ.",
+    "faq": [
+      "Xóa được bình luận của người khác không?",
+      "Trả lời bình luận có thông báo cho người đó không?",
+      "Bình luận lồng nhau bao nhiêu cấp?"
+    ],
+    "keywords": [
+      "trả lời bình luận",
+      "reply comment",
+      "thả tim bình luận",
+      "xóa bình luận",
+      "react comment",
+      "phản hồi bình luận"
+    ]
+  },
+  {
+    "id": "friend-004",
+    "category": "Bạn bè",
+    "feature": "Hủy kết bạn",
+    "description": "Người dùng có thể hủy kết bạn với một người trong danh sách bạn bè bất cứ lúc nào. Sau khi hủy, hai người không còn là bạn bè của nhau.",
+    "howTo": "Vào trang cá nhân của người đó (hoặc danh sách Bạn bè) → nhấn nút 'Bạn bè' / menu → chọn 'Hủy kết bạn' → xác nhận.",
+    "faq": [
+      "Hủy kết bạn có thông báo cho người kia không?",
+      "Hủy kết bạn rồi kết bạn lại được không?",
+      "Hủy kết bạn có xóa lịch sử trò chuyện không?"
+    ],
+    "keywords": [
+      "hủy kết bạn",
+      "xóa bạn bè",
+      "unfriend",
+      "remove friend",
+      "ngừng kết bạn",
+      "bỏ bạn bè"
+    ]
+  },
+  {
+    "id": "friend-005",
+    "category": "Bạn bè",
+    "feature": "Chặn và bỏ chặn người dùng",
+    "description": "Người dùng có thể chặn (block) người khác để ngừng mọi liên lạc và ẩn nội dung của họ. Khi cần, có thể bỏ chặn để khôi phục.",
+    "howTo": "Vào trang cá nhân của người muốn chặn → nhấn menu (⋯) → chọn 'Chặn' → xác nhận. Để bỏ chặn, vào lại trang cá nhân hoặc Cài đặt → chọn 'Bỏ chặn'.",
+    "faq": [
+      "Người bị chặn có biết mình bị chặn không?",
+      "Chặn có tự động hủy kết bạn không?",
+      "Người bị chặn còn nhắn tin được không?"
+    ],
+    "keywords": [
+      "chặn người dùng",
+      "block",
+      "bỏ chặn",
+      "unblock",
+      "chặn người khác",
+      "danh sách chặn"
+    ]
+  },
+  {
+    "id": "account-005",
+    "category": "Tài khoản",
+    "feature": "Quên mật khẩu và đặt lại",
+    "description": "Nếu quên mật khẩu, người dùng có thể đặt lại mật khẩu mới thông qua mã OTP gửi về email đã đăng ký.",
+    "howTo": "Tại màn hình Đăng nhập → nhấn 'Quên mật khẩu?' → nhập email tài khoản → nhập mã OTP nhận được trong email → đặt mật khẩu mới → xác nhận.",
+    "faq": [
+      "Mã OTP đặt lại mật khẩu có hết hạn không?",
+      "Không nhận được email OTP phải làm sao?",
+      "Đặt lại mật khẩu có làm đăng xuất thiết bị khác không?"
+    ],
+    "keywords": [
+      "quên mật khẩu",
+      "forgot password",
+      "đặt lại mật khẩu",
+      "reset password",
+      "khôi phục mật khẩu",
+      "OTP email",
+      "lấy lại mật khẩu"
+    ]
+  },
+  {
+    "id": "account-006",
+    "category": "Tài khoản",
+    "feature": "Đăng nhập bằng Google",
+    "description": "Người dùng có thể đăng nhập hoặc đăng ký nhanh ZChat bằng tài khoản Google mà không cần nhập mật khẩu riêng.",
+    "howTo": "Tại màn hình Đăng nhập → nhấn nút 'Đăng nhập với Google' → chọn tài khoản Google và cho phép quyền truy cập → hệ thống tự đăng nhập vào ZChat.",
+    "faq": [
+      "Đăng nhập Google có cần tạo mật khẩu không?",
+      "Tài khoản Google và tài khoản email thường có gộp được không?",
+      "Đăng nhập Google có an toàn không?"
+    ],
+    "keywords": [
+      "đăng nhập google",
+      "google login",
+      "đăng nhập bằng google",
+      "oauth",
+      "tài khoản google",
+      "sign in with google"
+    ]
+  },
+  {
+    "id": "account-007",
+    "category": "Tài khoản",
+    "feature": "Đăng xuất",
+    "description": "Người dùng có thể đăng xuất khỏi ứng dụng ZChat để bảo vệ tài khoản, đặc biệt khi dùng trên thiết bị chung.",
+    "howTo": "Vào Cài đặt (hoặc tab Cá nhân) → cuộn xuống → nhấn 'Đăng xuất' → xác nhận.",
+    "faq": [
+      "Đăng xuất có mất tin nhắn không?",
+      "Đăng xuất rồi đăng nhập lại có cần OTP không?",
+      "Đăng xuất từ xa trên thiết bị khác được không?"
+    ],
+    "keywords": [
+      "đăng xuất",
+      "logout",
+      "sign out",
+      "thoát tài khoản",
+      "thoát ứng dụng"
+    ]
+  },
+  {
+    "id": "account-008",
+    "category": "Tài khoản",
+    "feature": "Cài đặt quyền riêng tư",
+    "description": "Người dùng có thể tùy chỉnh quyền riêng tư của tài khoản: ẩn/hiện thời gian hoạt động cuối, ẩn ảnh đại diện với người lạ, và cho phép hoặc không cho phép người khác gửi lời mời kết bạn.",
+    "howTo": "Vào Cài đặt → chọn 'Quyền riêng tư' → bật/tắt các tùy chọn: 'Hiển thị hoạt động cuối', 'Cho phép xem ảnh đại diện', 'Cho phép nhận lời mời kết bạn'.",
+    "faq": [
+      "Ẩn hoạt động cuối thì người khác thấy gì?",
+      "Tắt nhận lời mời kết bạn có ảnh hưởng bạn cũ không?",
+      "Ai có thể thấy ảnh đại diện của tôi?"
+    ],
+    "keywords": [
+      "quyền riêng tư",
+      "privacy",
+      "hoạt động cuối",
+      "last seen",
+      "ẩn ảnh đại diện",
+      "cho phép kết bạn",
+      "cài đặt riêng tư"
+    ]
+  },
+  {
+    "id": "account-009",
+    "category": "Tài khoản",
+    "feature": "Cài đặt thông báo",
+    "description": "Người dùng có thể bật hoặc tắt các loại thông báo theo nhu cầu, bao gồm thông báo tin nhắn và thông báo cuộc gọi.",
+    "howTo": "Vào Cài đặt → chọn 'Thông báo' → bật/tắt từng loại: 'Thông báo tin nhắn', 'Thông báo cuộc gọi'.",
+    "faq": [
+      "Tắt thông báo tin nhắn có ảnh hưởng nhóm không?",
+      "Tắt thông báo cuộc gọi có còn nhận được cuộc gọi không?",
+      "Cài đặt thông báo áp dụng cho mọi thiết bị không?"
+    ],
+    "keywords": [
+      "cài đặt thông báo",
+      "notification settings",
+      "tắt thông báo",
+      "bật thông báo",
+      "thông báo tin nhắn",
+      "thông báo cuộc gọi"
+    ]
+  },
+  {
+    "id": "profile-001",
+    "category": "Tài khoản",
+    "feature": "Xem hồ sơ người khác",
+    "description": "Người dùng có thể xem trang cá nhân của người khác, gồm tên hiển thị, ảnh đại diện, trạng thái online và danh sách bài đăng của họ. Tại đây cũng có nút kết bạn hoặc hủy kết bạn tùy theo quan hệ.",
+    "howTo": "Nhấn vào tên hoặc ảnh đại diện của một người (trong feed, tin nhắn, hoặc kết quả tìm kiếm) để mở trang cá nhân của họ. Dùng nút 'Kết bạn' / 'Hủy kết bạn' / 'Nhắn tin' tùy theo quan hệ hiện tại.",
+    "faq": [
+      "Trạng thái online được tính thế nào?",
+      "Xem được bài 'Chỉ mình tôi' của người khác không?",
+      "Người kia có biết tôi xem hồ sơ của họ không?"
+    ],
+    "keywords": [
+      "xem hồ sơ",
+      "trang cá nhân",
+      "profile người khác",
+      "xem profile",
+      "bài đăng của user",
+      "trạng thái online",
+      "xem trang cá nhân"
+    ]
+  },
+  {
+    "id": "notif-004",
+    "category": "Thông báo",
+    "feature": "Quản lý thông báo",
+    "description": "Người dùng có thể quản lý danh sách thông báo: xóa từng thông báo không cần thiết và đánh dấu đã đọc tất cả thông báo cùng lúc.",
+    "howTo": "Mở mục Thông báo → rê chuột/nhấn giữ một thông báo rồi nhấn biểu tượng thùng rác (🗑️) để xóa, hoặc nhấn 'Đánh dấu đã đọc tất cả' ở phía trên để đọc hết.",
+    "faq": [
+      "Xóa thông báo có khôi phục được không?",
+      "Đánh dấu đã đọc tất cả có xóa thông báo không?",
+      "Thông báo cũ tự động xóa sau bao lâu?"
+    ],
+    "keywords": [
+      "quản lý thông báo",
+      "xóa thông báo",
+      "đánh dấu đã đọc",
+      "read all",
+      "đã đọc tất cả",
+      "dọn thông báo"
+    ]
+  },
+  {
+    "id": "ai-005",
+    "category": "Trí tuệ nhân tạo (AI)",
+    "feature": "Trợ lý AI ZChat",
+    "description": "ZChat có trợ lý AI giúp người dùng giải đáp thắc mắc về cách sử dụng ứng dụng và các tính năng. Trợ lý lưu lịch sử hội thoại để bạn xem lại các câu hỏi trước đó.",
+    "howTo": "Mở mục Trợ lý AI (AI Chat) trong ứng dụng → nhập câu hỏi về cách dùng ZChat (ví dụ: 'làm sao tạo nhóm?', 'cách lưu bài viết') → trợ lý sẽ trả lời và hướng dẫn.",
+    "faq": [
+      "Trợ lý AI giúp được những gì?",
+      "Trợ lý có lưu lịch sử trò chuyện không?",
+      "Trợ lý AI có truy cập tin nhắn riêng tư của tôi không?"
+    ],
+    "keywords": [
+      "trợ lý ai",
+      "ai chat",
+      "chatbot",
+      "hỗ trợ",
+      "trợ lý zchat",
+      "hỏi đáp",
+      "bạn là ai",
+      "giúp gì"
+    ]
   }
 ]
