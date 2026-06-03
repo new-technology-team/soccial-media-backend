@@ -9,6 +9,7 @@ import { ConversationService } from "../conversation/conversation.service";
 import { UserService } from "../user/user.service";
 import { NotificationService } from "../notification/notification.service";
 import { FriendshipService } from "../friendship/friendship.service";
+import { UserStatus } from "../../common/enum/user-status.enum";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { emitToConversation } from "../../common/socket/chat-socket";
@@ -117,6 +118,22 @@ export class MessageService {
 		const seconds = Number(conversation?.autoDeleteAfterSeconds || 0);
 		if (!seconds || seconds <= 0) return null;
 		return new Date(createdAt.getTime() + seconds * 1000);
+	}
+
+	private async assertCanSendMessage(actorId: number) {
+		const user = await this.userService.findOne(actorId);
+		if (!user) {
+			throw new ForbiddenException("Tài khoản không còn khả dụng");
+		}
+		const revokedStatuses = [UserStatus.BLOCKED, UserStatus.HIDDEN, UserStatus.DELETED, UserStatus.LOCKED];
+		const isTempLocked = user.status === UserStatus.TEMP_LOCKED &&
+			(!user.lockedUntil || new Date(user.lockedUntil).getTime() > Date.now());
+		if (revokedStatuses.includes(user.status) || isTempLocked) {
+			throw new ForbiddenException("Tài khoản đang bị khóa nên không thể gửi tin nhắn");
+		}
+		if (user.status === UserStatus.RESTRICTED) {
+			throw new ForbiddenException("Tài khoản đang bị hạn chế nên không thể gửi tin nhắn");
+		}
 	}
 
 	private async markDelivered(rows: any[], conversation: any, actorId: number) {
@@ -273,6 +290,7 @@ export class MessageService {
 	}
 
 	async sendMessage(actorId: number, conversationId: string, body: any) {
+		await this.assertCanSendMessage(actorId);
 		const conversation = await this.conversationService.ensureMembership(conversationId, actorId);
 		if (conversation.type === "direct") {
 			const peer = (conversation.members || []).find((member: any) => Number(member.userId) !== Number(actorId));

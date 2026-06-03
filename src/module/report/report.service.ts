@@ -12,7 +12,7 @@ import { UserRole } from "../../common/enum/user-role.enum";
 import { UserStatus } from "../../common/enum/user-status.enum";
 import { AuditLog } from "../audit-log/audit-log.entity";
 import { Notification } from "../notification/notification.entity";
-import { emitSocialEvent, emitToUser } from "../../common/socket/chat-socket";
+import { clearChatUserRevocation, emitSocialEvent, emitToUser, revokeChatUserSessions } from "../../common/socket/chat-socket";
 import { SystemSettingService } from "../system-setting/system-setting.service";
 
 function toClientUser(user: any) {
@@ -180,7 +180,7 @@ export class ReportService {
 	}
 
 	private revokeUserSession(userId: number, reason: string) {
-		emitToUser(userId, 'auth:revoked', { userId, reason });
+		revokeChatUserSessions(userId, reason);
 	}
 
 	private async audit(actor: any, action: string, targetType: string, targetId?: string | number | null, description?: string | null) {
@@ -612,6 +612,7 @@ export class ReportService {
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Khôi phục tài khoản', 'USER', userId, 'Khôi phục bởi kiểm duyệt viên');
 		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã được khôi phục', 'Tài khoản đã trở lại trạng thái hoạt động bình thường.', { action: 'restore' });
+		clearChatUserRevocation(userId);
 		this.emitUserChanged(user, actor, 'restore');
 		return { message: 'Đã khôi phục tài khoản', user: toClientUser(user) };
 	}

@@ -4,6 +4,7 @@ import * as jwt from "jsonwebtoken";
 let chatSocketServer: Server | null = null;
 const onlineSocketsByUser = new Map<number, Set<string>>();
 const lastActiveByUser = new Map<number, Date>();
+const revokedSocketUsers = new Map<number, string>();
 
 type ActiveCallInfo = {
   conversationId: string;
@@ -59,6 +60,21 @@ export const emitToUser = (userId: number, eventName: string, payload: any) => {
   chatSocketServer?.to(`user:${Number(userId)}`).emit(eventName, payload);
 };
 
+export const revokeChatUserSessions = (userId: number, reason: string) => {
+  const id = Number(userId || 0);
+  if (!id) return;
+  revokedSocketUsers.set(id, reason);
+  chatSocketServer?.to(`user:${id}`).emit("auth:revoked", { userId: id, reason });
+  chatSocketServer?.in(`user:${id}`).disconnectSockets(true);
+  onlineSocketsByUser.delete(id);
+  lastActiveByUser.set(id, new Date());
+  broadcastPresence(id, false);
+};
+
+export const clearChatUserRevocation = (userId: number) => {
+  revokedSocketUsers.delete(Number(userId || 0));
+};
+
 export const emitSocialEvent = (eventName: string, payload: any) => {
   chatSocketServer?.emit(eventName, payload);
 };
@@ -88,6 +104,12 @@ const relayConversationEvent = (
   eventName: string,
   payload: any,
 ) => {
+  const userId = resolveSocketUserId(socket);
+  if (userId && revokedSocketUsers.has(userId)) {
+    socket.emit("auth:revoked", { userId, reason: revokedSocketUsers.get(userId) });
+    socket.disconnect(true);
+    return;
+  }
   const conversationId = String(payload?.conversationId || "").trim();
   if (!conversationId) return;
   socket
@@ -332,6 +354,11 @@ export const registerChatSocketHandlers = (server: Server) => {
   server.on("connection", (socket) => {
     const userId = resolveSocketUserId(socket);
     if (userId) {
+      if (revokedSocketUsers.has(userId)) {
+        socket.emit("auth:revoked", { userId, reason: revokedSocketUsers.get(userId) });
+        socket.disconnect(true);
+        return;
+      }
       socket.join(`user:${userId}`);
       const sockets = onlineSocketsByUser.get(userId) || new Set<string>();
       sockets.add(socket.id);
