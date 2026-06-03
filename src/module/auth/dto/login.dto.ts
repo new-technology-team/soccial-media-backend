@@ -1,12 +1,11 @@
-export class LoginDto {
-  emailOrPhone?: string;
-  email?: string;
-  phone?: string;
-  username: string;
-  password: string;
+﻿import { IsString, MinLength } from 'class-validator';
 
-  constructor(username: string, password: string) {
-    this.username = username;
-    this.password = password;
-  }
+export class LoginDto {
+  @IsString()
+  @MinLength(1)
+  emailOrPhone: string;
+
+  @IsString()
+  @MinLength(1)
+  password: string;
 }

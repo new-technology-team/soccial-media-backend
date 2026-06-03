@@ -1,44 +1,51 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { LogLevel, ValidationPipe } from '@nestjs/common';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
-import { Server } from 'socket.io';
-import { json, urlencoded } from 'express';
-import { registerChatSocketHandlers, setChatSocketServer } from './common/socket/chat-socket';
+import { existsSync, mkdirSync } from 'fs';
+import express from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
-  const allowedOrigins = (
-    process.env.CORS_ORIGINS ||
-    process.env.FRONTEND_URL ||
-    'http://localhost:5173,http://localhost:5174,http://localhost:8088,http://localhost:19006'
-  )
+  const logLevels = (process.env.NEST_LOG_LEVELS || 'warn,error')
     .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+    .map((level) => level.trim())
+    .filter(Boolean) as LogLevel[];
 
-  app.use(json({ limit: '20mb' }));
-  app.use(urlencoded({ extended: true, limit: '20mb' }));
-  app.setGlobalPrefix('api');
+  const app = await NestFactory.create(AppModule, {
+    logger: logLevels.length ? logLevels : ['warn', 'error'],
+  });
+  const rawExpress = app.getHttpAdapter().getInstance();
+
+  // Base64 upload payload can be larger than default parser limit (~100kb).
+  rawExpress.use(express.json({ limit: '25mb' }));
+  rawExpress.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: process.env.CORS_ORIGINS?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:19006',
+    ],
     credentials: true,
   });
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
 
-  const io = new Server(app.getHttpServer(), {
-    cors: {
-      origin: allowedOrigins,
-      credentials: true,
-    },
-    transports: ['polling', 'websocket'],
-    path: process.env.SOCKET_IO_PATH || '/socket.io',
-  });
-  setChatSocketServer(io);
-  registerChatSocketHandlers(io);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
-  const port = Number(process.env.PORT ?? 5000);
+  app.useWebSocketAdapter(new IoAdapter(app));
+
+  const uploadsRoot = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsRoot)) {
+    mkdirSync(uploadsRoot, { recursive: true });
+  }
+  rawExpress.use('/uploads', express.static(uploadsRoot));
+
+  const port = process.env.PORT || 5000;
   await app.listen(port);
-  console.log(`API listening on http://localhost:${port}/api`);
+  console.log(`Server running on http://localhost:${port}`);
 }
-bootstrap();
+void bootstrap();

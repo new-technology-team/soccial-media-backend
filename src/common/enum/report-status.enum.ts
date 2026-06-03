@@ -1,7 +1,5 @@
-export enum ReportStatus {
-  PENDING = "PENDING",
-  IN_REVIEW = "IN_REVIEW",
-  REVIEWED = "REVIEWED",
-  RESOLVED = "RESOLVED",
-  REJECTED = "REJECTED"
+﻿export enum ReportStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
 }

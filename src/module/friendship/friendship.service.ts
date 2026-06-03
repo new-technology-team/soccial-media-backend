@@ -1,215 +1,346 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Friendship } from "./friendship.entity";
-import { FriendshipStatus } from "../../common/enum/friendship-status.enum";
-import { UserService } from "../user/user.service";
-import { NotificationService } from "../notification/notification.service";
-import { BlockedUser } from "./blocked-user.entity";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Friendship } from './friendship.entity';
+import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
+import { UserService } from '../user/user.service';
+import { NotificationService } from '../notification/notification.service';
+import { UserBlock } from '../user/user-block.entity';
 
 @Injectable()
 export class FriendshipService {
-	constructor(
-		@InjectRepository(Friendship, 'mariadb')
-		private readonly friendshipRepository: Repository<Friendship>,
-		@InjectRepository(BlockedUser, 'mariadb')
-		private readonly blockedUserRepository: Repository<BlockedUser>,
-		private readonly userService: UserService,
-		private readonly notificationService: NotificationService,
-	) {}
+  constructor(
+    @InjectRepository(Friendship, 'mariadb')
+    private readonly friendshipRepo: Repository<Friendship>,
+    @InjectRepository(UserBlock, 'mariadb')
+    private readonly userBlockRepo: Repository<UserBlock>,
+    private readonly userService: UserService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
-	private key(userA: number, userB: number) {
-		return userA < userB ? [userA, userB] : [userB, userA];
-	}
+  private async getBlockFlags(viewerId: number, targetUserId: number) {
+    if (viewerId === targetUserId) {
+      return {
+        isBlockedByMe: false,
+        isBlockedMe: false,
+      };
+    }
 
-	async isAcceptedFriend(userA: number, userB: number) {
-		if (userA === userB) {
-			return true;
-		}
-		const [a, b] = this.key(userA, userB);
-		const row = await this.friendshipRepository.findOne({ where: { userId1: a, userId2: b } });
-		return row?.status === FriendshipStatus.ACCEPTED;
-	}
+    const [blockedByMe, blockedMe] = await Promise.all([
+      this.userBlockRepo.findOne({
+        where: {
+          blockerUserId: viewerId,
+          blockedUserId: targetUserId,
+        },
+      }),
+      this.userBlockRepo.findOne({
+        where: {
+          blockerUserId: targetUserId,
+          blockedUserId: viewerId,
+        },
+      }),
+    ]);
 
-	async getAcceptedFriendIds(userId: number) {
-		const rows = await this.friendshipRepository.find({
-			where: [
-				{ userId1: userId, status: FriendshipStatus.ACCEPTED },
-				{ userId2: userId, status: FriendshipStatus.ACCEPTED },
-			],
-		});
+    return {
+      isBlockedByMe: Boolean(blockedByMe),
+      isBlockedMe: Boolean(blockedMe),
+    };
+  }
 
-		const friendIds = new Set<number>();
-		for (const row of rows) {
-			friendIds.add(row.userId1 === userId ? row.userId2 : row.userId1);
-		}
+  async sendRequest(userId: number, targetUserId: number) {
+    if (userId === targetUserId) {
+      throw new BadRequestException('Cannot send friend request to yourself');
+    }
 
-		return friendIds;
-	}
+    const { isBlockedByMe, isBlockedMe } = await this.getBlockFlags(
+      userId,
+      targetUserId,
+    );
+    if (isBlockedByMe) {
+      throw new BadRequestException(
+        'Ban dang chan nguoi dung nay. Hay bo chan truoc khi ket ban',
+      );
+    }
+    if (isBlockedMe) {
+      throw new BadRequestException(
+        'Khong the gui loi moi ket ban toi nguoi dung nay',
+      );
+    }
 
-	async isBlockedBetween(userA: number, userB: number) {
-		if (!userA || !userB || userA === userB) return false;
-		const row = await this.blockedUserRepository.findOne({
-			where: [
-				{ blockerId: userA, blockedUserId: userB },
-				{ blockerId: userB, blockedUserId: userA },
-			],
-		});
-		return Boolean(row);
-	}
+    const existing = await this.friendshipRepo.findOne({
+      where: [
+        { userId1: userId, userId2: targetUserId },
+        { userId1: targetUserId, userId2: userId },
+      ],
+    });
 
-	async isBlockedBy(actorId: number, targetUserId: number) {
-		if (!actorId || !targetUserId || actorId === targetUserId) return false;
-		const row = await this.blockedUserRepository.findOne({
-			where: { blockerId: actorId, blockedUserId: targetUserId },
-		});
-		return Boolean(row);
-	}
+    if (existing) {
+      if (existing.status === FriendshipStatus.ACCEPTED) {
+        throw new BadRequestException('Already friends');
+      }
+      if (existing.status === FriendshipStatus.PENDING) {
+        throw new BadRequestException('Request already sent');
+      }
+    }
 
-	async listFriends(userId: number) {
-		const rows = await this.friendshipRepository.find({
-			where: [
-				{ userId1: userId },
-				{ userId2: userId },
-			],
-		});
+    const friendship = this.friendshipRepo.create({
+      userId1: userId,
+      userId2: targetUserId,
+      status: FriendshipStatus.PENDING,
+      conversationId: '',
+      createdAt: new Date(),
+    });
 
-		const friends: any[] = [];
-		for (const row of rows) {
-			const friendId = row.userId1 === userId ? row.userId2 : row.userId1;
-			const user = await this.userService.findOne(friendId);
-			if (!user) continue;
-			friends.push({
-				id: user.userId,
-				fullName: user.displayName,
-				email: user.email,
-				phone: user.phone,
-				avatarUrl: user.avatarUrl,
-				isVerified: Boolean(user.isVerified),
-				role: user.role,
-				accountStatus: user.status,
-				status: row.status === FriendshipStatus.ACCEPTED ? 'accepted' : 'pending',
-				requestedByMe: Number(row.requesterId || 0) === Number(userId),
-				createdAt: row.createdAt,
-			});
-		}
+    const saved = await this.friendshipRepo.save(friendship);
 
-		return { friends };
-	}
+    const targetUser = await this.userService.findOne(targetUserId);
+    const requester = await this.userService.findOne(userId);
+    if (targetUser && requester) {
+      await this.notificationService.create({
+        userId: targetUserId,
+        title: 'Yêu cầu kết bạn',
+        content: `${requester.fullName} đã gửi lời mời kết bạn`,
+        link: `/friends`,
+      });
+    }
 
-	async requestFriend(actorId: number, targetUserId: number, actorName: string) {
-		if (actorId === targetUserId) {
-			throw new BadRequestException('Không thể kết bạn với chính mình');
-		}
+    return { message: 'Friend request sent', friendshipId: saved.id };
+  }
 
-		const target = await this.userService.findOne(targetUserId);
-		if (!target) {
-			throw new NotFoundException('Người dùng không tồn tại');
-		}
+  async acceptRequest(userId: number, requesterUserId: number) {
+    const friendship = await this.friendshipRepo.findOne({
+      where: {
+        userId1: requesterUserId,
+        userId2: userId,
+        status: FriendshipStatus.PENDING,
+      },
+    });
 
-		const [a, b] = this.key(actorId, targetUserId);
-		let row = await this.friendshipRepository.findOne({ where: { userId1: a, userId2: b } });
-		if (!row) {
-			row = this.friendshipRepository.create({
-				userId1: a,
-				userId2: b,
-				status: FriendshipStatus.PENDING,
-				conversationId: '',
-				requesterId: actorId,
-				createdAt: new Date(),
-			});
-		} else {
-			if (row.status === FriendshipStatus.ACCEPTED) {
-				return { message: 'Hai bạn đã là bạn bè' };
-			}
-			row.status = FriendshipStatus.PENDING;
-			row.requesterId = actorId;
-		}
+    if (!friendship) {
+      throw new NotFoundException('Friend request not found');
+    }
 
-		await this.friendshipRepository.save(row);
-		await this.notificationService.createNotification({
-			userId: targetUserId,
-			type: 'friend-request',
-			title: 'Yêu cầu kết bạn mới',
-			body: `${actorName || 'Có người'} đã gửi lời mời kết bạn`,
-			meta: { requesterId: actorId },
-		});
+    friendship.status = FriendshipStatus.ACCEPTED;
+    await this.friendshipRepo.save(friendship);
 
-		return { message: 'Đã gửi yêu cầu kết bạn' };
-	}
+    const requester = await this.userService.findOne(requesterUserId);
+    const acceptor = await this.userService.findOne(userId);
+    if (requester && acceptor) {
+      await this.notificationService.create({
+        userId: requesterUserId,
+        title: 'Chấp nhận kết bạn',
+        content: `${acceptor.fullName} đã chấp nhận lời mời kết bạn`,
+        link: `/friends`,
+      });
+    }
 
-	async acceptFriend(actorId: number, requesterIdOrFriendshipId: number, actorName: string) {
-		const [a, b] = this.key(actorId, requesterIdOrFriendshipId);
-		let row = await this.friendshipRepository.findOne({ where: { userId1: a, userId2: b } });
-		if (!row) {
-			row = await this.friendshipRepository.findOne({ where: { id: requesterIdOrFriendshipId } });
-		}
-		if (!row || row.status !== FriendshipStatus.PENDING) {
-			throw new BadRequestException('Không tìm thấy yêu cầu kết bạn chờ xử lý');
-		}
+    return { message: 'Friend request accepted' };
+  }
 
-		const participantIds = [Number(row.userId1), Number(row.userId2)];
-		if (!participantIds.includes(Number(actorId))) {
-			throw new BadRequestException('Yêu cầu kết bạn không hợp lệ');
-		}
+  async rejectRequest(userId: number, requesterUserId: number) {
+    const friendship = await this.friendshipRepo.findOne({
+      where: {
+        userId1: requesterUserId,
+        userId2: userId,
+        status: FriendshipStatus.PENDING,
+      },
+    });
 
-		const requesterHint = Number(requesterIdOrFriendshipId);
-		const effectiveRequesterId = Number(
-			row.requesterId ||
-			(participantIds.includes(requesterHint) ? requesterHint : participantIds.find((id) => id !== Number(actorId)))
-		);
+    if (!friendship) {
+      throw new NotFoundException('Friend request not found');
+    }
 
-		if (!participantIds.includes(effectiveRequesterId) || Number(actorId) === effectiveRequesterId) {
-			throw new BadRequestException('Yêu cầu kết bạn không hợp lệ');
-		}
+    friendship.status = FriendshipStatus.REJECTED;
+    await this.friendshipRepo.save(friendship);
+    return { message: 'Friend request rejected' };
+  }
 
-		row.status = FriendshipStatus.ACCEPTED;
-		row.requesterId = effectiveRequesterId;
-		await this.friendshipRepository.save(row);
+  async removeFriend(userId: number, friendUserId: number) {
+    const friendship = await this.friendshipRepo.findOne({
+      where: [
+        { userId1: userId, userId2: friendUserId },
+        { userId1: friendUserId, userId2: userId },
+      ],
+    });
 
-		await this.notificationService.createNotification({
-			userId: effectiveRequesterId,
-			type: 'friend-accepted',
-			title: 'Lời mời kết bạn đã được chấp nhận',
-			body: `${actorName || 'Một người dùng'} đã chấp nhận lời mời của bạn`,
-			meta: { accepterId: actorId },
-		});
+    if (!friendship) {
+      throw new NotFoundException('Friendship not found');
+    }
 
-		return { message: 'Đã chấp nhận lời mời kết bạn' };
-	}
+    await this.friendshipRepo.remove(friendship);
+    return { message: 'Friend removed' };
+  }
 
-	async deleteFriend(actorId: number, friendUserId: number) {
-		const [a, b] = this.key(actorId, friendUserId);
-		await this.friendshipRepository.delete({ userId1: a, userId2: b });
-		return { message: 'Đã xóa bạn' };
-	}
+  async blockUser(userId: number, targetUserId: number) {
+    if (Number(userId) === Number(targetUserId)) {
+      throw new BadRequestException('Khong the tu chan chinh minh');
+    }
 
-	async blockUser(actorId: number, targetUserId: number) {
-		if (!targetUserId || actorId === targetUserId) {
-			throw new BadRequestException('Không thể chặn chính mình');
-		}
+    const target = await this.userService.findOne(targetUserId);
+    if (!target) {
+      throw new NotFoundException('User not found');
+    }
 
-		const target = await this.userService.findOne(targetUserId);
-		if (!target) {
-			throw new NotFoundException('Người dùng không tồn tại');
-		}
+    const exists = await this.userBlockRepo.findOne({
+      where: {
+        blockerUserId: userId,
+        blockedUserId: targetUserId,
+      },
+    });
+    if (exists) {
+      return { message: 'Da chan nguoi dung nay' };
+    }
 
-		const existing = await this.blockedUserRepository.findOne({
-			where: { blockerId: actorId, blockedUserId: targetUserId },
-		});
-		if (!existing) {
-			await this.blockedUserRepository.save(this.blockedUserRepository.create({
-				blockerId: actorId,
-				blockedUserId: targetUserId,
-				createdAt: new Date(),
-			}));
-		}
+    await this.userBlockRepo.save(
+      this.userBlockRepo.create({
+        blockerUserId: userId,
+        blockedUserId: targetUserId,
+        createdAt: new Date(),
+      }),
+    );
 
-		return { message: 'Đã chặn người dùng' };
-	}
+    const friendship = await this.friendshipRepo.findOne({
+      where: [
+        { userId1: userId, userId2: targetUserId },
+        { userId1: targetUserId, userId2: userId },
+      ],
+    });
+    if (friendship) {
+      await this.friendshipRepo.remove(friendship);
+    }
 
-	async unblockUser(actorId: number, targetUserId: number) {
-		await this.blockedUserRepository.delete({ blockerId: actorId, blockedUserId: targetUserId });
-		return { message: 'Đã bỏ chặn người dùng' };
-	}
+    return { message: 'Da chan tin nhan tu nguoi dung nay' };
+  }
+
+  async unblockUser(userId: number, targetUserId: number) {
+    const block = await this.userBlockRepo.findOne({
+      where: {
+        blockerUserId: userId,
+        blockedUserId: targetUserId,
+      },
+    });
+    if (!block) {
+      return { message: 'Nguoi dung nay chua bi chan' };
+    }
+    await this.userBlockRepo.remove(block);
+    return { message: 'Da bo chan nguoi dung' };
+  }
+
+  async listFriends(userId: number) {
+    const friendships = await this.friendshipRepo.find({
+      where: [
+        { userId1: userId, status: FriendshipStatus.ACCEPTED },
+        { userId2: userId, status: FriendshipStatus.ACCEPTED },
+      ],
+    });
+
+    const friendIds = friendships.map((f) =>
+      f.userId1 === userId ? f.userId2 : f.userId1,
+    );
+
+    const users = await this.userService.findByIds(friendIds);
+    const userMap = new Map(users.map((u) => [u.userId, u]));
+
+    return friendships.map((f) => {
+      const friendId = f.userId1 === userId ? f.userId2 : f.userId1;
+      const friend = userMap.get(friendId);
+      return {
+        id: friendId,
+        fullName: friend?.fullName || 'Người dùng',
+        avatarUrl: friend?.avatarUrl || null,
+        status: f.status,
+      };
+    });
+  }
+
+  async listPendingRequests(userId: number) {
+    const friendships = await this.friendshipRepo.find({
+      where: { userId2: userId, status: FriendshipStatus.PENDING },
+    });
+
+    const requesterIds = friendships.map((f) => f.userId1);
+    if (requesterIds.length === 0) return [];
+
+    const users = await this.userService.findByIds(requesterIds);
+    const userMap = new Map(users.map((u) => [u.userId, u]));
+
+    return friendships.map((f) => {
+      const requester = userMap.get(f.userId1);
+      return {
+        id: f.userId1,
+        fullName: requester?.fullName || 'Người dùng',
+        avatarUrl: requester?.avatarUrl || null,
+      };
+    });
+  }
+
+  async searchUsers(keyword: string, limit = 20) {
+    const users = await this.userService.search(keyword, limit);
+    return users.map((u) => ({
+      id: u.userId,
+      username: u.username,
+      full_name: u.fullName,
+      email: u.email,
+      phone: u.phone,
+      avatar_url: u.avatarUrl,
+      is_verified: 0,
+    }));
+  }
+
+  async getUserProfile(viewerId: number, targetUserId: number) {
+    const user = await this.userService.findOne(targetUserId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const blockFlags = await this.getBlockFlags(viewerId, targetUserId);
+
+    const friendship =
+      viewerId === targetUserId
+        ? null
+        : await this.friendshipRepo.findOne({
+            where: [
+              { userId1: viewerId, userId2: targetUserId },
+              { userId1: targetUserId, userId2: viewerId },
+            ],
+          });
+
+    let relationshipStatus:
+      | 'self'
+      | 'none'
+      | 'pending_sent'
+      | 'pending_received'
+      | 'friends' = viewerId === targetUserId ? 'self' : 'none';
+
+    if (friendship?.status === FriendshipStatus.ACCEPTED) {
+      relationshipStatus = 'friends';
+    } else if (friendship?.status === FriendshipStatus.PENDING) {
+      relationshipStatus =
+        friendship.userId1 === viewerId ? 'pending_sent' : 'pending_received';
+    }
+
+    return {
+      user: {
+        id: user.userId,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl || null,
+        dateOfBirth: user.dateOfBirth || null,
+        gender: user.sex === 1 ? 'Nam' : user.sex === 2 ? 'Nữ' : null,
+      },
+      relationship: {
+        status: relationshipStatus,
+        friendshipId: friendship?.id || null,
+        requestedByMe: friendship?.userId1 === viewerId,
+        isBlockedByMe: blockFlags.isBlockedByMe,
+        isBlockedMe: blockFlags.isBlockedMe,
+      },
+    };
+  }
 }

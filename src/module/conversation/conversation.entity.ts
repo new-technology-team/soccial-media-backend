@@ -1,49 +1,38 @@
-import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
+﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+import { Member } from '../../common/embedded/member.embed';
 
 @Entity()
 export class Conversation {
-    @ObjectIdColumn()
-    _id: ObjectId;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
-    @Column()
-    type: string;
+  @Column({ nullable: true })
+  type: string;
 
-    @Column()
-    name: string;
+  @Column({ nullable: true })
+  conversationName: string;
 
-    @Column({ nullable: true })
-    avatarUrl: string | null;
+  @Column({ nullable: true })
+  avatarUrl: string;
 
-    @Column({ nullable: true })
-    backgroundUrl: string | null;
+  @Column({ default: 'active' })
+  status: string;
 
-    @Column({ nullable: true })
-    themeColor: string | null;
+  @Column()
+  createdAt: Date;
 
-    @Column({ nullable: true })
-    defaultEmoji: string | null;
+  @Column({ default: () => 'new Date()' })
+  lastMessageAt: Date;
 
-    @Column({ nullable: true })
-    autoDeleteAfterSeconds: number | null;
+  @Column({ nullable: true })
+  lastMessage: any;
 
-    @Column()
-    createdBy: number;
+  @Column({ default: 0 })
+  unreadCount: number;
 
-    @Column()
-    createdAt: Date;
+  @Column()
+  members: Member[];
 
-    @Column()
-    updatedAt: Date;
-
-    @Column()
-    members: any[];
-
-    @Column({ nullable: true })
-    lastMessage: any;
-
-    @Column({ nullable: true })
-    pinnedMessageIds: string[];
-
-    @Column({ nullable: true })
-    deletedForUserIds: number[];
+  @Column({ type: 'simple-array', nullable: true })
+  memberIds: string[];
 }

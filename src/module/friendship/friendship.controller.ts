@@ -1,65 +1,95 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { FriendshipService } from "./friendship.service";
-import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
-import { CurrentUser } from "../../common/auth/current-user.decorator";
-import { UserService } from "../user/user.service";
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
+import { FriendshipService } from './friendship.service';
+import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
-@Controller('social')
-@UseGuards(JwtAuthGuard)
+@Controller('api/social')
 export class FriendshipController {
-	constructor(
-		private readonly friendshipService: FriendshipService,
-		private readonly userService: UserService,
-	) {}
+  constructor(private readonly friendshipService: FriendshipService) {}
 
-	@Get('friends')
-	listFriends(@CurrentUser() user: any) {
-		return this.friendshipService.listFriends(user.id);
-	}
+  @Get('friends')
+  @UseGuards(JwtAuthGuard)
+  async listFriends(@Req() req: any) {
+    const friends = await this.friendshipService.listFriends(req.user.sub);
+    return { friends };
+  }
 
-	@Get('users/search')
-	async findUsers(@CurrentUser() user: any, @Query('q') q: string) {
-		const rows = await this.userService.searchUsers(String(q || '').trim(), user.id);
-		return {
-			users: rows.map((item) => ({
-				id: item.userId,
-				fullName: item.displayName,
-				avatarUrl: item.avatarUrl,
-				email: item.email,
-				phone: item.phone,
-				role: item.role,
-				accountStatus: item.status,
-			})),
-		};
-	}
+  @Get('friends/pending')
+  @UseGuards(JwtAuthGuard)
+  listPendingRequests(@Req() req: any) {
+    return this.friendshipService.listPendingRequests(req.user.sub);
+  }
 
-	@Post('friends/request')
-	requestFriend(@CurrentUser() user: any, @Body() body: { userId: number }) {
-		return this.friendshipService.requestFriend(user.id, Number(body.userId), user.fullName);
-	}
+  @Post('friends/request')
+  @UseGuards(JwtAuthGuard)
+  sendRequest(@Body() body: { userId: number }, @Req() req: any) {
+    return this.friendshipService.sendRequest(req.user.sub, body.userId);
+  }
 
-	@Post('friends/:userId/accept')
-	acceptFriend(@CurrentUser() user: any, @Param('userId') userId: string) {
-		return this.friendshipService.acceptFriend(user.id, Number(userId), user.fullName);
-	}
+  @Post('friends/:userId/accept')
+  @UseGuards(JwtAuthGuard)
+  acceptRequest(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.acceptRequest(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 
-	@Delete('friends/:userId')
-	deleteFriend(@CurrentUser() user: any, @Param('userId') userId: string) {
-		return this.friendshipService.deleteFriend(user.id, Number(userId));
-	}
+  @Post('friends/:userId/reject')
+  @UseGuards(JwtAuthGuard)
+  rejectRequest(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.rejectRequest(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 
-	@Post('users/:userId/block')
-	blockUser(@CurrentUser() user: any, @Param('userId') userId: string) {
-		return this.friendshipService.blockUser(user.id, Number(userId));
-	}
+  @Delete('friends/:userId')
+  @UseGuards(JwtAuthGuard)
+  removeFriend(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.removeFriend(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 
-	@Get('users/:userId/block')
-	isBlocked(@CurrentUser() user: any, @Param('userId') userId: string) {
-		return this.friendshipService.isBlockedBy(user.id, Number(userId)).then((blocked) => ({ blocked }));
-	}
+  @Get('users/search')
+  @UseGuards(JwtAuthGuard)
+  async searchUsers(@Query('q') q: string) {
+    const users = await this.friendshipService.searchUsers(q || '', 20);
+    return { users };
+  }
 
-	@Delete('users/:userId/block')
-	unblockUser(@CurrentUser() user: any, @Param('userId') userId: string) {
-		return this.friendshipService.unblockUser(user.id, Number(userId));
-	}
+  @Get('users/:userId/profile')
+  @UseGuards(JwtAuthGuard)
+  getUserProfile(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.getUserProfile(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
+
+  @Post('users/:userId/block')
+  @UseGuards(JwtAuthGuard)
+  blockUser(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.blockUser(req.user.sub, parseInt(userId, 10));
+  }
+
+  @Delete('users/:userId/block')
+  @UseGuards(JwtAuthGuard)
+  unblockUser(@Param('userId') userId: string, @Req() req: any) {
+    return this.friendshipService.unblockUser(
+      req.user.sub,
+      parseInt(userId, 10),
+    );
+  }
 }

@@ -1,37 +1,33 @@
-import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
+﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+import { Interacts } from '../../common/embedded/interacts.embed';
+import { Owner } from '../../common/embedded/owner.embed';
 
 @Entity()
 export class Post {
-    @ObjectIdColumn()
-    _id: ObjectId;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
-    @Column()
-    content: string;
+  @Column()
+  title: string;
 
-    @Column({ nullable: true })
-    mediaUrl: string | null;
+  @Column()
+  content: string;
 
-    @Column({ nullable: true })
-    sharedPostId: string | null;
+  @Column()
+  visibility: string;
 
-    @Column()
-    visibility: string;
+  @Column()
+  mediaUrl: string;
 
-    @Column()
-    status: string;
+  @Column()
+  createdAt: Date;
 
-    @Column()
-    authorId: number;
+  @Column({ type: 'int', default: 0 })
+  commentCount: number;
 
-    @Column()
-    createdAt: Date;
+  @Column()
+  interacts: Interacts[];
 
-    @Column()
-    updatedAt: Date;
-
-    @Column()
-    reactions: any[];
-
-    @Column()
-    commentCount: number;
+  @Column()
+  owner: Owner;
 }

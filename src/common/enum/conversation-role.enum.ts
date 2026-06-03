@@ -1,4 +1,4 @@
-export enum ConversationRole {
-  ADMIN = 'ADMIN',
+﻿export enum ConversationRole {
+  OWNER = 'OWNER',
   MEMBER = 'MEMBER',
 }

@@ -1,851 +1,466 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { UserService } from '../user/user.service';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as bcryptjs from 'bcryptjs';
+import { Repository } from 'typeorm';
+import { PostService } from '../post/post.service';
+import { CommentService } from '../comment/comment.service';
+import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UserStatus } from '../../common/enum/user-status.enum';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { AuthOtp } from './auth-otp.entity';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import nodemailer from 'nodemailer';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { emitSocialEvent } from '../../common/socket/chat-socket';
 
-type PairingState = {
-  pairingId: number;
-  pairingCode: string;
-  secretToken: string;
-  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'consumed';
-  expiresAt: Date;
-  approvedUserId?: number;
-  accessToken?: string;
-  refreshToken?: string;
+type AuthUserLike = {
+  userId: number;
+  username: string;
+  email: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  role?: string | null;
+  status?: string | null;
+  phone?: string | null;
 };
 
 @Injectable()
 export class AuthService {
-    private static pairingMap = new Map<number, PairingState>();
-    private static pairingCounter = 1;
+  constructor(
+    @InjectRepository(AuthOtp, 'mariadb')
+    private readonly authOtpRepo: Repository<AuthOtp>,
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly postService: PostService,
+    private readonly commentService: CommentService,
+  ) {}
 
-    constructor(
-        private userService: UserService,
-        private jwtService: JwtService,
-        @InjectRepository(AuthOtp, 'mariadb')
-        private readonly otpRepository: Repository<AuthOtp>,
-    ) { }
+  private normalizeIdentifier(raw: string) {
+    const value = String(raw || '').trim();
+    if (!value) return '';
+    if (value.includes('@')) return value.toLowerCase();
+    return value.replace(/\s+/g, '');
+  }
 
-    private isEmail(input: string) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  private isEmailIdentifier(identifier: string) {
+    return String(identifier || '').includes('@');
+  }
+
+  private async findUserByIdentifier(emailOrPhone: string) {
+    const identifier = this.normalizeIdentifier(emailOrPhone);
+    if (!identifier) return null;
+
+    if (this.isEmailIdentifier(identifier)) {
+      return this.userService.findOneByEmail(identifier);
     }
 
-    private normalizeIdentifier(raw: string) {
-        const text = String(raw || '').trim();
-        if (!text) {
-            throw new BadRequestException('Vui lòng nhập email hoặc số điện thoại hợp lệ');
-        }
+    const [byPhone, byEmail, byUsername] = await Promise.all([
+      this.userService.findOneByPhone(identifier),
+      this.userService.findOneByEmail(
+        `${identifier.replace(/\D/g, '')}@phone.local`,
+      ),
+      this.userService.findOneByUsername(identifier),
+    ]);
 
-        if (this.isEmail(text)) {
-            return text.toLowerCase();
-        }
+    return byPhone || byEmail || byUsername || null;
+  }
 
-        if (/^[0-9\-+() ]{7,}$/.test(text)) {
-            return text.replace(/\s/g, '');
-        }
+  private toAuthUser(user: AuthUserLike) {
+    return {
+      id: user.userId,
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl || '',
+      role: user.role || 'USER',
+      phone: user.phone || '',
+      isVerified: true,
+      accountStatus: String(user.status || 'ACTIVE').toLowerCase(),
+    };
+  }
 
-        throw new BadRequestException('Vui lòng nhập email hoặc số điện thoại hợp lệ');
+  private async issueTokens(user: AuthUserLike) {
+    const payload = { sub: user.userId, username: user.username };
+    const accessToken = await this.jwtService.signAsync(payload);
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret:
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'secretKey',
+      expiresIn: '7d',
+    });
+    return { accessToken, refreshToken };
+  }
+
+  private async buildAuthResponse(user: AuthUserLike) {
+    const { accessToken, refreshToken } = await this.issueTokens(user);
+    const authUser = this.toAuthUser(user);
+
+    // Keep both snake_case and camelCase for compatibility (mobile + web).
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      accessToken,
+      refreshToken,
+      user: authUser,
+    };
+  }
+
+  private generateOtpCode() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  private async issueOtp(identifier: string, purpose: string) {
+    const normalizedIdentifier = this.normalizeIdentifier(identifier);
+    if (!normalizedIdentifier) {
+      throw new BadRequestException('Identifier khong hop le');
     }
 
-    private normalizePhoneForSms(raw: string) {
-        const digitsOrPlus = String(raw || '').trim().replace(/[^\d+]/g, '');
+    const code = this.generateOtpCode();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
 
-        if (/^\+84\d{8,10}$/.test(digitsOrPlus)) {
-            return digitsOrPlus;
-        }
+    await this.authOtpRepo.save(
+      this.authOtpRepo.create({
+        identifier: normalizedIdentifier,
+        purpose,
+        code,
+        createdAt: now,
+        expiresAt,
+        usedAt: null,
+      }),
+    );
 
-        if (/^84\d{8,10}$/.test(digitsOrPlus)) {
-            return `+${digitsOrPlus}`;
-        }
+    return code;
+  }
 
-        if (/^0\d{8,10}$/.test(digitsOrPlus)) {
-            return `+84${digitsOrPlus.slice(1)}`;
-        }
+  private async consumeOtp(
+    identifier: string,
+    purpose: string,
+    code: string,
+    allowDevFallback = false,
+  ) {
+    const normalizedIdentifier = this.normalizeIdentifier(identifier);
+    const normalizedCode = String(code || '').trim();
+    if (!normalizedIdentifier || !normalizedCode) return false;
 
-        if (/^\+\d{8,15}$/.test(digitsOrPlus)) {
-            return digitsOrPlus;
-        }
+    const now = new Date();
+    const record = await this.authOtpRepo
+      .createQueryBuilder('otp')
+      .where('otp.identifier = :identifier', { identifier: normalizedIdentifier })
+      .andWhere('otp.purpose = :purpose', { purpose })
+      .andWhere('otp.code = :code', { code: normalizedCode })
+      .andWhere('otp.usedAt IS NULL')
+      .andWhere('otp.expiresAt > :now', { now })
+      .orderBy('otp.id', 'DESC')
+      .getOne();
 
-        throw new BadRequestException('Số điện thoại cần đúng định dạng, ví dụ 0901234567 hoặc +84901234567.');
+    if (!record) {
+      if (allowDevFallback && process.env.NODE_ENV !== 'production') {
+        return normalizedCode === '000000';
+      }
+      return false;
     }
 
-    private createNumericCode(length = 6) {
-        return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    record.usedAt = now;
+    await this.authOtpRepo.save(record);
+    return true;
+  }
+
+  async validateUser(identifier: string, password: string) {
+    let user = await this.userService.findOneByUsername(identifier);
+    if (!user) {
+      user = await this.userService.findOneByEmail(identifier);
+    }
+    if (!user) {
+      user = await this.userService.findOneByPhone(identifier);
+    }
+    if (!user) return null;
+
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    if (!isPasswordValid) return null;
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') return null;
+    return user;
+  }
+
+  async login(loginDto: LoginDto) {
+    const identifier = loginDto.emailOrPhone;
+    const user = await this.validateUser(identifier, loginDto.password);
+    if (!user) {
+      throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
     }
 
-    private createPairingCode(length = 6) {
-        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+    return this.buildAuthResponse(user);
+  }
+
+  async register(registerDto: RegisterDto) {
+    const emailOrPhone = registerDto.emailOrPhone || registerDto.email || '';
+    const isEmail = emailOrPhone.includes('@');
+
+    const email = isEmail
+      ? emailOrPhone.trim().toLowerCase()
+      : `${emailOrPhone.replace(/\D/g, '')}@phone.local`;
+    const username =
+      registerDto.username ||
+      (isEmail
+        ? emailOrPhone.split('@')[0]
+        : `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`);
+
+    const existingByEmail = await this.userService.findOneByEmail(email);
+    if (existingByEmail) {
+      throw new ConflictException('Email đã được sử dụng');
     }
 
-    private getGoogleCallbackUrl() {
-        return String(process.env.GOOGLE_CALLBACK_URL || `${String(process.env.API_PUBLIC_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/auth/google/callback`);
+    const existingByUsername = await this.userService.findOneByUsername(username);
+    if (existingByUsername) {
+      throw new ConflictException('Tên đăng nhập đã được sử dụng');
     }
 
-    private addMinutes(minutes: number) {
-        const d = new Date();
-        d.setMinutes(d.getMinutes() + minutes);
-        return d;
+    const hashedPassword = await bcryptjs.hash(registerDto.password, 10);
+    const newUser = await this.userService.create({
+      username,
+      email,
+      password: hashedPassword,
+      fullName: registerDto.fullName,
+      phone: isEmail ? registerDto.phone || '' : emailOrPhone,
+      dateOfBirth: registerDto.dateOfBirth || undefined,
+      sex: Number.isFinite(Number(registerDto.sex))
+        ? Number(registerDto.sex)
+        : 0,
+    });
+
+    return this.buildAuthResponse(newUser);
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret:
+          process.env.JWT_REFRESH_SECRET ||
+          process.env.JWT_SECRET ||
+          'secretKey',
+      });
+
+      const user = await this.userService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('Token không hợp lệ');
+      }
+
+      return this.buildAuthResponse(user);
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
+      );
+    }
+  }
+
+  async getMe(userId: number) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
     }
 
-    private get authFlags() {
-        return {
-            requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
-            exposeDebugCodes: process.env.AUTH_EXPOSE_DEBUG_CODES === 'true',
-            exposeOtpErrors:
-                process.env.AUTH_EXPOSE_OTP_ERRORS === 'true' ||
-                (process.env.NODE_ENV || 'development') !== 'production',
-        };
+    return this.toAuthUser({
+      ...user,
+      status: user.status,
+      phone: user.phone,
+    } as AuthUserLike);
+  }
+
+  async updateMe(
+    userId: number,
+    data: {
+      fullName?: string;
+      avatarUrl?: string;
+      dateOfBirth?: string | null;
+      gender?: string | null;
+    },
+  ) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
     }
 
-    private buildOtpFailureMessage(delivery: { channel?: string; reason?: string; error?: string }) {
-        const base = 'Không thể gửi OTP thật. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.';
-        if (!this.authFlags.exposeOtpErrors) return base;
+    const normalizeGender = (value?: string | null) => {
+      const lower = String(value || '')
+        .trim()
+        .toLowerCase();
 
-        const detail = [delivery.channel, delivery.reason, delivery.error].filter(Boolean).join(' - ');
-        return detail ? `${base} Chi tiết: ${detail}` : base;
+      if (['male', 'nam', 'm'].includes(lower)) return 1;
+      if (['female', 'nu', 'n', 'f'].includes(lower)) return 2;
+      if (['other', 'khac', 'o'].includes(lower)) return 0;
+      return undefined;
+    };
+
+    const sex = normalizeGender(data.gender);
+
+    const updated = await this.userService.update(userId, {
+      fullName: data.fullName,
+      avatarUrl: data.avatarUrl,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      sex,
+    });
+
+    try {
+      await this.postService.syncAuthorProfile(
+        updated.userId,
+        updated.fullName,
+        updated.avatarUrl || '',
+      );
+      await this.commentService.syncAuthorProfile(
+        updated.userId,
+        updated.fullName,
+        updated.avatarUrl || '',
+      );
+    } catch {
+      /* ignore sync errors */
     }
 
-    private async sendSmsOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
-        const accountSid = String(process.env.TWILIO_ACCOUNT_SID || process.env.OTP_SMS_ACCOUNT_SID || '').trim();
-        const authToken = String(process.env.TWILIO_AUTH_TOKEN || process.env.OTP_SMS_AUTH_TOKEN || '').trim();
-        const from = String(process.env.TWILIO_FROM || process.env.OTP_SMS_FROM || '').trim();
-        const to = this.normalizePhoneForSms(identifier);
+    return this.toAuthUser({
+      ...updated,
+      status: updated.status,
+      phone: updated.phone,
+    } as AuthUserLike);
+  }
 
-        if (!accountSid || !authToken || !from) {
-            return {
-                sent: false,
-                channel: 'sms',
-                destination: to,
-                reason: 'SMS provider chưa được cấu hình',
-                error: 'Missing Twilio config',
-            };
-        }
-
-        const message =
-            purpose === 'verify'
-                ? `Ma xac thuc ZZChat cua ban la: ${code}. Ma co hieu luc trong 10 phut.`
-                : `Ma dat lai mat khau ZZChat cua ban la: ${code}. Ma co hieu luc trong 10 phut.`;
-
-        try {
-            const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
-            const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Basic ${credentials}`,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({ To: to, From: from, Body: message }).toString(),
-            });
-            const data = (await response.json().catch(() => ({}))) as { message?: string; sid?: string };
-
-            if (!response.ok) {
-                return {
-                    sent: false,
-                    channel: 'sms',
-                    destination: to,
-                    reason: 'sms-error',
-                    error: data.message || `Twilio HTTP ${response.status}`,
-                };
-            }
-
-            return {
-                sent: true,
-                channel: 'sms',
-                destination: to,
-                reason: data.sid || 'sent',
-                error: undefined,
-            };
-        } catch (error: any) {
-            return {
-                sent: false,
-                channel: 'sms',
-                destination: to,
-                reason: 'sms-error',
-                error: error?.message || 'SMS send failed',
-            };
-        }
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
     }
 
-    private async sendOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
-        if (!this.isEmail(identifier)) {
-            return this.sendSmsOtp(identifier, code, purpose);
-        }
-
-        const smtpHost = String(process.env.OTP_SMTP_HOST || process.env.SMTP_HOST || '').trim();
-        const smtpUser = String(process.env.OTP_SMTP_USER || process.env.SMTP_USER || '').trim();
-        const smtpPass = String(
-            process.env.OTP_SMTP_PASS ||
-            process.env.SMTP_PASS ||
-            process.env.OTP_SMTP_PASSWORD ||
-            process.env.SMTP_PASSWORD ||
-            '',
-        ).trim();
-        const smtpFrom = String(process.env.OTP_SMTP_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
-        const smtpPort = Number(process.env.OTP_SMTP_PORT || process.env.SMTP_PORT || 587);
-        const smtpSecure = String(process.env.OTP_SMTP_SECURE || process.env.SMTP_SECURE || '') === 'true' || smtpPort === 465;
-
-        if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-            return {
-                sent: false,
-                channel: 'email',
-                destination: identifier,
-                reason: 'SMTP chưa cấu hình',
-                error: 'Missing SMTP config',
-            };
-        }
-
-        try {
-            const transporter = nodemailer.createTransport({
-                host: smtpHost,
-                port: smtpPort,
-                secure: smtpSecure,
-                auth: { user: smtpUser, pass: smtpPass },
-            });
-
-            await transporter.sendMail({
-                from: smtpFrom,
-                to: identifier,
-                subject: purpose === 'verify' ? 'Ma xac thuc tai khoan' : 'Ma dat lai mat khau',
-                text: `Ma OTP cua ban la: ${code}`,
-            });
-
-            return {
-                sent: true,
-                channel: 'email',
-                destination: identifier,
-                reason: 'sent',
-                error: undefined,
-            };
-        } catch (error: any) {
-            return {
-                sent: false,
-                channel: 'email',
-                destination: identifier,
-                reason: 'smtp-error',
-                error: error?.message || 'SMTP send failed',
-            };
-        }
+    const isValid = await bcryptjs.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
     }
 
-    private async saveOtp(identifier: string, code: string, purpose: 'verify' | 'reset', expiresAt: Date) {
-        await this.otpRepository.delete({ identifier, purpose });
-        await this.otpRepository.save(
-            this.otpRepository.create({
-                identifier,
-                purpose,
-                code,
-                expiresAt,
-                usedAt: null,
-                createdAt: new Date(),
-            }),
-        );
+    const hashed = await bcryptjs.hash(newPassword, 10);
+    await this.userService.update(userId, { password: hashed });
+    return { message: 'Doi mat khau thanh cong' };
+  }
+
+  async deleteAccount(userId: number, currentPassword: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new UnauthorizedException('Tai khoan da bi vo hieu');
     }
 
-    private async consumeOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
-        const row = await this.otpRepository.findOne({ where: { identifier, purpose, code } });
-        if (!row) return false;
-        if (row.usedAt) return false;
-        if (new Date(row.expiresAt).getTime() <= Date.now()) return false;
-        row.usedAt = new Date();
-        await this.otpRepository.save(row);
-        return true;
+    const isValid = await bcryptjs.compare(currentPassword, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
     }
 
-    private async issueTokens(user: any) {
-        const payload = {
-            id: user.userId,
-            email: user.email,
-            phone: user.phone,
-            fullName: user.displayName,
-            role: user.role,
-            accountStatus: user.status,
-            avatarUrl: user.avatarUrl || null,
-            isVerified: Boolean(user.isVerified),
-            permissions: typeof user.permissions === 'string'
-                ? user.permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
-                : [],
-        };
+    await this.userService.deactivateAccount(userId);
+    return { message: 'Tai khoan da duoc xoa' };
+  }
 
-        const accessToken = await this.jwtService.signAsync(payload, {
-            secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
-            expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN || '15m') as any,
-        });
-
-        const refreshToken = await this.jwtService.signAsync(payload, {
-            secret: process.env.JWT_REFRESH_SECRET || 'refreshSecret',
-            expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as any,
-        });
-
-        await this.userService.updateRefreshToken(user.userId, refreshToken);
-
-        return {
-            accessToken,
-            refreshToken,
-            user: this.userService.toProfile(user),
-        };
+  async resendVerificationCode(emailOrPhone: string) {
+    const identifier = this.normalizeIdentifier(emailOrPhone);
+    if (!identifier) {
+      throw new BadRequestException('Email hoac so dien thoai khong hop le');
     }
 
-    private async findOrCreateSocialUser(profile: { email: string; name?: string; avatarUrl?: string | null }) {
-        const email = profile.email.trim().toLowerCase();
-        if (!email) {
-            throw new BadRequestException('Không lấy được email từ tài khoản mạng xã hội.');
-        }
+    const code = await this.issueOtp(identifier, 'register');
+    return {
+      message: 'Da gui ma xac thuc',
+      otpSent: true,
+      otpChannel: this.isEmailIdentifier(identifier) ? 'email' : 'sms',
+      otpDestination: identifier,
+      verificationCode: process.env.NODE_ENV === 'production' ? undefined : code,
+    };
+  }
 
-        const existing = await this.userService.findByEmailOrPhone(email);
-        if (existing) {
-            if (!existing.isVerified) {
-                await this.userService.updateVerificationStatus(existing.userId, true);
-                return this.userService.findOne(existing.userId) || existing;
-            }
-            return existing;
-        }
-
-        return this.userService.create(
-            {
-                emailOrPhone: email,
-                email,
-                password: '',
-                displayName: profile.name || email.split('@')[0],
-                username: `${email.split('@')[0]}_${Date.now()}`,
-                sex: null as any,
-                dateOfBirth: null as any,
-                phone: null as any,
-                avatarUrl: profile.avatarUrl || undefined,
-            },
-            { isVerified: true },
-        );
+  async verifyRegistration(emailOrPhone: string, code: string) {
+    const identifier = this.normalizeIdentifier(emailOrPhone);
+    if (!identifier) {
+      throw new BadRequestException('Email hoac so dien thoai khong hop le');
     }
 
-    async loginWithGoogleCode(code: string) {
-        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-        const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-        const redirectUri = this.getGoogleCallbackUrl();
-
-        if (!clientId || !clientSecret) {
-            throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET.');
-        }
-
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                code,
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                grant_type: 'authorization_code',
-            }).toString(),
-        });
-        const tokenData = (await tokenResponse.json().catch(() => ({}))) as {
-            access_token?: string;
-            error_description?: string;
-        };
-
-        if (!tokenResponse.ok || !tokenData.access_token) {
-            throw new BadRequestException(tokenData.error_description || 'Không thể xác thực Google.');
-        }
-
-        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        });
-        const profile = (await profileResponse.json().catch(() => ({}))) as {
-            email?: string;
-            name?: string;
-            picture?: string;
-        };
-
-        if (!profileResponse.ok || !profile.email) {
-            throw new BadRequestException('Không lấy được thông tin tài khoản Google.');
-        }
-
-        const user = await this.findOrCreateSocialUser({
-            email: profile.email,
-            name: profile.name,
-            avatarUrl: profile.picture,
-        });
-        return this.issueTokens(user);
+    const ok = await this.consumeOtp(identifier, 'register', code, true);
+    if (!ok) {
+      throw new UnauthorizedException('Ma xac thuc khong hop le hoac da het han');
     }
 
-    async loginWithGoogleIdToken(idToken: string) {
-        const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-        if (!clientId) {
-            throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID.');
-        }
-
-        const tokenResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
-        const profile = (await tokenResponse.json().catch(() => ({}))) as {
-            aud?: string;
-            email?: string;
-            name?: string;
-            picture?: string;
-            error_description?: string;
-        };
-
-        if (!tokenResponse.ok || profile.aud !== clientId || !profile.email) {
-            throw new BadRequestException(profile.error_description || 'Google id_token không hợp lệ.');
-        }
-
-        const user = await this.findOrCreateSocialUser({
-            email: profile.email,
-            name: profile.name,
-            avatarUrl: profile.picture,
-        });
-        return this.issueTokens(user);
+    const user = await this.findUserByIdentifier(identifier);
+    if (!user) {
+      throw new NotFoundException('Khong tim thay tai khoan de xac thuc');
     }
 
-    async login(loginDto: LoginDto): Promise<any> {
-        const identifier =
-            loginDto.emailOrPhone || loginDto.email || loginDto.phone || loginDto.username;
+    return this.buildAuthResponse(user);
+  }
 
-        if (!identifier) {
-            throw new BadRequestException('Thiếu thông tin đăng nhập');
-        }
-
-        const user = await this.userService.findByEmailOrPhone(identifier) ||
-            await this.userService.findOneByUsername(identifier);
-
-        if (!user) {
-            throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
-        }
-
-        const lockedStatuses = [UserStatus.BLOCKED, UserStatus.HIDDEN, UserStatus.DELETED, UserStatus.LOCKED];
-        const isTempLocked = user.status === UserStatus.TEMP_LOCKED &&
-            (!user.lockedUntil || new Date(user.lockedUntil).getTime() > Date.now());
-        if (lockedStatuses.includes(user.status) || isTempLocked) {
-            throw new UnauthorizedException('Tài khoản không còn khả dụng');
-        }
-
-        const matched = await this.userService.checkPassword(user, loginDto.password);
-        if (!matched) {
-            throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
-        }
-
-        if (this.authFlags.requireEmailVerification && !Boolean(user.isVerified)) {
-            throw new UnauthorizedException('Tài khoản chưa xác thực OTP. Vui lòng xác thực trước khi đăng nhập.');
-        }
-
-        return this.issueTokens(user);
+  async forgotPassword(emailOrPhone: string) {
+    const identifier = this.normalizeIdentifier(emailOrPhone);
+    if (!identifier) {
+      throw new BadRequestException('Email hoac so dien thoai khong hop le');
     }
 
-    async register(registerDto: RegisterDto): Promise<any> {
-        const rawIdentifier = registerDto.emailOrPhone || registerDto.email || registerDto.phone;
-
-        if (!rawIdentifier || !registerDto.password) {
-            throw new BadRequestException('Thiếu thông tin đăng ký');
-        }
-
-        const normalized = this.normalizeIdentifier(rawIdentifier);
-        const isEmail = this.isEmail(normalized);
-
-        const payload: RegisterDto = {
-            ...registerDto,
-            email: isEmail ? normalized.toLowerCase() : registerDto.email,
-            phone: isEmail ? registerDto.phone : normalized,
-            displayName: registerDto.fullName || registerDto.displayName,
-            sex:
-                registerDto.sex ??
-                ({ male: 1, female: 0, other: 2 } as Record<string, number>)[String(registerDto.gender || '')],
-            username: registerDto.username || (isEmail ? normalized.split('@')[0] : `user_${Date.now()}`),
-        };
-
-        const { requireEmailVerification, exposeDebugCodes } = this.authFlags;
-        const newUser = await this.userService.create(payload, { isVerified: !requireEmailVerification });
-
-        if (!requireEmailVerification) {
-            return this.issueTokens(newUser);
-        }
-
-        const identifier = payload.email || payload.phone;
-        const verificationCode = this.createNumericCode(6);
-        const expiresAt = this.addMinutes(10);
-        await this.saveOtp(identifier!, verificationCode, 'verify', expiresAt);
-        const otpDelivery = await this.sendOtp(identifier!, verificationCode, 'verify');
-
-        if (!otpDelivery.sent) {
-            if (exposeDebugCodes) {
-                return {
-                    message: 'Không gửi được OTP thật. Đang dùng mã demo trong môi trường phát triển.',
-                    requiresVerification: true,
-                    emailOrPhone: identifier,
-                    otpSent: false,
-                    otpChannel: 'debug',
-                    otpReason: otpDelivery.reason,
-                    otpError: otpDelivery.error,
-                    verificationCode,
-                };
-            }
-
-            await this.otpRepository.delete({ identifier: identifier!, purpose: 'verify' });
-            await this.userService.deleteUnverifiedUser(newUser.userId);
-            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
-        }
-
-        return {
-            message: 'Đăng ký thành công. Vui lòng xác thực tài khoản bằng mã OTP.',
-            requiresVerification: true,
-            emailOrPhone: identifier,
-            otpSent: otpDelivery.sent,
-            otpChannel: otpDelivery.channel,
-            otpDestination: otpDelivery.destination,
-            otpReason: otpDelivery.reason,
-            verificationCode: exposeDebugCodes ? verificationCode : undefined,
-        };
+    const user = await this.findUserByIdentifier(identifier);
+    if (!user) {
+      // Keep generic response for security.
+      return {
+        message: 'Neu tai khoan ton tai, ma dat lai mat khau da duoc gui',
+        otpSent: true,
+      };
     }
 
-    async verifyRegistration(body: { emailOrPhone: string; code: string }) {
-        const identifier = this.normalizeIdentifier(body?.emailOrPhone);
-        const valid = await this.consumeOtp(identifier, String(body?.code || '').trim(), 'verify');
-        if (!valid) {
-            throw new BadRequestException('Mã xác thực không hợp lệ hoặc đã hết hạn');
-        }
+    const code = await this.issueOtp(identifier, 'reset_password');
+    return {
+      message: 'Da gui ma dat lai mat khau',
+      otpSent: true,
+      otpChannel: this.isEmailIdentifier(identifier) ? 'email' : 'sms',
+      otpDestination: identifier,
+      resetCode: process.env.NODE_ENV === 'production' ? undefined : code,
+    };
+  }
 
-        const user = await this.userService.findByEmailOrPhone(identifier);
-        if (!user) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        await this.userService.updateVerificationStatus(user.userId, true);
-        const refreshed = await this.userService.findOne(user.userId);
-        return {
-            message: 'Xác thực thành công',
-            ...(await this.issueTokens(refreshed || user)),
-        };
+  async resetPassword(
+    emailOrPhone: string,
+    code: string,
+    newPassword: string,
+  ) {
+    const identifier = this.normalizeIdentifier(emailOrPhone);
+    if (!identifier) {
+      throw new BadRequestException('Email hoac so dien thoai khong hop le');
     }
 
-    async resendVerificationCode(body: { emailOrPhone: string }) {
-        const identifier = this.normalizeIdentifier(body?.emailOrPhone);
-        const user = await this.userService.findByEmailOrPhone(identifier);
-        if (!user) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        if (user.isVerified) {
-            throw new BadRequestException('Tài khoản đã được xác thực');
-        }
-
-        const { exposeDebugCodes } = this.authFlags;
-        const verificationCode = this.createNumericCode(6);
-        await this.saveOtp(identifier, verificationCode, 'verify', this.addMinutes(10));
-        const otpDelivery = await this.sendOtp(identifier, verificationCode, 'verify');
-
-        if (!otpDelivery.sent && exposeDebugCodes) {
-            return {
-                message: 'Không gửi được OTP thật. Đang dùng mã demo trong môi trường phát triển.',
-                otpSent: false,
-                otpChannel: 'debug',
-                otpReason: otpDelivery.reason,
-                otpError: otpDelivery.error,
-                verificationCode,
-            };
-        }
-
-        if (!otpDelivery.sent) {
-            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
-        }
-
-        return {
-            message: 'Mã xác thực mới đã được gửi',
-            otpSent: true,
-            otpChannel: otpDelivery.channel,
-            otpDestination: otpDelivery.destination,
-            otpReason: otpDelivery.reason,
-            verificationCode: exposeDebugCodes ? verificationCode : undefined,
-        };
+    if (String(newPassword || '').length < 6) {
+      throw new BadRequestException('Mat khau moi phai co it nhat 6 ky tu');
     }
 
-    async forgotPassword(body: { emailOrPhone: string }) {
-        const identifier = this.normalizeIdentifier(body?.emailOrPhone);
-        const user = await this.userService.findByEmailOrPhone(identifier);
-        if (!user) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        const { exposeDebugCodes } = this.authFlags;
-        const resetCode = this.createNumericCode(6);
-        await this.saveOtp(identifier, resetCode, 'reset', this.addMinutes(10));
-        const otpDelivery = await this.sendOtp(identifier, resetCode, 'reset');
-
-        if (!otpDelivery.sent && exposeDebugCodes) {
-            return {
-                message: 'Không gửi được OTP thật. Đang dùng mã demo trong môi trường phát triển.',
-                otpSent: false,
-                otpChannel: 'debug',
-                otpReason: otpDelivery.reason,
-                otpError: otpDelivery.error,
-                resetCode,
-            };
-        }
-
-        if (!otpDelivery.sent) {
-            throw new BadRequestException(this.buildOtpFailureMessage(otpDelivery));
-        }
-
-        return {
-            message: 'Mã đặt lại mật khẩu đã được gửi',
-            otpSent: true,
-            otpChannel: otpDelivery.channel,
-            otpDestination: otpDelivery.destination,
-            otpReason: otpDelivery.reason,
-            resetCode: exposeDebugCodes ? resetCode : undefined,
-        };
+    const user = await this.findUserByIdentifier(identifier);
+    if (!user) {
+      throw new NotFoundException('Khong tim thay tai khoan');
     }
 
-    async resetPassword(body: { emailOrPhone: string; code: string; newPassword: string }) {
-        const identifier = this.normalizeIdentifier(body?.emailOrPhone);
-        const valid = await this.consumeOtp(identifier, String(body?.code || '').trim(), 'reset');
-        if (!valid) {
-            throw new BadRequestException('Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
-        }
-        await this.userService.updatePasswordByIdentifier(identifier, String(body?.newPassword || ''));
-        return { message: 'Đặt lại mật khẩu thành công' };
+    const ok = await this.consumeOtp(identifier, 'reset_password', code, true);
+    if (!ok) {
+      throw new UnauthorizedException(
+        'Ma dat lai mat khau khong hop le hoac da het han',
+      );
     }
 
-    async createDesktopPairingRequest() {
-        const pairingId = AuthService.pairingCounter++;
-        const pairing: PairingState = {
-            pairingId,
-            pairingCode: this.createPairingCode(6),
-            secretToken: crypto.randomBytes(24).toString('hex'),
-            status: 'pending',
-            expiresAt: this.addMinutes(5),
-        };
-        AuthService.pairingMap.set(pairingId, pairing);
-        return {
-            pairingId,
-            pairingCode: pairing.pairingCode,
-            secretToken: pairing.secretToken,
-            status: pairing.status,
-            expiresAt: pairing.expiresAt,
-            pollIntervalMs: 2000,
-        };
-    }
+    const hashed = await bcryptjs.hash(newPassword, 10);
+    await this.userService.update(user.userId, { password: hashed });
 
-    async getDesktopPairingStatus(id: number, secret: string) {
-        const pairing = AuthService.pairingMap.get(Number(id));
-        if (!pairing || pairing.secretToken !== secret) {
-            throw new NotFoundException('Không tìm thấy phiên ghép đăng nhập');
-        }
-
-        if (pairing.status === 'pending' && pairing.expiresAt.getTime() <= Date.now()) {
-            pairing.status = 'expired';
-        }
-
-        if (pairing.status === 'approved' && pairing.accessToken && pairing.refreshToken && pairing.approvedUserId) {
-            const user = await this.userService.findOne(pairing.approvedUserId);
-            pairing.status = 'consumed';
-            return {
-                status: 'approved',
-                accessToken: pairing.accessToken,
-                refreshToken: pairing.refreshToken,
-                user: user ? this.userService.toProfile(user) : null,
-            };
-        }
-
-        return {
-            status: pairing.status,
-            expiresAt: pairing.expiresAt,
-        };
-    }
-
-    async approveDesktopPairing(actorId: number, pairingCode: string) {
-        const normalizedCode = String(pairingCode || '').trim().toUpperCase();
-        const pairing = [...AuthService.pairingMap.values()].find((item) => item.pairingCode === normalizedCode);
-
-        if (!pairing) {
-            throw new NotFoundException('Mã đăng nhập máy tính không tồn tại');
-        }
-
-        if (pairing.status !== 'pending') {
-            throw new BadRequestException(`Phiên ghép không còn hợp lệ (${pairing.status})`);
-        }
-
-        if (pairing.expiresAt.getTime() <= Date.now()) {
-            pairing.status = 'expired';
-            throw new BadRequestException('Mã đăng nhập máy tính đã hết hạn');
-        }
-
-        const actor = await this.userService.findOne(actorId);
-        if (!actor) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        const tokenData = await this.issueTokens(actor);
-        pairing.status = 'approved';
-        pairing.approvedUserId = actor.userId;
-        pairing.accessToken = tokenData.accessToken;
-        pairing.refreshToken = tokenData.refreshToken;
-
-        return {
-            message: 'Đã xác nhận đăng nhập máy tính từ điện thoại',
-            pairingId: pairing.pairingId,
-            pairingCode: pairing.pairingCode,
-        };
-    }
-
-    private sanitizeFileName(name: string) {
-        return String(name || 'file')
-            .replace(/[^a-zA-Z0-9._-]/g, '-')
-            .replace(/-+/g, '-')
-            .slice(0, 120);
-    }
-
-    private getS3Config() {
-        const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || '';
-        const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1';
-        return { bucket, region };
-    }
-
-    private getS3Client() {
-        const { region } = this.getS3Config();
-        return new S3Client({
-            region,
-            credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-                ? {
-                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                    sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
-                }
-                : undefined,
-        });
-    }
-
-    async getAvatarUploadUrl(actorId: number, body: { fileName: string; contentType: string }) {
-        const safeName = this.sanitizeFileName(body?.fileName || `avatar-${Date.now()}.bin`);
-        const relative = `/uploads/avatars/${actorId}/${Date.now()}-${safeName}`;
-        return {
-            uploadUrl: relative,
-            fileUrl: relative,
-            expiresIn: 900,
-            contentType: body?.contentType || 'application/octet-stream',
-            note: 'Local upload URL. Nếu cần S3 presigned URL mình có thể chuyển tiếp.',
-        };
-    }
-
-    async uploadAvatarBase64(actorId: number, body: { fileName: string; contentType: string; base64Data: string }) {
-        const safeName = this.sanitizeFileName(body?.fileName || `avatar-${Date.now()}.bin`);
-        const outputName = `${Date.now()}-${safeName}`;
-        const base64 = String(body?.base64Data || '').replace(/^data:[^;]+;base64,/, '');
-        const buffer = Buffer.from(base64, 'base64');
-        const contentType = body?.contentType || 'application/octet-stream';
-        const { bucket, region } = this.getS3Config();
-
-        let fileUrl: string;
-        if (bucket) {
-            const key = `uploads/avatars/${actorId}/${outputName}`;
-            try {
-                await this.getS3Client().send(new PutObjectCommand({
-                    Bucket: bucket,
-                    Key: key,
-                    Body: buffer,
-                    ContentType: contentType,
-                }));
-                fileUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-            } catch (error) {
-                const detail = error instanceof Error ? error.message : 'Lỗi S3 không xác định';
-                console.error('S3 avatar upload failed:', detail);
-                throw new BadRequestException(`Không thể tải ảnh đại diện lên S3: ${detail}`);
-            }
-        } else {
-            const outputDir = path.join(process.cwd(), 'uploads', 'avatars', String(actorId));
-            await fs.mkdir(outputDir, { recursive: true });
-            await fs.writeFile(path.join(outputDir, outputName), buffer);
-            fileUrl = `/uploads/avatars/${actorId}/${outputName}`;
-        }
-
-        const user = await this.userService.updateProfile(actorId, { avatarUrl: fileUrl });
-        emitSocialEvent('user:avatar-updated', {
-            userId: actorId,
-            avatarUrl: fileUrl,
-            user: user ? this.userService.toProfile(user) : null,
-        });
-
-        return {
-            message: 'Tải ảnh đại diện thành công',
-            avatarUrl: fileUrl,
-            mediaUrl: fileUrl,
-            fileUrl,
-            user: user ? this.userService.toProfile(user) : null,
-            contentType: body?.contentType || 'application/octet-stream',
-        };
-    }
-
-    async me(userId: number) {
-        const user = await this.userService.findOne(userId);
-        if (!user) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-        return { user: this.userService.toProfile(user) };
-    }
-
-    async updateProfile(userId: number, body: any) {
-        const updated = await this.userService.updateProfile(userId, {
-            displayName: body.fullName,
-            avatarUrl: body.avatarUrl,
-            sex: body.gender,
-            dateOfBirth: body.dateOfBirth,
-        });
-
-        if (!updated) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        return {
-            message: 'Cập nhật hồ sơ thành công',
-            user: this.userService.toProfile(updated),
-        };
-    }
-
-    async refresh(refreshToken: string) {
-        if (!refreshToken) {
-            throw new UnauthorizedException('Missing refresh token');
-        }
-
-        let decoded: any;
-        try {
-            decoded = this.jwtService.verify(refreshToken, {
-                secret: process.env.JWT_REFRESH_SECRET || 'refreshSecret',
-            });
-        } catch (_error) {
-            throw new UnauthorizedException('Refresh token không hợp lệ');
-        }
-
-        const user = await this.userService.findOne(decoded.id);
-        if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
-            throw new UnauthorizedException('Refresh token không hợp lệ');
-        }
-
-        return this.issueTokens(user);
-    }
-
-    async logout(userId: number) {
-        await this.userService.updateRefreshToken(userId, null);
-        return { message: 'Đăng xuất thành công' };
-    }
-
-    async changePassword(userId: number, currentPassword: string, newPassword: string) {
-        const user = await this.userService.findOne(userId);
-        if (!user) {
-            throw new NotFoundException('Tài khoản không tồn tại');
-        }
-
-        const matched = await this.userService.checkPassword(user, currentPassword);
-        if (!matched) {
-            throw new UnauthorizedException('Mật khẩu hiện tại không chính xác');
-        }
-
-        await this.userService.updatePassword(userId, newPassword);
-        return { message: 'Đổi mật khẩu thành công' };
-    }
+    return { message: 'Dat lai mat khau thanh cong' };
+  }
 }

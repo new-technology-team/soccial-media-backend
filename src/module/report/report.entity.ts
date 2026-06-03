@@ -1,53 +1,28 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-import { ReportType } from "../../common/enum/report-type.enum";
-import { ReportStatus } from "../../common/enum/report-status.enum";
-
+﻿import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
 export class Report {
-    @PrimaryGeneratedColumn()
-    reportId: number;
+  @PrimaryGeneratedColumn()
+  reportId: number;
 
-    @Column({
-        type: "enum",
-        enum: ReportStatus,
-        default: ReportStatus.PENDING,
-    })
-    status: ReportStatus;
+  @Column({ default: 'PENDING' })
+  status: string;
 
-    @Column({ type: "datetime" })
-    createAt: Date;
+  @Column()
+  createAt: Date;
 
-    @Column({ type: "datetime", nullable: true })
-    updatedAt: Date | null;
+  @Column()
+  description: string;
 
-    @Column({ type: "text" })
-    description: string;
+  @Column()
+  targetId: string;
 
-    @Column({ type: "varchar", length: 64 })
-    targetId: string;
+  @Column()
+  targetType: string;
 
-    @Column({ type: "text", nullable: true })
-    resolutionNote: string | null;
+  @Column()
+  reportType: string;
 
-    @Column({ type: "int", nullable: true })
-    reviewerId: number | null;
-
-    @Column({ type: "int", nullable: true })
-    assignedTo: number | null;
-
-    @Column({ type: "int", nullable: true })
-    resolvedBy: number | null;
-
-    @Column({ type: "varchar", length: 120, nullable: true })
-    reason: string | null;
-
-    @Column({
-        type: "enum",
-        enum: ReportType,
-    })
-    reportType: ReportType;
-
-    @Column({ type: "int" })
-    userId: number;
+  @Column()
+  userId: number;
 }

@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsArray, ValidateNested, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /** Một lượt trong lịch sử hội thoại */

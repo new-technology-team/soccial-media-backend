@@ -1,83 +1,58 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { UserRole } from "../../common/enum/user-role.enum";
-import { UserStatus } from "../../common/enum/user-status.enum";
+﻿import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { UserRole } from '../../common/enum/user-role.enum';
+import { UserStatus } from '../../common/enum/user-status.enum';
 
-@Entity()
+@Entity('user')
 export class User {
-    @PrimaryGeneratedColumn()
-    userId: number;
+  @PrimaryGeneratedColumn()
+  userId: number;
 
-    @Column({ type: 'varchar', length: 50, unique: true, nullable: true })
-    username: string | null;
+  @Column({ name: 'username' })
+  username: string;
 
-    @Column({ type: 'varchar', length: 100 })
-    displayName: string;
+  @Column({ name: 'displayName' })
+  fullName: string;
 
-    @Column({ type: 'tinyint', nullable: true })
-    sex: number | null;
+  @Column({ nullable: true })
+  sex: number;
 
-    @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
-    email: string | null;
+  @Column({ name: 'email' })
+  email: string;
 
-    @Column({ type: "date", nullable: true })
-    dateOfBirth: Date | null;
+  @Column({ type: 'date', nullable: true, name: 'dateOfBirth' })
+  dateOfBirth: Date;
 
-    @Column({ type: 'varchar', length: 20, nullable: true })
-    phone: string | null;
+  @Column({ nullable: true })
+  phone: string;
 
-    @Column({ type: 'varchar', length: 255, nullable: true })
-    password: string | null;
+  @Column()
+  password: string;
 
-    @Column({ type: 'varchar', length: 500, nullable: true })
-    avatarUrl: string | null;
+  @Column({ nullable: true, name: 'avatarUrl' })
+  avatarUrl: string;
 
-    @Column({ default: false })
-    isVerified: boolean;
+  @Column({ type: 'enum', enum: ['ADMIN', 'USER'], default: 'USER' })
+  role: string;
 
-    @Column({ type: 'text', nullable: true })
-    refreshToken: string | null;
+  @Column({
+    type: 'enum',
+    enum: ['ACTIVE', 'BLOCKED', 'RESTRICTED', 'HIDDEN'],
+    default: 'ACTIVE',
+  })
+  status: string;
 
-    @Column({ default: true })
-    privacyLastSeen: boolean;
+  @Column({ default: true })
+  privacyLastSeen: boolean;
 
-    @Column({ default: true })
-    privacyProfilePhoto: boolean;
+  @Column({ default: true })
+  privacyProfilePhoto: boolean;
 
-    @Column({ default: true })
-    allowFriendRequests: boolean;
+  @Column({ default: true })
+  allowFriendRequests: boolean;
 
-    @Column({ default: true })
-    notificationMessages: boolean;
+  @Column({ default: true })
+  notificationMessages: boolean;
 
-    @Column({ default: true })
-    notificationCalls: boolean;
-
-    @Column({ type: 'datetime', nullable: true })
-    lastActiveAt: Date | null;
-
-    @Column({ type: 'datetime', nullable: true })
-    lockedUntil: Date | null;
-
-    @Column({ type: 'int', default: 0 })
-    warningCount: number;
-
-    @Column({ type: 'text', nullable: true })
-    restrictionReason: string | null;
-
-    @Column({
-        type: "enum",
-        enum: UserRole,
-        default: UserRole.USER
-    })
-    role: UserRole;
-
-    @Column({ type: 'text', nullable: true })
-    permissions: string | null;
-
-    @Column({
-        type: "enum",
-        enum: UserStatus,
-        default: UserStatus.ACTIVE
-    })
-    status: UserStatus;
+  @Column({ default: true })
+  notificationCalls: boolean;
 }

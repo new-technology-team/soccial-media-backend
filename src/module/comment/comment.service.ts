@@ -1,282 +1,279 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { InjectRepository } from "@nestjs/typeorm";
-import { ObjectId } from "mongodb";
-import { Repository } from "typeorm";
-import * as fs from "fs";
-import * as path from "path";
-import { Comment } from "./comment.entity";
-import { UserService } from "../user/user.service";
-import { PostService } from "../post/post.service";
-import { NotificationService } from "../notification/notification.service";
-import { emitSocialEvent } from "../../common/socket/chat-socket";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
+import { Repository } from 'typeorm';
+import { Comment } from './comment.entity';
+import { UserService } from '../user/user.service';
+import { PostService } from '../post/post.service';
+import { emitToConversation } from '../../common/socket/chat-socket';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class CommentService {
-	constructor(
-		@InjectRepository(Comment, 'mongodb')
-		private readonly commentRepository: Repository<Comment>,
-		private readonly userService: UserService,
-		private readonly postService: PostService,
-		private readonly notificationService: NotificationService,
-	) { }
+  constructor(
+    @InjectRepository(Comment, 'mongodb')
+    private readonly commentsRepository: Repository<Comment>,
+    private readonly userService: UserService,
+    private readonly postService: PostService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
-	private isValidObjectId(value: string) {
-		return ObjectId.isValid(String(value || ''));
-	}
+  private toResponse(comment: Comment, viewerId?: number) {
+    const viewerReact = viewerId
+      ? (comment.reacts || []).find((r) => r.userId === viewerId)
+      : null;
 
-	private async findCommentById(commentId: string) {
-		if (!this.isValidObjectId(commentId)) return null;
-		return this.commentRepository.findOne({ where: { _id: new ObjectId(commentId) as any } });
-	}
+    return {
+      id: String(comment._id),
+      postId: comment.postId,
+      parentId: comment.parentId || null,
+      content: comment.content,
+      fileUrl: comment.fileUrl,
+      createdAt: comment.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      userId: comment.owner?.userId,
+      authorName: comment.owner?.displayName || 'Nguoi dung',
+      authorAvatar: comment.owner?.avatarUrl,
+      owner: comment.owner,
+      reactionCount: (comment.reacts || []).length,
+      viewerReaction: viewerReact?.type || null,
+      replyCount: 0,
+    };
+  }
 
-	private getS3Config() {
-		const bucket = process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || '';
-		const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1';
-		return { bucket, region };
-	}
+  async create(
+    postId: string,
+    content: string,
+    parentId: string | null,
+    userId: number,
+  ) {
+    const user = await this.userService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
 
-	private getS3Client() {
-		const { region } = this.getS3Config();
-		return new S3Client({
-			region,
-			credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-				? {
-					accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-					secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-					sessionToken: process.env.AWS_SESSION_TOKEN || undefined,
-				}
-				: undefined,
-		});
-	}
+    const comment = this.commentsRepository.create({
+      postId,
+      content,
+      parentId: parentId || '',
+      fileUrl: '',
+      createdAt: new Date(),
+      owner: {
+        userId: user.userId,
+        displayName: user.fullName,
+        avatarUrl: user.avatarUrl,
+      },
+      reacts: [],
+    });
 
-	private safeFileName(name: string) {
-		const ext = path.extname(name || '').slice(0, 24);
-		const base = path.basename(name || 'comment-image', ext).replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 64) || 'comment-image';
-		return `${Date.now()}-${base}${ext}`;
-	}
+    const saved = await this.commentsRepository.save(comment);
 
-	private async mapComment(row: any, viewerUserId?: number) {
-		const author = await this.userService.findOne(row.userId);
-		return {
-			id: String(row._id),
-			postId: row.postId,
-			parentCommentId: row.parentCommentId || null,
-			userId: row.userId,
-			authorName: author?.displayName || 'Nguoi dung',
-			authorAvatar: author?.avatarUrl || null,
-			authorRole: author?.role || 'USER',
-			content: row.content || '',
-			imageUrl: row.file || null,
-			file: row.file || null,
-			status: row.status,
-			reactionCount: (row.reactions || []).length,
-			viewerReaction: (row.reactions || []).find((r: any) => Number(r.userId) === Number(viewerUserId))?.type || null,
-			replies: [],
-			createdAt: row.createdAt,
-			updatedAt: row.updatedAt,
-		};
-	}
+    // Increment post comment count
+    try {
+      await this.postService.incrementCommentCount(postId);
+    } catch {
+      /* ignore */
+    }
 
-	async listPostComments(postId: string, viewerUserId?: number, limit = 20, offset = 0) {
-		const rows = await this.commentRepository.find({
-			where: { postId } as any,
-			order: { createdAt: 'ASC' },
-		});
-		const visibleRows = (rows as any[]).filter((row) => row.status === 'visible');
-		const safeOffset = Math.max(Number(offset || 0), 0);
-		const safeLimit = Math.min(Math.max(Number(limit || 20), 1), 50);
-		const mapped = await Promise.all(visibleRows.map((row) => this.mapComment(row, viewerUserId)));
-		const byParent = new Map<string, any[]>();
-		for (const comment of mapped) {
-			const parentKey = comment.parentCommentId ? String(comment.parentCommentId) : '';
-			byParent.set(parentKey, [...(byParent.get(parentKey) || []), comment]);
-		}
-		const attachReplies = (comment: any): any => ({
-			...comment,
-			replies: (byParent.get(String(comment.id)) || []).map(attachReplies),
-		});
-		const topLevel = (byParent.get('') || []).map(attachReplies);
-		const comments = topLevel.slice(safeOffset, safeOffset + safeLimit);
+    // Emit realtime event
+    emitToConversation(
+      `post-${postId}`,
+      'comment:new',
+      this.toResponse(saved, userId),
+    );
+    emitToConversation(
+      'global-feed',
+      'comment:new',
+      this.toResponse(saved, userId),
+    );
 
-		return {
-			comments,
-			total: topLevel.length,
-			limit: safeLimit,
-			offset: safeOffset,
-			hasMore: safeOffset + comments.length < topLevel.length,
-		};
-	}
+    try {
+      const postSummary = await this.postService.getPostSummary(postId);
+      const postOwnerId = Number(postSummary?.authorId || 0);
+      if (postOwnerId > 0 && postOwnerId !== Number(userId)) {
+        await this.notificationService.create({
+          userId: postOwnerId,
+          type: 'post_comment',
+          title: 'Co binh luan moi',
+          content: `${user.fullName} vua binh luan bai viet cua ban`,
+          link: '/feed',
+          meta: {
+            postId,
+            commentId: String(saved._id),
+            actorId: Number(user.userId),
+            actorName: user.fullName,
+            parentId: parentId || null,
+          },
+        });
+      }
 
-	async createComment(actorId: number, postId: string, content: string, parentCommentId?: string | null, imageUrl?: string | null) {
-		await this.postService.getPostById(postId);
-		const normalizedContent = String(content || '').trim();
-		const normalizedImageUrl = imageUrl ? String(imageUrl).trim() : null;
-		const normalizedParentId = parentCommentId ? String(parentCommentId).trim() : null;
-		if (!normalizedContent && !normalizedImageUrl) {
-			throw new BadRequestException('Binh luan can co noi dung hoac anh');
-		}
-		if (normalizedParentId) {
-			const parent = await this.findCommentById(normalizedParentId);
-			if (!parent || parent.status !== 'visible' || String(parent.postId) !== String(postId)) {
-				throw new NotFoundException('Khong tim thay binh luan cha');
-			}
-		}
-		const now = new Date();
-		const row = await this.commentRepository.save(
-			this.commentRepository.create({
-				postId,
-				parentCommentId: normalizedParentId as any,
-				userId: actorId,
-				content: normalizedContent,
-				file: normalizedImageUrl as any,
-				status: 'visible',
-				reactions: [],
-				createdAt: now,
-				updatedAt: now,
-			}),
-		);
+      if (parentId) {
+        const parentComment = await this.commentsRepository.findOne({
+          where: { _id: this.toObjectId(parentId) } as any,
+        });
+        const parentOwnerId = Number(parentComment?.owner?.userId || 0);
+        if (
+          parentOwnerId > 0 &&
+          parentOwnerId !== Number(userId) &&
+          parentOwnerId !== postOwnerId
+        ) {
+          await this.notificationService.create({
+            userId: parentOwnerId,
+            type: 'comment_reply',
+            title: 'Co phan hoi binh luan moi',
+            content: `${user.fullName} da tra loi binh luan cua ban`,
+            link: '/feed',
+            meta: {
+              postId,
+              commentId: String(saved._id),
+              parentId,
+              actorId: Number(user.userId),
+              actorName: user.fullName,
+            },
+          });
+        }
+      }
+    } catch {
+      /* ignore notification errors */
+    }
 
-		await this.postService.increaseCommentCount(postId);
-		const post = await this.postService.getPostById(postId);
-		if (Number(post.authorId) !== Number(actorId)) {
-			const actor = await this.userService.findOne(actorId);
-			await this.notificationService.createNotification({
-				userId: Number(post.authorId),
-				type: 'comment',
-				title: `${actor?.displayName || 'Mot nguoi dung'} da binh luan bai viet`,
-				body: (normalizedContent || 'Da gui anh trong binh luan').slice(0, 120),
-				meta: { postId, commentId: String((row as any)._id), actorId },
-			});
-		}
+    return { comment: this.toResponse(saved, userId) };
+  }
 
-		const comment = await this.mapComment(row, actorId);
-		emitSocialEvent('comment:created', {
-			postId,
-			parentCommentId: normalizedParentId,
-			actorId,
-			comment,
-			commentCount: Number(post.commentCount || 0),
-		});
-		return { comment };
-	}
+  async findByPost(postId: string, viewerId?: number) {
+    const comments = await this.commentsRepository.find({
+      where: { postId, parentId: { $in: ['', null] } as any },
+      order: { createdAt: 'ASC' },
+    });
 
-	async createReply(actorId: number, parentCommentId: string, content: string, imageUrl?: string | null) {
-		const parent = await this.findCommentById(parentCommentId);
-		if (!parent || parent.status !== 'visible') {
-			throw new NotFoundException('Khong tim thay binh luan cha');
-		}
-		return this.createComment(actorId, parent.postId, content, parentCommentId, imageUrl);
-	}
+    const replies = await this.commentsRepository.find({
+      where: { postId, parentId: { $ne: '' } as any },
+      order: { createdAt: 'ASC' },
+    });
 
-	async uploadCommentBase64(actorId: number, body: { fileName: string; contentType: string; base64Data: string }) {
-		if (!body?.base64Data) {
-			throw new BadRequestException('Thieu du lieu anh binh luan');
-		}
-		const contentType = body.contentType || 'application/octet-stream';
-		if (!contentType.startsWith('image/')) {
-			throw new BadRequestException('Binh luan chi ho tro tep anh');
-		}
-		const rawBase64 = String(body.base64Data).includes(',')
-			? String(body.base64Data).split(',').pop() || ''
-			: String(body.base64Data);
-		const buffer = Buffer.from(rawBase64, 'base64');
-		const outputName = this.safeFileName(body.fileName || 'comment-image');
-		const { bucket, region } = this.getS3Config();
-		if (bucket) {
-			const key = `uploads/comments/${actorId}/${outputName}`;
-			await this.getS3Client().send(new PutObjectCommand({
-				Bucket: bucket,
-				Key: key,
-				Body: buffer,
-				ContentType: contentType,
-			}));
-			return { mediaUrl: `https://${bucket}.s3.${region}.amazonaws.com/${key}` };
-		}
-		const outputDir = path.join(process.cwd(), 'uploads', 'comments', String(actorId));
-		await fs.promises.mkdir(outputDir, { recursive: true });
-		await fs.promises.writeFile(path.join(outputDir, outputName), buffer);
-		return { mediaUrl: `/uploads/comments/${actorId}/${outputName}` };
-	}
+    const commentMap = new Map<string, any[]>();
+    for (const reply of replies) {
+      const parentKey = reply.parentId || String(reply._id);
+      if (!commentMap.has(parentKey)) commentMap.set(parentKey, []);
+      commentMap.get(parentKey)!.push(this.toResponse(reply, viewerId));
+    }
 
-	async reactComment(actorId: number, commentId: string, type: string) {
-		const row = await this.findCommentById(commentId);
-		if (!row || row.status !== 'visible') {
-			throw new NotFoundException('Khong tim thay binh luan');
-		}
-		row.reactions = (row.reactions || []).filter((item: any) => Number(item.userId) !== Number(actorId));
-		row.reactions.push({ userId: actorId, type: type || 'like', createdAt: new Date() });
-		row.updatedAt = new Date();
-		await this.commentRepository.save(row);
-		emitSocialEvent('comment:reaction', {
-			postId: row.postId,
-			commentId,
-			actorId,
-			reaction: type || 'like',
-			reactionCount: (row.reactions || []).length,
-		});
-		if (Number(row.userId) !== Number(actorId)) {
-			const actor = await this.userService.findOne(actorId);
-			await this.notificationService.createNotification({
-				userId: Number(row.userId),
-				type: 'like',
-				title: `${actor?.displayName || 'Mot nguoi dung'} da tha cam xuc binh luan`,
-				body: String(row.content || '').slice(0, 120),
-				meta: { postId: row.postId, commentId, actorId, reaction: type || 'like' },
-			});
-		}
-		return { message: 'Da cap nhat tuong tac binh luan', comment: await this.mapComment(row, actorId) };
-	}
+    return {
+      comments: comments.map((c) => ({
+        ...this.toResponse(c, viewerId),
+        replyCount: commentMap.get(String(c._id))?.length || 0,
+        replies: commentMap.get(String(c._id)) || [],
+      })),
+      total: comments.length,
+    };
+  }
 
-	async removeCommentReaction(actorId: number, commentId: string) {
-		const row = await this.findCommentById(commentId);
-		if (!row || row.status !== 'visible') {
-			throw new NotFoundException('Khong tim thay binh luan');
-		}
-		row.reactions = (row.reactions || []).filter((item: any) => Number(item.userId) !== Number(actorId));
-		row.updatedAt = new Date();
-		await this.commentRepository.save(row);
-		emitSocialEvent('comment:reaction', {
-			postId: row.postId,
-			commentId,
-			actorId,
-			reaction: null,
-			reactionCount: (row.reactions || []).length,
-		});
-		return { message: 'Da go tuong tac binh luan', comment: await this.mapComment(row, actorId) };
-	}
+  async react(commentId: string, userId: number, type: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
 
-	async deleteComment(actor: any, commentId: string) {
-		const actorId = Number(actor?.id || actor?.userId || actor || 0);
-		const actorRole = String(actor?.role || '').toLowerCase();
-		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
-		const row = await this.findCommentById(commentId);
-		if (!row) {
-			throw new NotFoundException('Khong tim thay binh luan');
-		}
-		if (row.status !== 'visible') {
-			if (canModerate) {
-				return { message: 'Binh luan da duoc xu ly truoc do', alreadyDeleted: true };
-			}
-			throw new NotFoundException('Khong tim thay binh luan');
-		}
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
 
-		const post = await this.postService.getPostById(row.postId);
-		if (Number(row.userId) !== Number(actorId) && Number(post.authorId) !== Number(actorId) && !canModerate) {
-			throw new ForbiddenException('Bạn không có quyền xóa bình luận này');
-		}
+    comment.reacts = (comment.reacts || []).filter((r) => r.userId !== userId);
+    comment.reacts.push({
+      userId: user.userId,
+      displayName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      type,
+      createdAt: new Date(),
+    });
 
-		row.status = 'deleted';
-		row.updatedAt = new Date();
-		await this.commentRepository.save(row);
-		await this.postService.decreaseCommentCount(row.postId);
-		const updatedPost = await this.postService.getPostById(row.postId);
-		emitSocialEvent('comment:deleted', {
-			postId: row.postId,
-			commentId,
-			actorId,
-			commentCount: Number(updatedPost.commentCount || 0),
-		});
-		return { message: 'Đã xóa bình luận' };
-	}
+    const saved = await this.commentsRepository.save(comment);
+
+    const ownerId = Number(saved.owner?.userId || 0);
+    if (ownerId > 0 && ownerId !== Number(userId)) {
+      try {
+        await this.notificationService.create({
+          userId: ownerId,
+          type: 'comment_reaction',
+          title: 'Co nguoi tha cam xuc binh luan',
+          content: `${user.fullName} da tha cam xuc binh luan cua ban`,
+          link: '/feed',
+          meta: {
+            postId: saved.postId,
+            commentId: String(saved._id),
+            actorId: Number(user.userId),
+            actorName: user.fullName,
+            reactionType: type,
+          },
+        });
+      } catch {
+        /* ignore notification errors */
+      }
+    }
+
+    return { comment: this.toResponse(saved, userId) };
+  }
+
+  async unreact(commentId: string, userId: number) {
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    comment.reacts = (comment.reacts || []).filter((r) => r.userId !== userId);
+    const saved = await this.commentsRepository.save(comment);
+    return { comment: this.toResponse(saved, userId) };
+  }
+
+  async delete(commentId: string, userId: number) {
+    const comment = await this.commentsRepository.findOne({
+      where: { _id: this.toObjectId(commentId) } as any,
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (comment.owner?.userId !== userId)
+      throw new ForbiddenException('Not authorized');
+
+    await this.commentsRepository.delete({
+      _id: this.toObjectId(commentId),
+    } as any);
+
+    try {
+      await this.postService.decrementCommentCount(comment.postId);
+    } catch {
+      /* ignore */
+    }
+
+    return { message: 'Comment deleted successfully' };
+  }
+
+  async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string) {
+    const comments = await this.commentsRepository.find({});
+    if (!comments.length) return;
+
+    for (const comment of comments) {
+      if (Number(comment.owner?.userId) === Number(userId)) {
+        comment.owner.displayName = fullName;
+        comment.owner.avatarUrl = avatarUrl || '';
+      }
+
+      comment.reacts = (comment.reacts || []).map((react: any) => {
+        if (Number(react?.userId) !== Number(userId)) return react;
+        return {
+          ...react,
+          displayName: fullName,
+          avatarUrl: avatarUrl || '',
+        };
+      });
+    }
+
+    await this.commentsRepository.save(comments);
+  }
+
+  private toObjectId(id: string): any {
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestException('Comment id khong hop le');
+    }
+    return new ObjectId(id);
+  }
 }

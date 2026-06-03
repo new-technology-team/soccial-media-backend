@@ -1,29 +1,38 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-import { FriendshipStatus } from "../../common/enum/friendship-status.enum";
+﻿import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
 @Entity()
 export class Friendship {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column({ type: 'int' })
-    userId1: number;
+  @Column()
+  userId1: number;
 
-    @Column({ type: 'int' })
-    userId2: number;
+  @Column()
+  userId2: number;
 
-    @Column({
-        type: 'enum',
-        enum: FriendshipStatus,
-        default: FriendshipStatus.PENDING,
-    })
-    status: FriendshipStatus;
+  @Column()
+  status: FriendshipStatus;
 
-    @Column({ type: 'varchar', length: 64 })
-    conversationId: string;
+  @Column()
+  conversationId: string;
 
-    @Column({ type: 'int', nullable: true })
-    requesterId: number | null;
+  @Column()
+  createdAt: Date;
 
-    @Column({ type: 'datetime' })
-    createdAt: Date;
+  constructor(
+    id: number,
+    userId1: number,
+    userId2: number,
+    status: FriendshipStatus,
+    conversationId: string,
+    createdAt: Date,
+  ) {
+    this.id = id;
+    this.userId1 = userId1;
+    this.userId2 = userId2;
+    this.status = status;
+    this.conversationId = conversationId;
+    this.createdAt = createdAt;
+  }
 }

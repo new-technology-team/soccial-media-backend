@@ -1,61 +1,49 @@
-import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
+﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
 
 @Entity()
 export class Message {
-    @ObjectIdColumn()
-    _id: ObjectId;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
-    @Column()
-    conversationId: string;
+  @Column()
+  conversationId: string;
 
-    @Column()
-    senderId: number;
+  @Column()
+  senderId: number;
 
-    @Column()
-    type: string;
+  @Column({ nullable: true })
+  senderName: string;
 
-    @Column({ nullable: true })
-    text: string | null;
+  @Column({ nullable: true })
+  senderFullName: string;
 
-    @Column({ nullable: true })
-    mediaUrl: string | null;
+  @Column({ nullable: true })
+  senderAvatar: string;
 
-    @Column({ nullable: true })
-    fileName: string | null;
+  @Column()
+  content: string;
 
-    @Column({ nullable: true })
-    mimeType: string | null;
+  @Column({ default: 'text' })
+  type: string;
 
-    @Column({ nullable: true })
-    fileSize: number | null;
+  @Column({ nullable: true })
+  mediaUrl: string;
 
-    @Column({ nullable: true })
-    meta: any;
+  @Column({ nullable: true })
+  fileName?: string;
 
-    @Column({ nullable: true })
-    reactions: any[];
+  @Column({ nullable: true })
+  fileSize?: number;
 
-    @Column()
-    createdAt: Date;
+  @Column({ nullable: true })
+  meta?: Record<string, any> | null;
 
-    @Column()
-    updatedAt: Date;
+  @Column({ default: false })
+  isRecalled: boolean;
 
-    @Column({ nullable: true })
-    expiresAt: Date | null;
+  @Column({ nullable: true })
+  removedForUserIds?: number[];
 
-    @Column()
-    isRecalled: boolean;
-
-    @Column({ nullable: true })
-    deletedForUserIds: number[];
-
-    @Column({ nullable: true })
-    deliveredTo: any[];
-
-    @Column({ nullable: true })
-    readBy: any[];
-
-    @Column({ nullable: true })
-    links: string[];
+  @Column()
+  createdAt: Date;
 }

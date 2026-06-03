@@ -1,5 +1,6 @@
-export enum InteractType {
+﻿export enum InteractType {
   LIKE = 'LIKE',
-  COMMENT = 'COMMENT',
-  SHARE = 'SHARE',
+  LOVE = 'LOVE',
+  HAHA = 'HAHA',
+  SAD = 'SAD',
 }

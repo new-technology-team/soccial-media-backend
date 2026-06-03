@@ -1,30 +1,50 @@
-import { Controller, Delete, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
-import { NotificationService } from "./notification.service";
-import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
-import { CurrentUser } from "../../common/auth/current-user.decorator";
+﻿import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { NotificationService } from './notification.service';
+import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
-@Controller('social')
-@UseGuards(JwtAuthGuard)
+@Controller('api/social')
 export class NotificationController {
-	constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) {}
 
-	@Get('notifications')
-	getNotifications(@CurrentUser() user: any, @Query('limit') limit?: string) {
-		return this.notificationService.listByUser(user.id, Number(limit || 50));
-	}
+  @Get('notifications')
+  @UseGuards(JwtAuthGuard)
+  async listNotifications(@Req() req: any) {
+    const notifications = await this.notificationService.findByUser(
+      req.user.sub,
+    );
+    return {
+      notifications: notifications.map((n) => ({
+        id: String(n._id),
+        userId: n.userId,
+        type: n.type || 'general',
+        title: n.title,
+        body: n.content,
+        link: n.link,
+        meta: n.meta || null,
+        isRead: n.isRead,
+        is_read: n.isRead,
+        createdAt: n.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      })),
+    };
+  }
 
-	@Patch('notifications/:id/read')
-	readNotification(@CurrentUser() user: any, @Param('id') id: string) {
-		return this.notificationService.markRead(user.id, id);
-	}
+  @Patch('notifications/:id/read')
+  @UseGuards(JwtAuthGuard)
+  markRead(@Param('id') id: string) {
+    return this.notificationService.markRead(id);
+  }
 
-	@Patch('notifications/read-all')
-	readAll(@CurrentUser() user: any) {
-		return this.notificationService.markAllRead(user.id);
-	}
-
-	@Delete('notifications/:id')
-	deleteNotification(@CurrentUser() user: any, @Param('id') id: string) {
-		return this.notificationService.deleteNotification(user.id, id);
-	}
+  @Patch('notifications/read-all')
+  @UseGuards(JwtAuthGuard)
+  markAllRead(@Req() req: any) {
+    return this.notificationService.markAllRead(req.user.sub);
+  }
 }

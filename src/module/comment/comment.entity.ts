@@ -1,34 +1,37 @@
-import { Entity, ObjectIdColumn, ObjectId, Column } from "typeorm";
+﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+import { Owner } from '../../common/embedded/owner.embed';
+
+export class CommentReact {
+  userId: number;
+  displayName: string;
+  avatarUrl: string;
+  type: string;
+  createdAt: Date;
+}
 
 @Entity()
 export class Comment {
-    @ObjectIdColumn()
-    _id: ObjectId;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
-    @Column()
-    postId: string;
+  @Column()
+  postId: string;
 
-    @Column()
-    userId: number;
+  @Column()
+  content: string;
 
-    @Column()
-    content: string;
+  @Column({ nullable: true })
+  parentId: string;
 
-    @Column({ nullable: true })
-    file: string | null;
+  @Column()
+  fileUrl: string;
 
-    @Column({ nullable: true })
-    parentCommentId: string | null;
+  @Column()
+  createdAt: Date;
 
-    @Column()
-    status: string;
+  @Column()
+  owner: Owner;
 
-    @Column()
-    reactions: any[];
-
-    @Column()
-    createdAt: Date;
-
-    @Column()
-    updatedAt: Date;
+  @Column(() => CommentReact)
+  reacts: CommentReact[];
 }

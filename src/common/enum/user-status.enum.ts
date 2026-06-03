@@ -1,10 +1,6 @@
-export enum UserStatus {
-    ACTIVE = "ACTIVE",
-    WARNING = "WARNING",
-    BLOCKED = "BLOCKED",
-    RESTRICTED = "RESTRICTED",
-    TEMP_LOCKED = "TEMP_LOCKED",
-    LOCKED = "LOCKED",
-    HIDDEN = "HIDDEN",
-    DELETED = "DELETED",
+﻿export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  RESTRICTED = 'RESTRICTED',
+  HIDDEN = 'HIDDEN',
 }

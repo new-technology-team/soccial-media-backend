@@ -37,6 +37,27 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.development.local
+.env.test.local
+.env.production.local
 .env.local
-node_modules
-dist
+
+# temp directory
+.temp
+.tmp
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+/generated
+
+# Runtime uploads and local run artifacts
+/uploads
+backend-run.err
+backend-run.log

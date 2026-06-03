@@ -40,8 +40,6 @@ services:
       - .env
     environment:
       - CHROMA_URL=http://chromadb:8000
-    volumes:
-      - ./uploads:/app/uploads
     depends_on:
       - mariadb
       - mongodb

@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UserModule } from "./module/user/user.module";
+import { UserModule } from './module/user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './module/auth/auth.module';
 import { PostModule } from './module/post/post.module';
@@ -24,11 +24,8 @@ import { Post } from './module/post/post.entity';
 import { SavedPost } from './module/post/saved-post.entity';
 import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
-import { BlockedUser } from './module/friendship/blocked-user.entity';
-import { DevAdminSeed } from './dev-admin.seed';
-import { AuditLog } from './module/audit-log/audit-log.entity';
-import { SystemSetting } from './module/system-setting/system-setting.entity';
-import * as fs from 'fs';
+import { ChatGateway } from './common/socket/chat.gateway';
+import { UserBlock } from './module/user/user-block.entity';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
@@ -62,32 +59,6 @@ function buildMongoUrl(): string {
   return process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/zalo_app';
 }
 
-function buildMariaSsl() {
-  const caPath = process.env.DB_SSL_CA_PATH || 'global-bundle.pem';
-  const shouldUseSsl = process.env.DB_SSL === 'true' || fs.existsSync(caPath);
-  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
-
-  if (!shouldUseSsl) {
-    return undefined;
-  }
-
-  if (fs.existsSync(caPath)) {
-    return {
-      ca: fs.readFileSync(caPath),
-      rejectUnauthorized,
-    };
-  }
-
-  if (rejectUnauthorized) {
-    throw new Error(`MariaDB SSL CA file not found: ${caPath}`);
-  }
-
-  return {
-    rejectUnauthorized: false,
-  };
-}
-
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -99,8 +70,8 @@ function buildMariaSsl() {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, BlockedUser, Report, AuthOtp, AuditLog, SystemSetting, SavedPost],
-      ssl: buildMariaSsl(),
+      entities: [User, Friendship, Report, AuthOtp, UserBlock],
+      logging: false,
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',
@@ -121,9 +92,6 @@ function buildMariaSsl() {
     AiModule,
   ],
   controllers: [AppController],
-  providers: [AppService, DevAdminSeed],
+  providers: [AppService, ChatGateway],
 })
-
-export class AppModule {
-
-}
+export class AppModule {}

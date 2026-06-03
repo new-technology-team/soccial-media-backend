@@ -1,184 +1,168 @@
-import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
-import { User } from "./user.entity";
-import { RegisterDto } from "../auth/dto/register.dto";
-import { InjectRepository } from "@nestjs/typeorm";
-import { ILike, In, Repository } from "typeorm";
-import { UserStatus } from "../../common/enum/user-status.enum";
-import { UserRole } from "../../common/enum/user-role.enum";
-import * as bcrypt from 'bcryptjs';
+﻿import { Injectable, BadRequestException } from '@nestjs/common';
+import { User } from './user.entity';
+import { RegisterDto } from '../auth/dto/register.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Friendship } from '../friendship/friendship.entity';
+import { UserBlock } from './user-block.entity';
 
 @Injectable()
 export class UserService {
-    constructor(
-        @InjectRepository(User, 'mariadb')
-        private readonly usersRepository: Repository<User>,
-    ) { }
+  constructor(
+    @InjectRepository(User, 'mariadb')
+    private readonly usersRepository: Repository<User>,
+    @InjectRepository(Friendship, 'mariadb')
+    private readonly friendshipRepository: Repository<Friendship>,
+    @InjectRepository(UserBlock, 'mariadb')
+    private readonly userBlockRepository: Repository<UserBlock>,
+  ) {}
 
-    async findOne(userId: number): Promise<User | null> {
-        return this.usersRepository.findOne({ where: { userId } });
+  async findOne(userId: number): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { userId } });
+  }
+
+  async findOneByUsername(username: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { username } as any });
+  }
+
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async findOneByPhone(phone: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { phone } });
+  }
+
+  async findByIds(userIds: number[]): Promise<User[]> {
+    if (!userIds.length) return [];
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.userId IN (:...ids)', { ids: userIds })
+      .getMany();
+  }
+
+  async search(keyword: string, limit = 20): Promise<User[]> {
+    const qb = this.usersRepository.createQueryBuilder('user');
+    qb.where('user.username LIKE :kw', { kw: `%${keyword}%` })
+      .orWhere('user.fullName LIKE :kw', { kw: `%${keyword}%` })
+      .orWhere('user.email LIKE :kw', { kw: `%${keyword}%` })
+      .limit(limit);
+    return qb.getMany();
+  }
+
+  async create(data: {
+    username: string;
+    email: string;
+    password: string;
+    fullName: string;
+    sex?: number;
+    dateOfBirth?: string | Date;
+    phone?: string;
+    avatarUrl?: string;
+  }): Promise<User> {
+    const user = this.usersRepository.create({
+      email: data.email,
+      password: data.password,
+      username: data.username,
+      fullName: data.fullName,
+      sex: data.sex ?? 0,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      phone: data.phone || '',
+      avatarUrl: data.avatarUrl || '',
+    });
+
+    return this.usersRepository.save(user);
+  }
+
+  async update(
+    userId: number,
+    data: Partial<{
+      fullName: string;
+      avatarUrl: string;
+      dateOfBirth: Date;
+      sex: number;
+      password: string;
+      phone: string;
+    }>,
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
 
-    async getAvatarMap(userIds: number[]): Promise<Map<number, string | null>> {
-        const ids = Array.from(new Set((userIds || []).map((id) => Number(id)).filter((id) => id > 0)));
-        const map = new Map<number, string | null>();
-        if (!ids.length) return map;
-        const rows = await this.usersRepository.find({
-            where: { userId: In(ids) },
-            select: ['userId', 'avatarUrl'],
-        });
-        for (const row of rows) {
-            map.set(Number(row.userId), row.avatarUrl || null);
-        }
-        return map;
+    if (data.fullName !== undefined) user.fullName = data.fullName;
+    if (data.avatarUrl !== undefined) user.avatarUrl = data.avatarUrl;
+    if (data.dateOfBirth !== undefined) user.dateOfBirth = data.dateOfBirth;
+    if (data.sex !== undefined) user.sex = data.sex;
+    if (data.password !== undefined) user.password = data.password;
+    if (data.phone !== undefined) user.phone = data.phone;
+
+    return this.usersRepository.save(user);
+  }
+
+  async updateSettings(
+    userId: number,
+    data: Partial<{
+      privacyLastSeen: boolean;
+      privacyProfilePhoto: boolean;
+      allowFriendRequests: boolean;
+      notificationMessages: boolean;
+      notificationCalls: boolean;
+    }>,
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
 
-    async findOneByUsername(username: string): Promise<User | null> {
-        return this.usersRepository.findOne({ where: { username } });
+    if (data.privacyLastSeen !== undefined) {
+      user.privacyLastSeen = Boolean(data.privacyLastSeen);
+    }
+    if (data.privacyProfilePhoto !== undefined) {
+      user.privacyProfilePhoto = Boolean(data.privacyProfilePhoto);
+    }
+    if (data.allowFriendRequests !== undefined) {
+      user.allowFriendRequests = Boolean(data.allowFriendRequests);
+    }
+    if (data.notificationMessages !== undefined) {
+      user.notificationMessages = Boolean(data.notificationMessages);
+    }
+    if (data.notificationCalls !== undefined) {
+      user.notificationCalls = Boolean(data.notificationCalls);
     }
 
-    async findOneByEmail(email: string): Promise<User | null> {
-        return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.save(user);
+  }
+
+  async deactivateAccount(userId: number): Promise<void> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
 
-    async findOneByPhone(phone: string): Promise<User | null> {
-        return this.usersRepository.findOne({ where: { phone } });
-    }
+    const deletedAt = Date.now();
+    const mark = `deleted_${userId}_${deletedAt}`;
 
-    async findByEmailOrPhone(identifier: string): Promise<User | null> {
-        const normalized = String(identifier || '').trim().toLowerCase();
-        const byEmail = await this.findOneByEmail(normalized);
-        if (byEmail) return byEmail;
-        return this.findOneByPhone(String(identifier || '').trim());
-    }
+    user.username = mark;
+    user.email = `${mark}@zchat.local`;
+    user.phone = `${mark}_phone`;
+    user.fullName = 'Tai khoan da xoa';
+    user.avatarUrl = '';
+    user.status = 'HIDDEN';
+    user.notificationCalls = false;
+    user.notificationMessages = false;
+    user.allowFriendRequests = false;
 
-    async searchUsers(keyword: string, viewerUserId: number): Promise<User[]> {
-        const q = String(keyword || '').trim();
-        if (!q) return [];
+    await this.usersRepository.save(user);
 
-        return this.usersRepository.find({
-            where: [
-                { displayName: ILike(`%${q}%`) },
-                { email: ILike(`%${q}%`) },
-                { phone: ILike(`%${q}%`) },
-                { username: ILike(`%${q}%`) },
-            ],
-            take: 30,
-        }).then((rows) => rows.filter((item) => item.userId !== viewerUserId));
-    }
+    await this.friendshipRepository.delete([
+      { userId1: userId } as any,
+      { userId2: userId } as any,
+    ]);
 
-    async updateRefreshToken(userId: number, refreshToken: string | null): Promise<void> {
-        await this.usersRepository.update({ userId }, { refreshToken: refreshToken || null });
-    }
-
-    async updateProfile(userId: number, payload: Partial<Pick<User, 'displayName' | 'avatarUrl' | 'sex' | 'dateOfBirth'>>): Promise<User | null> {
-        await this.usersRepository.update({ userId }, payload);
-        return this.findOne(userId);
-    }
-
-    async updateSettings(
-        userId: number,
-        payload: Partial<
-            Pick<User, 'privacyLastSeen' | 'privacyProfilePhoto' | 'allowFriendRequests' | 'notificationMessages' | 'notificationCalls'>
-        >,
-    ): Promise<User | null> {
-        const next: any = {};
-        for (const [key, value] of Object.entries(payload || {})) {
-            if (value !== undefined) {
-                next[key] = Boolean(value);
-            }
-        }
-
-        if (Object.keys(next).length > 0) {
-            await this.usersRepository.update({ userId }, next);
-        }
-
-        return this.findOne(userId);
-    }
-
-    async touchActivity(userId: number): Promise<void> {
-        if (!userId) return;
-        await this.usersRepository.update({ userId }, { lastActiveAt: new Date() });
-    }
-
-    async updatePassword(userId: number, plainPassword: string): Promise<void> {
-        const hashed = await bcrypt.hash(plainPassword, 10);
-        await this.usersRepository.update({ userId }, { password: hashed });
-    }
-
-    async updatePasswordByIdentifier(identifier: string, plainPassword: string): Promise<void> {
-        const user = await this.findByEmailOrPhone(identifier);
-        if (!user) {
-            throw new BadRequestException('Tài khoản không tồn tại');
-        }
-        await this.updatePassword(user.userId, plainPassword);
-    }
-
-    async updateVerificationStatus(userId: number, isVerified: boolean): Promise<void> {
-        await this.usersRepository.update({ userId }, { isVerified: Boolean(isVerified) });
-    }
-
-    async deleteUnverifiedUser(userId: number): Promise<void> {
-        await this.usersRepository.delete({ userId, isVerified: false });
-    }
-
-    async checkPassword(user: User, plainPassword: string): Promise<boolean> {
-        if (!user?.password) return false;
-        return bcrypt.compare(plainPassword, user.password);
-    }
-
-    async create(registerDto: RegisterDto, options?: { isVerified?: boolean }): Promise<User> {
-        const existingUser = registerDto.email ? await this.findOneByEmail(registerDto.email) : null;
-        if (existingUser) {
-            throw new BadRequestException('Email already exists');
-        }
-
-        if (registerDto.phone) {
-            const existingPhone = await this.findOneByPhone(registerDto.phone);
-            if (existingPhone) {
-                throw new BadRequestException('Phone already exists');
-            }
-        }
-
-        const passwordHash = registerDto.password ? await bcrypt.hash(registerDto.password, 10) : null;
-        const generatedUsername = registerDto.username || `user_${Date.now()}`;
-
-        const user = this.usersRepository.create({
-            email: registerDto.email,
-            password: passwordHash,
-            username: generatedUsername,
-            displayName: registerDto.displayName || generatedUsername,
-            sex: registerDto.sex,
-            dateOfBirth: registerDto.dateOfBirth,
-            phone: registerDto.phone,
-            avatarUrl: registerDto.avatarUrl || '',
-            isVerified: options?.isVerified ?? true,
-            refreshToken: null,
-            role: UserRole.USER,
-            status: UserStatus.ACTIVE,
-        });
-
-        return this.usersRepository.save(user);
-    }
-
-    toProfile(user: User) {
-        return {
-            id: user.userId,
-            username: user.username,
-            email: user.email || null,
-            phone: user.phone || null,
-            fullName: user.displayName,
-            dateOfBirth: user.dateOfBirth || null,
-            gender: user.sex ?? null,
-            role: String(user.role || '').toLowerCase(),
-            accountStatus: String(user.status || '').toLowerCase(),
-            avatarUrl: user.avatarUrl || null,
-            isVerified: Boolean(user.isVerified),
-            lockedUntil: user.lockedUntil || null,
-            warningCount: Number(user.warningCount || 0),
-            restrictionReason: user.restrictionReason || null,
-            permissions: typeof (user as any).permissions === 'string'
-                ? (user as any).permissions.split(',').map((item: string) => item.trim()).filter(Boolean)
-                : [],
-        };
-    }
+    await this.userBlockRepository.delete([
+      { blockerUserId: userId } as any,
+      { blockedUserId: userId } as any,
+    ]);
+  }
 }
