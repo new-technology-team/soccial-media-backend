@@ -418,6 +418,9 @@ export class ReportService {
 		if (body?.restrictionReason !== undefined) {
 			(user as any).restrictionReason = body.restrictionReason || null;
 		}
+		if ([UserStatus.BLOCKED, UserStatus.DELETED, UserStatus.LOCKED, UserStatus.TEMP_LOCKED].includes(user.status)) {
+			user.refreshToken = null as any;
+		}
 
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Cập nhật người dùng', 'USER', userId, body?.reason || body?.restrictionReason || null);
@@ -495,6 +498,7 @@ export class ReportService {
 		const user = await this.userRepository.findOne({ where: { userId } });
 		if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 		user.status = UserStatus.DELETED;
+		user.refreshToken = null as any;
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Xóa tài khoản', 'USER', userId, user.username || user.displayName);
 		this.emitUserChanged(user, actor, 'deleted');
@@ -593,6 +597,7 @@ export class ReportService {
 		user.status = UserStatus.TEMP_LOCKED;
 		user.lockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 		user.restrictionReason = reason || 'Tạm khóa bởi kiểm duyệt viên';
+		user.refreshToken = null as any;
 		await this.userRepository.save(user);
 		await this.audit(actor, 'Tạm khóa tài khoản', 'USER', userId, user.restrictionReason);
 		await this.notifyModerationAction(userId, 'Tài khoản của bạn đã bị tạm khóa', `${user.restrictionReason}. Thời hạn khóa đến ${user.lockedUntil.toLocaleString('vi-VN')}.`, { action: 'temp_lock', lockedUntil: user.lockedUntil });

@@ -898,6 +898,13 @@ export class AuthService {
         if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
             throw new UnauthorizedException('Refresh token không hợp lệ');
         }
+        const lockedStatuses = [UserStatus.BLOCKED, UserStatus.HIDDEN, UserStatus.DELETED, UserStatus.LOCKED];
+        const isTempLocked = user.status === UserStatus.TEMP_LOCKED &&
+            (!user.lockedUntil || new Date(user.lockedUntil).getTime() > Date.now());
+        if (lockedStatuses.includes(user.status) || isTempLocked) {
+            await this.userService.updateRefreshToken(user.userId, null);
+            throw new UnauthorizedException('Tài khoản không còn khả dụng');
+        }
 
         return this.issueTokens(user);
     }
