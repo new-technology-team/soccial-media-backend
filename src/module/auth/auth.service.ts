@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -10,6 +10,7 @@ import * as crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { emitSocialEvent } from '../../common/socket/chat-socket';
+import { SystemSettingService } from '../system-setting/system-setting.service';
 
 type PairingState = {
   pairingId: number;
@@ -32,10 +33,12 @@ export class AuthService {
     private static pairingMap = new Map<number, PairingState>();
     private static pairingCounter = 1;
     private static otpCache = new Map<string, OtpCacheEntry>();
+    private static rateCache = new Map<string, { count: number; resetAt: number }>();
 
     constructor(
         private userService: UserService,
         private jwtService: JwtService,
+        private systemSettingService: SystemSettingService,
     ) { }
 
     private isEmail(input: string) {
@@ -100,22 +103,46 @@ export class AuthService {
         return d;
     }
 
-    private get authFlags() {
+    private async getAuthFlags() {
+        const { settings } = await this.systemSettingService.getAdminSettings();
         return {
-            requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
+            requireEmailVerification: settings.otp && process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
             exposeDebugCodes: process.env.AUTH_EXPOSE_DEBUG_CODES === 'true',
             exposeOtpErrors:
                 process.env.AUTH_EXPOSE_OTP_ERRORS === 'true' ||
                 (process.env.NODE_ENV || 'development') !== 'production',
+            allowRegistration: settings.register,
+            shortAdminSession: settings.session,
+            maintenance: settings.maintenance,
+            rateLimit: settings.rate,
         };
     }
 
     private buildOtpFailureMessage(delivery: { channel?: string; reason?: string; error?: string }) {
         const base = 'Không thể gửi OTP thật. Vui lòng kiểm tra cấu hình Email/SMS và thử lại.';
-        if (!this.authFlags.exposeOtpErrors) return base;
+        const exposeOtpErrors =
+            process.env.AUTH_EXPOSE_OTP_ERRORS === 'true' ||
+            (process.env.NODE_ENV || 'development') !== 'production';
+        if (!exposeOtpErrors) return base;
 
         const detail = [delivery.channel, delivery.reason, delivery.error].filter(Boolean).join(' - ');
         return detail ? `${base} Chi tiết: ${detail}` : base;
+    }
+
+    private async assertRateAllowed(scope: string, identifier: string, maxAttempts = 10) {
+        const { rateLimit } = await this.getAuthFlags();
+        if (!rateLimit) return;
+        const key = `${scope}:${this.normalizeIdentifier(identifier || 'unknown')}`;
+        const now = Date.now();
+        const row = AuthService.rateCache.get(key);
+        if (!row || row.resetAt <= now) {
+            AuthService.rateCache.set(key, { count: 1, resetAt: now + 60_000 });
+            return;
+        }
+        row.count += 1;
+        if (row.count > maxAttempts) {
+            throw new BadRequestException('Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.');
+        }
     }
 
     private async sendSmsOtp(identifier: string, code: string, purpose: 'verify' | 'reset') {
@@ -283,6 +310,14 @@ export class AuthService {
     }
 
     private async issueTokens(user: any) {
+        const { shortAdminSession } = await this.getAuthFlags();
+        const isStaff = ['ADMIN', 'MODERATOR'].includes(String(user.role || '').toUpperCase());
+        const accessExpiresIn = shortAdminSession && isStaff
+            ? (process.env.JWT_ADMIN_SHORT_ACCESS_EXPIRES_IN || '5m')
+            : (process.env.JWT_ACCESS_EXPIRES_IN || '15m');
+        const refreshExpiresIn = shortAdminSession && isStaff
+            ? (process.env.JWT_ADMIN_SHORT_REFRESH_EXPIRES_IN || '30m')
+            : (process.env.JWT_REFRESH_EXPIRES_IN || '7d');
         const payload = {
             id: user.userId,
             email: user.email,
@@ -299,12 +334,12 @@ export class AuthService {
 
         const accessToken = await this.jwtService.signAsync(payload, {
             secret: process.env.JWT_ACCESS_SECRET || 'secretKey',
-            expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN || '15m') as any,
+            expiresIn: accessExpiresIn as any,
         });
 
         const refreshToken = await this.jwtService.signAsync(payload, {
             secret: process.env.JWT_REFRESH_SECRET || 'refreshSecret',
-            expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as any,
+            expiresIn: refreshExpiresIn as any,
         });
 
         await this.userService.updateRefreshToken(user.userId, refreshToken);
@@ -329,6 +364,11 @@ export class AuthService {
                 return this.userService.findOne(existing.userId) || existing;
             }
             return existing;
+        }
+
+        const flags = await this.getAuthFlags();
+        if (!flags.allowRegistration || flags.maintenance) {
+            throw new ForbiddenException('Đăng ký mới đang tạm đóng.');
         }
 
         return this.userService.create(
@@ -431,6 +471,7 @@ export class AuthService {
         if (!identifier) {
             throw new BadRequestException('Thiếu thông tin đăng nhập');
         }
+        await this.assertRateAllowed('login', identifier, 12);
 
         const user = await this.userService.findByEmailOrPhone(identifier) ||
             await this.userService.findOneByUsername(identifier);
@@ -446,12 +487,17 @@ export class AuthService {
             throw new UnauthorizedException('Tài khoản không còn khả dụng');
         }
 
+        const flags = await this.getAuthFlags();
+        if (flags.maintenance && String(user.role || '').toUpperCase() !== 'ADMIN') {
+            throw new ForbiddenException('Hệ thống đang bảo trì. Vui lòng quay lại sau.');
+        }
+
         const matched = await this.userService.checkPassword(user, loginDto.password);
         if (!matched) {
             throw new UnauthorizedException('Email/số điện thoại hoặc mật khẩu không chính xác');
         }
 
-        if (this.authFlags.requireEmailVerification && !Boolean(user.isVerified)) {
+        if (flags.requireEmailVerification && !Boolean(user.isVerified)) {
             throw new UnauthorizedException('Tài khoản chưa xác thực OTP. Vui lòng xác thực trước khi đăng nhập.');
         }
 
@@ -463,6 +509,11 @@ export class AuthService {
 
         if (!rawIdentifier || !registerDto.password) {
             throw new BadRequestException('Thiếu thông tin đăng ký');
+        }
+        await this.assertRateAllowed('register', rawIdentifier, 6);
+        const flags = await this.getAuthFlags();
+        if (!flags.allowRegistration || flags.maintenance) {
+            throw new ForbiddenException('Đăng ký mới đang tạm đóng.');
         }
 
         const normalized = this.normalizeIdentifier(rawIdentifier);
@@ -479,7 +530,7 @@ export class AuthService {
             username: registerDto.username || (isEmail ? normalized.split('@')[0] : `user_${Date.now()}`),
         };
 
-        const { requireEmailVerification, exposeDebugCodes } = this.authFlags;
+        const { requireEmailVerification, exposeDebugCodes } = flags;
         const newUser = await this.userService.create(payload, { isVerified: !requireEmailVerification });
 
         if (!requireEmailVerification) {
@@ -545,6 +596,7 @@ export class AuthService {
 
     async resendVerificationCode(body: { emailOrPhone: string }) {
         const identifier = this.normalizeIdentifier(body?.emailOrPhone);
+        await this.assertRateAllowed('resend-otp', identifier, 5);
         const user = await this.userService.findByEmailOrPhone(identifier);
         if (!user) {
             throw new NotFoundException('Tài khoản không tồn tại');
@@ -554,7 +606,7 @@ export class AuthService {
             throw new BadRequestException('Tài khoản đã được xác thực');
         }
 
-        const { exposeDebugCodes } = this.authFlags;
+        const { exposeDebugCodes } = await this.getAuthFlags();
         const verificationCode = this.createNumericCode(6);
         await this.saveOtp(identifier, verificationCode, 'verify', this.addMinutes(10));
         const otpDelivery = await this.sendOtp(identifier, verificationCode, 'verify');
@@ -586,12 +638,13 @@ export class AuthService {
 
     async forgotPassword(body: { emailOrPhone: string }) {
         const identifier = this.normalizeIdentifier(body?.emailOrPhone);
+        await this.assertRateAllowed('forgot-password', identifier, 5);
         const user = await this.userService.findByEmailOrPhone(identifier);
         if (!user) {
             throw new NotFoundException('Tài khoản không tồn tại');
         }
 
-        const { exposeDebugCodes } = this.authFlags;
+        const { exposeDebugCodes } = await this.getAuthFlags();
         const resetCode = this.createNumericCode(6);
         await this.saveOtp(identifier, resetCode, 'reset', this.addMinutes(10));
         const otpDelivery = await this.sendOtp(identifier, resetCode, 'reset');
@@ -623,6 +676,7 @@ export class AuthService {
 
     async resetPassword(body: { emailOrPhone: string; code: string; newPassword: string }) {
         const identifier = this.normalizeIdentifier(body?.emailOrPhone);
+        await this.assertRateAllowed('reset-password', identifier, 5);
         const valid = await this.consumeOtp(identifier, String(body?.code || '').trim(), 'reset');
         if (!valid) {
             throw new BadRequestException('Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');

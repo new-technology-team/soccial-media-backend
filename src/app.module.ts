@@ -15,6 +15,7 @@ import { NotificationModule } from './module/notification/notification.module';
 import { ReportModule } from './module/report/report.module';
 import { AiModule } from './module/ai/ai.module';
 import { CallModule } from './module/call/call.module';
+import { SystemSettingModule } from './module/system-setting/system-setting.module';
 import { CallLog } from './module/call/call-log.entity';
 import { Message } from './module/message/message.entity';
 import { Conversation } from './module/conversation/conversation.entity';
@@ -121,6 +122,7 @@ function buildMariaSsl() {
     UserModule,
     AiModule,
     CallModule,
+    SystemSettingModule,
   ],
   controllers: [AppController],
   providers: [AppService, DevAdminSeed],

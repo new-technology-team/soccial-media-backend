@@ -11,9 +11,9 @@ import { Comment } from "../comment/comment.entity";
 import { UserRole } from "../../common/enum/user-role.enum";
 import { UserStatus } from "../../common/enum/user-status.enum";
 import { AuditLog } from "../audit-log/audit-log.entity";
-import { SystemSetting } from "../system-setting/system-setting.entity";
 import { Notification } from "../notification/notification.entity";
 import { emitSocialEvent, emitToUser } from "../../common/socket/chat-socket";
+import { SystemSettingService } from "../system-setting/system-setting.service";
 
 function toClientUser(user: any) {
 	const permissions = typeof user?.permissions === 'string'
@@ -77,10 +77,9 @@ export class ReportService {
 		private readonly commentRepository: Repository<Comment>,
 		@InjectRepository(AuditLog, 'mariadb')
 		private readonly auditLogRepository: Repository<AuditLog>,
-		@InjectRepository(SystemSetting, 'mariadb')
-		private readonly systemSettingRepository: Repository<SystemSetting>,
 		@InjectRepository(Notification, 'mongodb')
 		private readonly notificationRepository: Repository<Notification>,
+		private readonly systemSettingService: SystemSettingService,
 	) {}
 
 	private async notifyModerationAction(userId: number, title: string, body: string, meta: any = {}) {
@@ -185,6 +184,8 @@ export class ReportService {
 	}
 
 	private async audit(actor: any, action: string, targetType: string, targetId?: string | number | null, description?: string | null) {
+		const { settings } = await this.systemSettingService.getAdminSettings();
+		if (!settings.logging) return;
 		await this.auditLogRepository.save(this.auditLogRepository.create({
 			actorId: actor?.id ? Number(actor.id) : null,
 			actorRole: roleOf(actor) || 'UNKNOWN',
@@ -241,6 +242,10 @@ export class ReportService {
 		);
 		emitSocialEvent('report:created', { report, actorId });
 		emitSocialEvent('report:queueUpdated', { report, actorId });
+		const { settings } = await this.systemSettingService.getAdminSettings();
+		if (settings.notify) {
+			emitSocialEvent('report:priorityCreated', { report, actorId });
+		}
 
 		return {
 			message: 'Đã gửi báo cáo',
@@ -535,49 +540,18 @@ export class ReportService {
 		return { logs };
 	}
 
-	private defaultSystemSettings(): Record<string, boolean> {
-		return {
-			otp: true,
-			register: true,
-			session: false,
-			auto: true,
-			notify: true,
-			rate: true,
-			device: true,
-			logging: true,
-			maintenance: false,
-		};
-	}
-
 	async getSystemSettings(actor: any) {
 		this.assertAdmin(actor);
-		const row = await this.systemSettingRepository.findOne({ where: { key: 'admin_console' } });
-		const saved = row?.value ? JSON.parse(row.value) : {};
+		const { settings, updatedAt } = await this.systemSettingService.getAdminSettings();
 		return {
-			settings: {
-				...this.defaultSystemSettings(),
-				...saved,
-			},
-			updatedAt: row?.updatedAt || null,
+			settings,
+			updatedAt,
 		};
 	}
 
 	async updateSystemSettings(actor: any, body: any) {
 		this.assertAdmin(actor);
-		const defaults = this.defaultSystemSettings();
-		const next = { ...defaults };
-		for (const key of Object.keys(defaults)) {
-			if (body?.settings?.[key] !== undefined || body?.[key] !== undefined) {
-				next[key] = Boolean(body?.settings?.[key] ?? body?.[key]);
-			}
-		}
-
-		await this.systemSettingRepository.save(
-			this.systemSettingRepository.create({
-				key: 'admin_console',
-				value: JSON.stringify(next),
-			}),
-		);
+		const next = await this.systemSettingService.updateAdminSettings(body?.settings || body || {});
 		await this.audit(actor, 'Cập nhật cấu hình hệ thống', 'SYSTEM_SETTING', 'admin_console', JSON.stringify(next));
 		return { message: 'Đã cập nhật cấu hình hệ thống', settings: next };
 	}

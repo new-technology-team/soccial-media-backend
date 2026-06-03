@@ -525,22 +525,38 @@ export class MessageService {
 			throw new NotFoundException("Không tìm thấy tin nhắn");
 		}
 
-		const conversation = await this.conversationService.ensureMembership(message.conversationId, actorId);
 		const actorRole = String(actor?.role || '').toLowerCase();
 		const canModerate = actorRole === 'admin' || actorRole === 'moderator';
-
-		const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
-		if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
-			deletedForUserIds.push(actorId);
+		const conversation = canModerate
+			? await this.conversationService.getConversationById(message.conversationId)
+			: await this.conversationService.ensureMembership(message.conversationId, actorId);
+		if (!conversation) {
+			throw new NotFoundException("Không tìm thấy hội thoại");
 		}
-		message.deletedForUserIds = deletedForUserIds;
+
+		if (canModerate && Number(message.senderId) !== Number(actorId)) {
+			message.isRecalled = true;
+			message.meta = {
+				...(message.meta || {}),
+				moderatedBy: actorId,
+				moderatedRole: actorRole,
+				moderatedAt: new Date().toISOString(),
+			};
+		} else {
+			const deletedForUserIds = Array.isArray(message.deletedForUserIds) ? [...message.deletedForUserIds] : [];
+			if (!deletedForUserIds.some((uid) => Number(uid) === Number(actorId))) {
+				deletedForUserIds.push(actorId);
+			}
+			message.deletedForUserIds = deletedForUserIds;
+		}
 		message.updatedAt = new Date();
 		await this.messageRepository.save(message);
 
 		// Auto-unpin nếu tin nhắn đang được ghim
 		const pinnedIds = (conversation.pinnedMessageIds || []).map(String);
 		const wasPinned = pinnedIds.includes(String(message._id));
-		if (wasPinned) {
+		const actorIsMember = (conversation.members || []).some((item: any) => Number(item.userId) === Number(actorId));
+		if (wasPinned && actorIsMember) {
 			await this.conversationService.unpinMessage(message.conversationId, actorId, String(message._id));
 		}
 
@@ -553,7 +569,7 @@ export class MessageService {
 			});
 		}
 
-		return { message: "Đã xóa tin nhắn ở phía bạn" };
+		return { message: canModerate ? "Đã khóa tin nhắn vi phạm" : "Đã xóa tin nhắn ở phía bạn" };
 	}
 
 	async clearConversationMessages(actorId: number, conversationId: string) {
