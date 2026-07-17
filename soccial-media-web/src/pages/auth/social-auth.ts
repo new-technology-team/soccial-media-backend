@@ -1,3 +1,5 @@
+import { API_BASE } from '@/config/api'
+
 type SocialProvider = 'google'
 
 const providerLabels: Record<SocialProvider, string> = {
@@ -6,7 +8,7 @@ const providerLabels: Record<SocialProvider, string> = {
 
 export const startSocialAuth = (provider: SocialProvider) => {
   const errorRedirect = encodeURIComponent(`/auth/login?socialProvider=${provider}`)
-  const targetUrl = `/api/auth/${provider}?redirectOnError=${errorRedirect}`
+  const targetUrl = `${API_BASE}/auth/${provider}?redirectOnError=${errorRedirect}`
 
   sessionStorage.setItem('zchat-social-provider', provider)
   sessionStorage.removeItem('zchat-social-retry')

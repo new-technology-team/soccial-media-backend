@@ -9,6 +9,7 @@ import { api, request } from '@/api/client'
 import { useAuthStore } from '@/contexts/auth-store'
 import type { AuthPayload } from '@/types'
 import styles from '../auth.module.css'
+import { API_BASE } from '@/config/api'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -74,7 +75,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
     setError('')
     // Redirect to backend Google OAuth
-    window.location.href = '/api/auth/google'
+    window.location.href = `${API_BASE}/auth/google`
   }
 
   useEffect(() => {
