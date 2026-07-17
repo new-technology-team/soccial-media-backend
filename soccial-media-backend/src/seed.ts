@@ -13,16 +13,33 @@ import { Friendship } from './module/friendship/friendship.entity';
 import { FriendshipStatus } from './common/enum/friendship-status.enum';
 import { Post } from './module/post/post.entity';
 
-const mariadbConfig = () => ({
-  type: 'mariadb' as const,
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || '3306'),
-  username: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root',
-  database: process.env.DB_NAME || 'zalo_app',
-  entities: [User, Friendship],
-  synchronize: true,
-});
+const mariadbConfig = () => {
+  const url = process.env.DATABASE_URL_MARIA;
+  if (url) {
+    const parsed = new URL(url);
+    const type = url.startsWith('mysql://') ? 'mysql' : 'mariadb';
+    return {
+      type: type as 'mysql' | 'mariadb',
+      host: parsed.hostname,
+      port: Number(parsed.port || 3306),
+      username: parsed.username,
+      password: parsed.password,
+      database: parsed.pathname.replace('/', ''),
+      entities: [User, Friendship],
+      synchronize: true,
+    } as any;
+  }
+  return {
+    type: 'mariadb' as const,
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || '3306'),
+    username: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root',
+    database: process.env.DB_NAME || 'zalo_app',
+    entities: [User, Friendship],
+    synchronize: true,
+  };
+};
 
 const mongoConfig = () => ({
   type: 'mongodb' as const,

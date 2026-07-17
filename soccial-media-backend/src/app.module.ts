@@ -33,7 +33,7 @@ import { UserBlock } from './module/user/user-block.entity';
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
     assertNotLocalDatabaseInProduction(process.env.DATABASE_URL_MARIA, 'DATABASE_URL_MARIA');
-    return process.env.DATABASE_URL_MARIA;
+    return process.env.DATABASE_URL_MARIA.replace('mysql://', 'mariadb://');
   }
 
   const host = process.env.DB_HOST || 'localhost';
