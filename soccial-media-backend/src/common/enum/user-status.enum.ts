@@ -1,0 +1,9 @@
+﻿export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  RESTRICTED = 'RESTRICTED',
+  HIDDEN = 'HIDDEN',
+  DELETED = 'DELETED',
+  LOCKED = 'LOCKED',
+  TEMP_LOCKED = 'TEMP_LOCKED',
+}

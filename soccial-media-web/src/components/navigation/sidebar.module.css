@@ -1,0 +1,140 @@
+.sidebar {
+  position: sticky;
+  top: 80px;
+  align-self: start;
+  border: 1px solid #dfe6ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.userCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  color: #111827;
+  padding: 8px;
+  text-decoration: none;
+}
+
+.userCard:hover,
+.shortcut:hover {
+  background: #f3f6fb;
+}
+
+.userCard span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.userCard b,
+.userCard small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userCard b {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.userCard small {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #0b57d0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.createButton {
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: #0b57d0;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(11, 87, 208, 0.22);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.createButton:hover {
+  background: #0849b4;
+  transform: translateY(-1px);
+}
+
+.createButton:focus-visible,
+.shortcut:focus-visible,
+.userCard:focus-visible {
+  outline: 3px solid rgba(11, 87, 208, 0.22);
+  outline-offset: 2px;
+}
+
+.shortcuts {
+  display: grid;
+  gap: 4px;
+}
+
+.shortcut {
+  min-height: 42px;
+  border-radius: 10px;
+  color: #374151;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.shortcutActive {
+  background: #eef4ff;
+  color: #0b57d0;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: static;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .shortcuts {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .shortcut {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
+}

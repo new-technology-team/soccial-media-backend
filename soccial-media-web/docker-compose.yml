@@ -1,0 +1,25 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: abc-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: 123456
+      MARIADB_DATABASE: abc_social
+    ports:
+      - '3308:3306'
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  mongo:
+    image: mongo:7
+    container_name: abc-mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mariadb_data:
+  mongo_data:

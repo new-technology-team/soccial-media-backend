@@ -1,0 +1,485 @@
+.page {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 1rem 0 1.8rem;
+}
+
+.container {
+  width: min(760px, calc(100% - 1.2rem));
+  margin: 0 auto;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.header {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(233, 241, 255, 0.72), rgba(255, 255, 255, 0.96));
+  padding: 1rem;
+}
+
+.backButton {
+  border: 1px solid rgba(171, 173, 174, 0.28);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #22313a;
+  min-height: 34px;
+  padding: 0 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.65rem;
+}
+
+.backButton:hover {
+  border-color: rgba(0, 82, 206, 0.34);
+  color: #0052ce;
+  background: #f8fbff;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  color: #1f2d36;
+}
+
+.header p {
+  margin: 0.35rem 0 0;
+  color: #596972;
+  font-size: 0.9rem;
+}
+
+.infoCard {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 14px;
+  background: #fff;
+  padding: 1rem;
+  text-align: center;
+  color: #647179;
+}
+
+.postCard,
+.commentCard {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 21, 28, 0.08);
+  padding: 0.95rem;
+}
+
+.postAuthorRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.postAuthorAvatar {
+  width: 40px !important;
+  height: 40px !important;
+  flex-shrink: 0;
+}
+
+.postHeader h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #22313a;
+}
+
+.postHeader a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.postHeader a:hover {
+  text-decoration: underline;
+}
+
+.postHeader p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #68757e;
+}
+
+.postAuthorUsername {
+  margin: 0.05rem 0 0 !important;
+  font-size: 0.75rem !important;
+  color: #9ca3af !important;
+}
+
+.postContent {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #2f3a3f;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.postMedia {
+  display: block;
+  margin-top: 0.75rem;
+  width: 100%;
+  border-radius: 12px;
+  max-height: 480px;
+  object-fit: contain;
+  background: #000;
+}
+
+.postMeta {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(171, 173, 174, 0.2);
+  color: #66757e;
+  font-size: 0.83rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reactionWrap {
+  position: relative;
+}
+
+.reactionBtn {
+  border: 1px solid rgba(171, 173, 174, 0.3);
+  border-radius: 20px;
+  padding: 0.28rem 0.75rem;
+  background: #f4f6f8;
+  color: #3a4550;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reactionBtn:hover {
+  background: #e8edf2;
+}
+
+.reactionBtnActive {
+  background: #e8f0fe;
+  border-color: rgba(0, 82, 206, 0.3);
+  color: #0052ce;
+}
+
+.reactionPicker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid rgba(171, 173, 174, 0.25);
+  border-radius: 30px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 10;
+  animation: pickerIn 120ms ease-out;
+}
+
+@keyframes pickerIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.reactionOption {
+  border: 0;
+  background: transparent;
+  font-size: 1.45rem;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 2px;
+  transition: transform 0.12s;
+}
+
+.reactionOption:hover {
+  transform: scale(1.3);
+}
+
+.reactionOptionActive {
+  background: #e8f0fe;
+}
+
+.commentCard h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #22313a;
+}
+
+.commentForm {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.commentTextarea {
+  width: 100%;
+  min-height: 100px;
+  max-width: 100%;
+  border: 1px solid rgba(171, 173, 174, 0.28);
+  border-radius: 10px;
+  padding: 0.62rem;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.commentTextarea:focus {
+  border-color: rgba(0, 82, 206, 0.55);
+  box-shadow: 0 0 0 3px rgba(0, 82, 206, 0.12);
+}
+
+.submitBtn {
+  border: 0;
+  border-radius: 10px;
+  height: 38px;
+  background: #0052ce;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.commentList {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.commentItem {
+  border: 1px solid rgba(171, 173, 174, 0.2);
+  border-radius: 12px;
+  background: #f9fbfd;
+  padding: 0.65rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.commentAvatarWrap {
+  padding-top: 0.1rem;
+}
+
+.commentAvatar {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.commentReply {
+  margin-left: 2.4rem;
+  background: #f0f4f8;
+}
+
+.commentImage {
+  max-width: 200px;
+  border-radius: 8px;
+  margin-top: 0.35rem;
+}
+
+.commentActions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.replyBtn {
+  border: 0;
+  background: transparent;
+  color: #0052ce;
+  font-size: 0.76rem;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+}
+
+.replyBtn:hover {
+  text-decoration: underline;
+}
+
+.commentLiked {
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.replyForm {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.replyInput {
+  flex: 1;
+  border: 1px solid rgba(171, 173, 174, 0.3);
+  border-radius: 20px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.replyInput:focus {
+  border-color: rgba(0, 82, 206, 0.5);
+}
+
+.replySubmit {
+  border: 0;
+  border-radius: 20px;
+  padding: 0.3rem 0.85rem;
+  background: #0052ce;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.replySubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.replyList {
+  margin-top: 0.35rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.commentBody {
+  min-width: 0;
+}
+
+.commentAuthor {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: #22313a;
+}
+
+.commentAuthor a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.commentAuthor a:hover {
+  text-decoration: underline;
+}
+
+.commentText {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  color: #2f3c45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.commentTime {
+  margin: 0.25rem 0 0;
+  font-size: 0.76rem;
+  color: #6d7a82;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #66757e;
+}
+
+.viewerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.viewerDialog {
+  width: min(420px, 100%);
+  max-height: min(520px, calc(100dvh - 2rem));
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.viewerHeader {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(171, 173, 174, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.viewerHeader h3 {
+  margin: 0;
+  color: #22313a;
+  font-size: 1rem;
+}
+
+.viewerHeader p {
+  margin: 0.2rem 0 0;
+  color: #66757e;
+  font-size: 0.82rem;
+}
+
+.viewerHeader button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.viewerList {
+  overflow: auto;
+  padding: 0.45rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.viewerItem {
+  border-radius: 10px;
+  padding: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #22313a;
+  text-decoration: none;
+}
+
+.viewerItem:hover {
+  background: #f4f7fb;
+}
+
+.viewerAvatar {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.viewerItem strong,
+.viewerItem small {
+  display: block;
+}
+
+.viewerItem small {
+  margin-top: 0.1rem;
+  color: #66757e;
+  font-size: 0.78rem;
+}

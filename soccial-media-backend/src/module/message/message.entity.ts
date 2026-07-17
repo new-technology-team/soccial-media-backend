@@ -1,0 +1,59 @@
+﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+
+@Entity()
+export class Message {
+  @ObjectIdColumn()
+  _id: ObjectId;
+
+  @Column()
+  conversationId: string;
+
+  @Column()
+  senderId: number;
+
+  @Column({ nullable: true })
+  senderName: string;
+
+  @Column({ nullable: true })
+  senderUsername: string;
+
+  @Column({ nullable: true })
+  senderFullName: string;
+
+  @Column({ nullable: true })
+  senderAvatar: string;
+
+  @Column()
+  content: string;
+
+  @Column({ default: 'text' })
+  type: string;
+
+  @Column({ nullable: true })
+  mediaUrl: string;
+
+  @Column({ nullable: true })
+  fileName?: string;
+
+  @Column({ nullable: true })
+  fileSize?: number;
+
+  @Column({ nullable: true })
+  meta?: Record<string, any> | null;
+
+  @Column({ default: false })
+  isRecalled: boolean;
+
+  @Column({ nullable: true })
+  removedForUserIds?: number[];
+
+  @Column({ nullable: true, type: 'simple-json' })
+  reactions?: Array<{
+    userId: number;
+    reaction: string;
+    createdAt?: string;
+  }>;
+
+  @Column()
+  createdAt: Date;
+}

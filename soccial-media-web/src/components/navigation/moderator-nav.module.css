@@ -1,0 +1,136 @@
+.nav {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  min-width: 220px;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 16px 10px;
+  gap: 12px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.brandIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 18px;
+}
+
+.brandLabel {
+  min-width: 0;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: #475569;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 750;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.item svg,
+.logout svg {
+  flex: 0 0 auto;
+}
+
+.item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  transform: translateX(2px);
+}
+
+.item.active {
+  background: #f0fdf4;
+  color: #16a34a;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.logout {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.logout:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    width: 64px;
+    min-width: 64px;
+    padding: 14px 8px;
+  }
+
+  .brandLabel,
+  .item span,
+  .logout span {
+    display: none;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 8px 0 14px;
+  }
+
+  .item,
+  .logout {
+    justify-content: center;
+    padding: 0;
+  }
+}

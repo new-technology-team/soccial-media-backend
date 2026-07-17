@@ -1,0 +1,93 @@
+.page {
+  width: min(1100px, calc(100% - 1rem));
+  margin: 0.75rem auto 1.4rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.hero {
+  border: 1px solid rgba(171, 173, 174, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(120deg, #ffffff, #edf2fa);
+  padding: 0.9rem;
+}
+
+.hero p {
+  margin: 0;
+  color: #0052ce;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.25rem 0 0;
+}
+
+.list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.card {
+  border: 1px solid rgba(171, 173, 174, 0.22);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.head b {
+  display: block;
+}
+
+.head small {
+  color: #697680;
+}
+
+.content {
+  margin: 0.55rem 0;
+  color: #27363d;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.actions button,
+.actions a {
+  border: 1px solid rgba(171, 173, 174, 0.25);
+  background: #f7f9fc;
+  border-radius: 9px;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+  color: #203038;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
+  cursor: pointer;
+}
+
+.actions button:hover,
+.actions a:hover {
+  background: #edf3ff;
+}
+
+.empty {
+  border: 1px dashed rgba(117, 119, 120, 0.35);
+  border-radius: 11px;
+  padding: 0.7rem;
+  color: #6f7c85;
+  text-align: center;
+}
