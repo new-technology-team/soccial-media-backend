@@ -3,7 +3,6 @@ import { Interacts } from '../../common/embedded/interacts.embed';
 import { Owner } from '../../common/embedded/owner.embed';
 
 @Entity()
-@Index(['owner.userId'])
 @Index(['visibility', 'createdAt'])
 export class Post {
   @ObjectIdColumn()

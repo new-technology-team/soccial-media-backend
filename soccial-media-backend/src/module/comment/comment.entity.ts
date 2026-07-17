@@ -12,7 +12,6 @@ export class CommentReact {
 
 @Entity()
 @Index(['postId'])
-@Index(['owner.userId'])
 @Index(['parentId'])
 export class Comment {
   @ObjectIdColumn()
