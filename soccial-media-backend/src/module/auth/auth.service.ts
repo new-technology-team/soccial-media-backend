@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -33,6 +34,7 @@ type AuthUserLike = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRepository(AuthOtp, 'mariadb')
     private readonly authOtpRepo: Repository<AuthOtp>,
@@ -476,7 +478,7 @@ export class AuthService {
     if (this.isEmailIdentifier(identifier)) {
       const result = await this.mailService.sendOtpEmail(identifier, code, 'reset_password');
       if (result.error) {
-        console.warn('[Auth] OTP email failed, but OTP was stored:', result.error);
+        this.logger.warn('[Auth] OTP email failed, but OTP was stored:', result.error);
       }
     }
     return {

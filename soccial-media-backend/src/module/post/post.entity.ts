@@ -1,8 +1,10 @@
-﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+﻿import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 import { Interacts } from '../../common/embedded/interacts.embed';
 import { Owner } from '../../common/embedded/owner.embed';
 
 @Entity()
+@Index(['owner.userId'])
+@Index(['visibility', 'createdAt'])
 export class Post {
   @ObjectIdColumn()
   _id: ObjectId;

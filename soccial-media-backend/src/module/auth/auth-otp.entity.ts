@@ -1,6 +1,8 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity({ name: 'auth_otp' })
+@Index(['identifier', 'purpose'])
+@Index(['expiresAt'])
 export class AuthOtp {
   @PrimaryGeneratedColumn()
   id!: number;

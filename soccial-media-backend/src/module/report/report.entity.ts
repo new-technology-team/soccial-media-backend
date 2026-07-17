@@ -1,6 +1,8 @@
-﻿import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity()
+@Index(['status'])
+@Index(['userId'])
 export class Report {
   @PrimaryGeneratedColumn()
   reportId: number;

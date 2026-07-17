@@ -1,6 +1,8 @@
-﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+﻿import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 
 @Entity()
+@Index(['userId', 'createdAt'])
+@Index(['userId', 'isRead'])
 export class Notification {
   @ObjectIdColumn()
   _id: ObjectId;

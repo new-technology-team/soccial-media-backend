@@ -1,6 +1,8 @@
-﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+﻿import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 
 @Entity()
+@Index(['conversationId', 'createdAt'])
+@Index(['senderId'])
 export class Message {
   @ObjectIdColumn()
   _id: ObjectId;

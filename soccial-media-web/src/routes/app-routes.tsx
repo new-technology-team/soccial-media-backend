@@ -4,12 +4,20 @@ import { lazy, Suspense } from 'react'
 import { Outlet, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layouts/AppLayout'
 import MainLayout from '@/components/layouts/MainLayout'
-import AIChatPage from '@/pages/(app)/ai-chat/page'
-import ExplorePage from '@/pages/(app)/explore/page'
-import FeedPage from '@/pages/(app)/feed/page'
-import FriendsPage from '@/pages/(app)/friends/page'
-import MediaPage from '@/pages/(app)/media/page'
+
+const FeedPage = lazy(() => import('@/pages/(app)/feed/page'))
+const AIChatPage = lazy(() => import('@/pages/(app)/ai-chat/page'))
+const ExplorePage = lazy(() => import('@/pages/(app)/explore/page'))
+const FriendsPage = lazy(() => import('@/pages/(app)/friends/page'))
+const MediaPage = lazy(() => import('@/pages/(app)/media/page'))
 const MessagesPage = lazy(() => import('@/pages/(app)/messages/page'))
+const NotificationsPage = lazy(() => import('@/pages/(app)/notifications/page'))
+const PostDetailPage = lazy(() => import('@/pages/(app)/posts/[id]/page'))
+const ProfilePage = lazy(() => import('@/pages/(app)/profile/[id]/page'))
+const EditProfilePage = lazy(() => import('@/pages/(app)/profile/edit/page'))
+const ReportPage = lazy(() => import('@/pages/(app)/report/page'))
+const SettingsPage = lazy(() => import('@/pages/(app)/settings/page'))
+const SystemAlertsPage = lazy(() => import('@/pages/(app)/system-alerts/page'))
 const ModeratorDashboardPage = lazy(() => import('@/pages/(app)/moderator/dashboard/page'))
 const ModeratorCommentsPage = lazy(() => import('@/pages/(app)/moderator/comments/page'))
 const ModeratorPostsPage = lazy(() => import('@/pages/(app)/moderator/posts/page'))
@@ -18,13 +26,6 @@ const ModeratorHistoryPage = lazy(() => import('@/pages/(app)/moderator/history/
 const ModeratorReportsPage = lazy(() => import('@/pages/(app)/moderator/reports/page'))
 const ModeratorReportDetailPage = lazy(() => import('@/pages/(app)/moderator/report-detail/[id]/page'))
 const ModeratorUsersPage = lazy(() => import('@/pages/(app)/moderator/users/page'))
-import NotificationsPage from '@/pages/(app)/notifications/page'
-import PostDetailPage from '@/pages/(app)/posts/[id]/page'
-import ProfilePage from '@/pages/(app)/profile/[id]/page'
-import EditProfilePage from '@/pages/(app)/profile/edit/page'
-import ReportPage from '@/pages/(app)/report/page'
-import SettingsPage from '@/pages/(app)/settings/page'
-import SystemAlertsPage from '@/pages/(app)/system-alerts/page'
 import { renderAdminRoutes } from '@/routes/admin-routes'
 import { useAuthStore } from '@/contexts/auth-store'
 
@@ -39,7 +40,9 @@ function AppLayoutRoute() {
   }
   return (
     <AppLayout>
-      <Outlet />
+      <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>}>
+        <Outlet />
+      </Suspense>
     </AppLayout>
   )
 }

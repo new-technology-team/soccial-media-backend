@@ -398,7 +398,7 @@ export class AiService implements OnModuleInit {
 
     if (store.collection?.count) {
       try {
-        return await store.collection.count();
+        return store.collection.count();
       } catch {
         this.logger.debug('getCollectionCount: cách 1 thất bại, thử cách 2');
       }
@@ -409,7 +409,7 @@ export class AiService implements OnModuleInit {
         const col = await store._client.getCollection({
           name: store.collectionName ?? 'app_docs',
         });
-        return await col.count();
+        return col.count();
       } catch {
         this.logger.debug('getCollectionCount: cách 2 thất bại, thử cách 3');
       }

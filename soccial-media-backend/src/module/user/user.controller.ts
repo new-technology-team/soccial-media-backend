@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 import { UserService } from './user.service';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @Controller(['user', 'api/social'])
 @UseGuards(JwtAuthGuard)
@@ -23,19 +24,13 @@ export class UserController {
   }
 
   @Put('settings')
-  async saveSettings(@Req() req: any, @Body() body: any) {
+  async saveSettings(@Req() req: any, @Body() updateSettingsDto: UpdateSettingsDto) {
     const current = await this.userService.findOne(req.user.sub);
     if (!current) {
       return { message: 'Không tìm thấy tài khoản' };
     }
 
-    await this.userService.updateSettings(req.user.sub, {
-      privacyLastSeen: body?.privacyLastSeen,
-      privacyProfilePhoto: body?.privacyProfilePhoto,
-      allowFriendRequests: body?.allowFriendRequests,
-      notificationMessages: body?.notificationMessages,
-      notificationCalls: body?.notificationCalls,
-    });
+    await this.userService.updateSettings(req.user.sub, updateSettingsDto);
 
     const updated = await this.userService.findOne(req.user.sub);
     return {

@@ -251,28 +251,39 @@ export class CommentService {
   }
 
   async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string, username: string) {
-    const comments = await this.commentsRepository.find({});
-    if (!comments.length) return;
+    // Filter by owner first, then also update reactions in a separate pass
+    const authoredComments = await this.commentsRepository.find({
+      where: { 'owner.userId': Number(userId) } as any,
+    });
 
-    for (const comment of comments) {
-      if (Number(comment.owner?.userId) === Number(userId)) {
+    if (authoredComments.length) {
+      for (const comment of authoredComments) {
         comment.owner.displayName = fullName;
         comment.owner.avatarUrl = avatarUrl || '';
         comment.owner.username = username;
       }
-
-      comment.reacts = (comment.reacts || []).map((react: any) => {
-        if (Number(react?.userId) !== Number(userId)) return react;
-        return {
-          ...react,
-          displayName: fullName,
-          avatarUrl: avatarUrl || '',
-          username,
-        };
-      });
+      await this.commentsRepository.save(authoredComments);
     }
 
-    await this.commentsRepository.save(comments);
+    // Update reactions for reacts matching this user
+    const reactedComments = await this.commentsRepository.find({
+      where: { 'reacts.userId': Number(userId) } as any,
+    });
+
+    if (reactedComments.length) {
+      for (const comment of reactedComments) {
+        comment.reacts = (comment.reacts || []).map((react: any) => {
+          if (Number(react?.userId) !== Number(userId)) return react;
+          return {
+            ...react,
+            displayName: fullName,
+            avatarUrl: avatarUrl || '',
+            username,
+          };
+        });
+      }
+      await this.commentsRepository.save(reactedComments);
+    }
   }
 
   private toObjectId(id: string): any {

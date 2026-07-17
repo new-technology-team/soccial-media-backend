@@ -1,4 +1,4 @@
-﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+﻿import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 import { Owner } from '../../common/embedded/owner.embed';
 
 export class CommentReact {
@@ -11,6 +11,9 @@ export class CommentReact {
 }
 
 @Entity()
+@Index(['postId'])
+@Index(['owner.userId'])
+@Index(['parentId'])
 export class Comment {
   @ObjectIdColumn()
   _id: ObjectId;

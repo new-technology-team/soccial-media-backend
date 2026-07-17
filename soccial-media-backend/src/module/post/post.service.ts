@@ -131,28 +131,21 @@ export class PostService {
     }
 
     const friendIds = await this.getAcceptedFriendIds(viewerId);
-    const allowedAuthorIds = new Set<number>([viewerId, ...friendIds]);
+    const allIds = [viewerId, ...friendIds];
 
     const rawPosts = await this.postsRepository.find({
+      where: { 'owner.userId': { $in: allIds } } as any,
       order: { createdAt: 'DESC' },
-      take: Math.max(limit * 5, 150),
+      take: Math.max(limit, 1),
     });
 
     const posts = rawPosts
       .filter((post) => {
         const authorId = Number(post.owner?.userId || 0);
-        if (!authorId || !allowedAuthorIds.has(authorId)) {
-          return false;
-        }
-
-        // Owner always sees their own posts (including private).
-        if (authorId === viewerId) {
-          return true;
-        }
-
+        if (authorId === viewerId) return true;
         return String(post.visibility || 'public') !== 'private';
       })
-      .slice(0, Math.max(limit, 1));
+      .slice(0, limit);
 
     return posts.map((p) => this.toResponse(p, viewerId));
   }

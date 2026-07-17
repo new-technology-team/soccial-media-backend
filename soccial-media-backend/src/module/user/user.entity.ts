@@ -17,6 +17,7 @@ export class User {
   @Column({ nullable: true })
   sex: number;
 
+  @Index()
   @Column({ name: 'email' })
   email: string;
 

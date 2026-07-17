@@ -15,6 +15,8 @@ import { NotificationModule } from './module/notification/notification.module';
 import { ReportModule } from './module/report/report.module';
 import { AiModule } from './module/ai/ai.module';
 import { DiscoveryModule } from './module/discovery/discovery.module';
+import { MediaModule } from './module/media/media.module';
+import { HealthModule } from './module/health/health.module';
 import { Message } from './module/message/message.entity';
 import { Conversation } from './module/conversation/conversation.entity';
 import { Friendship } from './module/friendship/friendship.entity';
@@ -70,15 +72,15 @@ function buildMongoUrl(): string {
       name: 'mariadb',
       type: 'mariadb',
       url: buildMariaUrl(),
-      synchronize: true,
+      synchronize: process.env.NODE_ENV !== 'production',
       entities: [User, Friendship, Report, AuthOtp, UserBlock],
-      logging: false,
+      logging: process.env.DB_LOGGING === 'true',
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',
       type: 'mongodb',
       url: buildMongoUrl(),
-      synchronize: true,
+      synchronize: process.env.NODE_ENV !== 'production',
       entities: [Comment, Conversation, Message, Notification, Post, AiMessage],
     }),
     AuthModule,
@@ -92,6 +94,8 @@ function buildMongoUrl(): string {
     UserModule,
     AiModule,
     DiscoveryModule,
+    MediaModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService, ChatGateway],

@@ -1,7 +1,9 @@
-﻿import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+﻿import { Entity, ObjectIdColumn, ObjectId, Column, Index } from 'typeorm';
 import { Member } from '../../common/embedded/member.embed';
 
 @Entity()
+@Index(['memberIds'])
+@Index(['lastMessageAt'])
 export class Conversation {
   @ObjectIdColumn()
   _id: ObjectId;

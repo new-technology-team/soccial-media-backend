@@ -11,15 +11,17 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { promises as fs } from 'fs';
-import { extname, join } from 'path';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 import { ConversationService } from './conversation.service';
+import { MediaService } from '../media/media.service';
 
 @Controller('api/chat')
 @UseGuards(JwtAuthGuard)
 export class ConversationController {
-  constructor(private readonly conversationService: ConversationService) {}
+  constructor(
+    private readonly conversationService: ConversationService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   @Get('conversations')
   listConversations(@Req() req: any) {
@@ -262,60 +264,15 @@ export class ConversationController {
       base64Data?: string;
     },
   ) {
-    const base64Raw = String(body?.base64Data || '').trim();
-    if (!base64Raw) {
-      throw new BadRequestException('Thieu base64Data');
-    }
-
-    const base64Payload = base64Raw.includes(',')
-      ? base64Raw.split(',').pop() || ''
-      : base64Raw;
-    const buffer = Buffer.from(base64Payload, 'base64');
-    if (!buffer.length) {
-      throw new BadRequestException('Du lieu file khong hop le');
-    }
-    if (buffer.length > 15 * 1024 * 1024) {
-      throw new BadRequestException('Kich thuoc file qua lon (toi da 15MB)');
-    }
-
-    const requestedExt = extname(String(body?.fileName || '')).toLowerCase();
-    const contentType = String(body?.contentType || '').toLowerCase();
-    const safeExt =
-      requestedExt ||
-      (contentType.includes('png')
-        ? '.png'
-        : contentType.includes('webp')
-          ? '.webp'
-          : contentType.includes('gif')
-            ? '.gif'
-            : contentType.includes('jpeg') || contentType.includes('jpg')
-              ? '.jpg'
-              : contentType.includes('pdf')
-                ? '.pdf'
-                : contentType.includes('json')
-                  ? '.json'
-                  : contentType.includes('zip')
-                    ? '.zip'
-                    : contentType.includes('mp4')
-                      ? '.mp4'
-                      : '.bin');
-
     const userId = Number(req?.user?.sub || 0);
-    if (!userId) {
-      throw new BadRequestException('Khong xac dinh duoc user');
-    }
+    if (!userId) throw new BadRequestException('Khong xac dinh duoc user');
 
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt}`;
-    const relativeDir = join('uploads', 'messages', String(userId));
-    const absoluteDir = join(process.cwd(), relativeDir);
-    await fs.mkdir(absoluteDir, { recursive: true });
-    await fs.writeFile(join(absoluteDir, fileName), buffer);
-
+    const result = await this.mediaService.uploadBase64(userId, 'message', body);
     return {
-      fileUrl: `/${relativeDir.replace(/\\/g, '/')}/${fileName}`,
-      fileName: String(body?.fileName || fileName),
-      contentType: contentType || 'application/octet-stream',
-      size: buffer.length,
+      fileUrl: result.fileUrl,
+      fileName: String(body?.fileName || result.fileName),
+      contentType: String(body?.contentType || 'application/octet-stream'),
+      size: result.size,
     };
   }
 
@@ -329,60 +286,15 @@ export class ConversationController {
       base64Data?: string;
     },
   ) {
-    const base64Raw = String(body?.base64Data || '').trim();
-    if (!base64Raw) {
-      throw new BadRequestException('Thieu base64Data');
-    }
-
-    const base64Payload = base64Raw.includes(',')
-      ? base64Raw.split(',').pop() || ''
-      : base64Raw;
-    const buffer = Buffer.from(base64Payload, 'base64');
-    if (!buffer.length) {
-      throw new BadRequestException('Du lieu file khong hop le');
-    }
-    if (buffer.length > 15 * 1024 * 1024) {
-      throw new BadRequestException('Kich thuoc file qua lon (toi da 15MB)');
-    }
-
-    const requestedExt = extname(String(body?.fileName || '')).toLowerCase();
-    const contentType = String(body?.contentType || '').toLowerCase();
-    const safeExt =
-      requestedExt ||
-      (contentType.includes('png')
-        ? '.png'
-        : contentType.includes('webp')
-          ? '.webp'
-          : contentType.includes('gif')
-            ? '.gif'
-            : contentType.includes('jpeg') || contentType.includes('jpg')
-              ? '.jpg'
-              : contentType.includes('pdf')
-                ? '.pdf'
-                : contentType.includes('json')
-                  ? '.json'
-                  : contentType.includes('zip')
-                    ? '.zip'
-                    : contentType.includes('mp4')
-                      ? '.mp4'
-                      : '.bin');
-
     const userId = Number(req?.user?.sub || 0);
-    if (!userId) {
-      throw new BadRequestException('Khong xac dinh duoc user');
-    }
+    if (!userId) throw new BadRequestException('Khong xac dinh duoc user');
 
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt}`;
-    const relativeDir = join('uploads', 'messages', String(userId));
-    const absoluteDir = join(process.cwd(), relativeDir);
-    await fs.mkdir(absoluteDir, { recursive: true });
-    await fs.writeFile(join(absoluteDir, fileName), buffer);
-
+    const result = await this.mediaService.uploadBase64(userId, 'message', body);
     return {
-      fileUrl: `/${relativeDir.replace(/\\/g, '/')}/${fileName}`,
-      fileName: String(body?.fileName || fileName),
-      contentType: contentType || 'application/octet-stream',
-      size: buffer.length,
+      fileUrl: result.fileUrl,
+      fileName: String(body?.fileName || result.fileName),
+      contentType: String(body?.contentType || 'application/octet-stream'),
+      size: result.size,
     };
   }
 }

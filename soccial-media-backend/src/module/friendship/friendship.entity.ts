@@ -1,6 +1,8 @@
-﻿import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+﻿import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
 @Entity()
+@Index(['userId1', 'status'])
+@Index(['userId2', 'status'])
 export class Friendship {
   @PrimaryGeneratedColumn()
   id: number;

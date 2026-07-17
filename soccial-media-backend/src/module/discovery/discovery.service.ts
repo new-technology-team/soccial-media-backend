@@ -37,18 +37,17 @@ export class DiscoveryService {
     const friendIds = await this.getAcceptedFriendIds(viewerId);
     const totalFriends = friendIds.length;
 
-    // Get friend posts (same as regular feed)
-    const allowedAuthorIds = new Set<number>([viewerId, ...friendIds]);
+    // Get friend posts filtered by author in query (not in-memory)
+    const allIds = [viewerId, ...friendIds];
     const rawPosts = await this.postsRepo.find({
+      where: { 'owner.userId': { $in: allIds } } as any,
       order: { createdAt: 'DESC' },
-      take: 200,
+      take: limit,
     });
 
     const friendPosts = rawPosts
       .filter((post) => {
         const authorId = Number(post.owner?.userId || 0);
-        if (!authorId) return false;
-        if (!allowedAuthorIds.has(authorId)) return false;
         if (authorId === viewerId) return true;
         return String(post.visibility || 'public') !== 'private';
       })
@@ -143,17 +142,18 @@ export class DiscoveryService {
   async getTrendingHashtags(limit = 10): Promise<{ tag: string; count: number }[]> {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    // Fetch only recent public posts (no need to scan 500 posts and then filter by date)
     const recentPosts = await this.postsRepo.find({
       where: {
         visibility: 'public' as any,
+        createdAt: { $gte: sevenDaysAgo } as any,
       } as any,
-      take: 500,
+      take: 200,
     });
 
     const hashtagCounts = new Map<string, number>();
 
     for (const post of recentPosts) {
-      if (post.createdAt < sevenDaysAgo) continue;
       const hashtags = this.extractHashtags(post.content || '');
       for (const tag of hashtags) {
         const lower = tag.toLowerCase();
@@ -209,18 +209,6 @@ export class DiscoveryService {
       }
     }
 
-    // Calculate mutual friends
-    const getMutualCount = (userId: number): number => {
-      let count = 0;
-      for (const fid of friendIds) {
-        // Check if userId and fid are friends
-        const friendship = allPublicPosts.some(() => false); // Simplified - we skip full mutual calc
-      }
-      // More efficient: check friendship table
-      // For now, estimate based on common friend network
-      return 0;
-    };
-
     // Sort by most posts (most active) first
     const sorted = suggested
       .map((u) => ({
@@ -236,7 +224,7 @@ export class DiscoveryService {
       .sort((a, b) => b.postCount - a.postCount)
       .slice(0, limit);
 
-    // Calculate actual mutual friends (check if friend's friends are also friends with suggested user)
+    // Calculate actual mutual friends
     for (const user of sorted) {
       let mutual = 0;
       for (const fid of friendIds) {

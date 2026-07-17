@@ -64,13 +64,9 @@ export class NotificationService {
   }
 
   async markAllRead(userId: number) {
-    const notifications = await this.notifRepo.find({
-      where: { userId: String(userId), isRead: false },
-    });
-    await Promise.all(
-      notifications.map((n) =>
-        this.notifRepo.update({ _id: n._id } as any, { isRead: true } as any),
-      ),
+    await this.notifRepo.update(
+      { userId: String(userId), isRead: false } as any,
+      { isRead: true } as any,
     );
     return { message: 'All notifications marked as read' };
   }

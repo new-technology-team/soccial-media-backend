@@ -16,15 +16,18 @@ import { OAuth2Client } from 'google-auth-library';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
-import { promises as fs } from 'fs';
-import { extname, join } from 'path';
+import { MediaService } from '../media/media.service';
 
 @Controller('api/auth')
 export class AuthController {
   private googleClient: OAuth2Client;
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private readonly mediaService: MediaService,
+  ) {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
 
@@ -124,17 +127,16 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getMe(@Req() req: any) {
-    return this.authService.getMe(req.user.sub).then((user) => ({ user }));
+  async getMe(@Req() req: any) {
+    const user = await this.authService.getMe(req.user.sub);
+    return { user };
   }
 
   @Put('me')
   @UseGuards(JwtAuthGuard)
-  updateMe(@Req() req: any, @Body() body: any) {
-    return this.authService.updateMe(req.user.sub, body).then((user) => ({
-      message: 'Cap nhat ho so thanh cong',
-      user,
-    }));
+  async updateMe(@Req() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+    const user = await this.authService.updateMe(req.user.sub, updateProfileDto);
+    return { message: 'Cap nhat ho so thanh cong', user };
   }
 
   @Post('change-password')
@@ -167,48 +169,12 @@ export class AuthController {
       base64Data?: string;
     },
   ) {
-    const base64Raw = String(body?.base64Data || '').trim();
-    if (!base64Raw) {
-      throw new BadRequestException('Thieu base64Data');
-    }
-
-    const base64Payload = base64Raw.includes(',')
-      ? base64Raw.split(',').pop() || ''
-      : base64Raw;
-
-    const buffer = Buffer.from(base64Payload, 'base64');
-    if (!buffer.length) {
-      throw new BadRequestException('Du lieu anh khong hop le');
-    }
-    if (buffer.length > 6 * 1024 * 1024) {
-      throw new BadRequestException('Kich thuoc anh qua lon (toi da 6MB)');
-    }
-
-    const requestedExt = extname(String(body?.fileName || '')).toLowerCase();
-    const extFromContentType = String(body?.contentType || '')
-      .toLowerCase()
-      .includes('png')
-      ? '.png'
-      : '.jpg';
-    const fileExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(requestedExt)
-      ? requestedExt
-      : extFromContentType;
-
     const userId = Number(req?.user?.sub || 0);
     if (!userId) {
       throw new BadRequestException('Khong xac dinh duoc user');
     }
-
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${fileExt}`;
-    const relativeDir = join('uploads', 'avatars', String(userId));
-    const absoluteDir = join(process.cwd(), relativeDir);
-    await fs.mkdir(absoluteDir, { recursive: true });
-
-    const absolutePath = join(absoluteDir, fileName);
-    await fs.writeFile(absolutePath, buffer);
-
-    const fileUrl = `/${relativeDir.replace(/\\/g, '/')}/${fileName}`;
-    return { fileUrl };
+    const result = await this.mediaService.uploadBase64(userId, 'avatar', body);
+    return { fileUrl: result.fileUrl };
   }
 
   @Post('cover-upload-base64')
@@ -222,52 +188,16 @@ export class AuthController {
       base64Data?: string;
     },
   ) {
-    const base64Raw = String(body?.base64Data || '').trim();
-    if (!base64Raw) {
-      throw new BadRequestException('Thieu base64Data');
-    }
-
-    const base64Payload = base64Raw.includes(',')
-      ? base64Raw.split(',').pop() || ''
-      : base64Raw;
-
-    const buffer = Buffer.from(base64Payload, 'base64');
-    if (!buffer.length) {
-      throw new BadRequestException('Du lieu anh khong hop le');
-    }
-    if (buffer.length > 10 * 1024 * 1024) {
-      throw new BadRequestException('Kich thuoc anh qua lon (toi da 10MB)');
-    }
-
-    const requestedExt = extname(String(body?.fileName || '')).toLowerCase();
-    const extFromContentType = String(body?.contentType || '')
-      .toLowerCase()
-      .includes('png')
-      ? '.png'
-      : '.jpg';
-    const fileExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(requestedExt)
-      ? requestedExt
-      : extFromContentType;
-
     const userId = Number(req?.user?.sub || 0);
     if (!userId) {
       throw new BadRequestException('Khong xac dinh duoc user');
     }
-
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${fileExt}`;
-    const relativeDir = join('uploads', 'covers', String(userId));
-    const absoluteDir = join(process.cwd(), relativeDir);
-    await fs.mkdir(absoluteDir, { recursive: true });
-
-    const absolutePath = join(absoluteDir, fileName);
-    await fs.writeFile(absolutePath, buffer);
-
-    const fileUrl = `/${relativeDir.replace(/\\/g, '/')}/${fileName}`;
+    const result = await this.mediaService.uploadBase64(userId, 'cover', body);
 
     // Persist coverUrl to user record so it survives refresh/logout
-    const user = await this.authService.updateCoverUrl(userId, fileUrl);
+    const user = await this.authService.updateCoverUrl(userId, result.fileUrl);
 
-    return { fileUrl, user };
+    return { fileUrl: result.fileUrl, user };
   }
 
   @Post('logout')
