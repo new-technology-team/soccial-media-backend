@@ -2,6 +2,9 @@
 
 **ZConnect** là dự án mạng xã hội full-stack được xây dựng trong khuôn khổ môn học **Công nghệ mới**. Dự án ban đầu là sản phẩm của team nhóm, sau đó được clone về và custom, phát triển thêm nhiều tính năng.
 
+- **GitHub (Team)**: [https://github.com/new-technology-team](https://github.com/new-technology-team)
+- **GitHub (Fork)**: [https://github.com/minhnt2510/zconnect](https://github.com/minhnt2510/zconnect)
+
 ---
 
 ## Công nghệ sử dụng
@@ -170,8 +173,3 @@ npm run dev             # http://localhost:8088
 | `VITE_SOCKET_URL` | WebSocket URL |
 
 ---
-
-## Liên kết
-
-- **GitHub (Team)**: [https://github.com/new-technology-team](https://github.com/new-technology-team)
-- **GitHub (Fork)**: [https://github.com/minhnt2510/zconnect](https://github.com/minhnt2510/zconnect)
