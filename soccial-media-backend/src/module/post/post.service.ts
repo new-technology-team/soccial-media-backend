@@ -169,7 +169,7 @@ export class PostService {
         const friendIds = await this.getAcceptedFriendIds(viewerId);
         const isFriend = friendIds.includes(authorId);
         const isPublic = String(post.visibility || 'public') !== 'private';
-        if (!isFriend || !isPublic) {
+        if (!isFriend && !isPublic) {
           throw new ForbiddenException('Ban khong co quyen xem bai viet nay');
         }
       }

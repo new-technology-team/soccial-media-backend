@@ -141,7 +141,7 @@ export default function ProfilePage() {
   }, [profileId, token])
 
   useEffect(() => {
-    if (!token) return
+    if (!token || !isOwnProfile) return
     api
       .listFriends(token)
       .then((response) => {
@@ -494,28 +494,38 @@ export default function ProfilePage() {
             <section className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold">Bạn bè</h3>
-                <Link to="/friends" className="text-xs text-primary hover:underline">Xem tất cả</Link>
+                {isOwnProfile && (
+                  <Link to="/friends" className="text-xs text-primary hover:underline">Xem tất cả</Link>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">{acceptedFriends.length} người bạn</p>
-              {acceptedFriends.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {acceptedFriends.slice(0, 6).map((friend) => (
-                    <Link key={friend.id} to={`/profile/${friend.username || friend.id}`} className="flex flex-col items-center gap-1">
-                      <div className="w-14 h-14 rounded-xl bg-muted overflow-hidden">
-                        {friend.avatarUrl ? (
-                          <img src={friend.avatarUrl} alt={friend.fullName} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
-                            {(friend.fullName[0] || 'U').toUpperCase()}
+              {isOwnProfile ? (
+                <>
+                  <p className="text-xs text-muted-foreground mb-3">{acceptedFriends.length} người bạn</p>
+                  {acceptedFriends.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {acceptedFriends.slice(0, 6).map((friend) => (
+                        <Link key={friend.id} to={`/profile/${friend.username || friend.id}`} className="flex flex-col items-center gap-1">
+                          <div className="w-14 h-14 rounded-xl bg-muted overflow-hidden">
+                            {friend.avatarUrl ? (
+                              <img src={friend.avatarUrl} alt={friend.fullName} className="w-full h-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
+                                {(friend.fullName[0] || 'U').toUpperCase()}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2">{friend.fullName}</span>
-                    </Link>
-                  ))}
-                </div>
+                          <span className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2">{friend.fullName}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Chưa có bạn bè.</p>
+                  )}
+                </>
               ) : (
-                <p className="text-xs text-muted-foreground">Chưa có bạn bè.</p>
+                <p className="text-xs text-muted-foreground">
+                  {friendStatus === 'accepted' ? 'Đã kết bạn với chủ tài khoản này' : 'Chưa kết nối với chủ tài khoản này'}
+                </p>
               )}
             </section>
           </aside>
