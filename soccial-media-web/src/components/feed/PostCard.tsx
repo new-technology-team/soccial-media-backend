@@ -770,6 +770,7 @@ function CommentItem({
     )}>
       <Link to={`/profile/${comment.userId}`} className="shrink-0 mt-0.5">
         <Avatar className="w-7 h-7">
+          <AvatarImage src={comment.authorAvatar || undefined} alt={comment.authorName} />
           <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
             {comment.authorName.charAt(0).toUpperCase()}
           </AvatarFallback>

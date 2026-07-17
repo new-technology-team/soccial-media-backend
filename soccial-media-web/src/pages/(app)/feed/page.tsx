@@ -25,6 +25,7 @@ import {
   X,
   MapPin,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { api, isAuthExpiredError } from "@/api/client";
 import { ConfirmDialog, ReportDialog } from "@/components/dialogs";
 import type { FeedComment, FeedPost } from "@/types";
@@ -1157,9 +1158,12 @@ export default function FeedPage() {
         key={comment.id}
         className={`${styles.commentItem} ${depth > 0 ? styles.commentReplyItem : ""}`}
       >
-        <div className={styles.commentAvatar}>
-          {(comment.authorName[0] || "U").toUpperCase()}
-        </div>
+        <Avatar className="w-7 h-7 shrink-0 mt-0.5">
+          <AvatarImage src={comment.authorAvatar || undefined} alt={comment.authorName} />
+          <AvatarFallback className="text-[10px] font-semibold">
+            {(comment.authorName[0] || "U").toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
         <div className={styles.commentBody}>
           <Link to={`/profile/${comment.userId}`}>
             <b>{comment.authorName}</b>
