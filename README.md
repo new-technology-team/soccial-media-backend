@@ -173,4 +173,5 @@ npm run dev             # http://localhost:8088
 
 ## Liên kết
 
-- **GitHub**: [https://github.com/minhnt2510/zconnect](https://github.com/minhnt2510/zconnect)
+- **GitHub (Team)**: [https://github.com/new-technology-team](https://github.com/new-technology-team)
+- **GitHub (Fork)**: [https://github.com/minhnt2510/zconnect](https://github.com/minhnt2510/zconnect)
